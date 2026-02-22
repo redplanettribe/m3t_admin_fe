@@ -35,7 +35,16 @@ import { useEventsMe } from "@/hooks/useEvents"
 import { useEventStore } from "@/store/eventStore"
 import { useUserStore } from "@/store/userStore"
 
-const navMain = [
+type NavSubItem = { title: string; url: string }
+
+type NavItem = {
+  title: string
+  url: string
+  icon: React.ComponentType<{ className?: string }>
+  items?: NavSubItem[]
+}
+
+const navMain: NavItem[] = [
   {
     title: "Home",
     url: "/",
