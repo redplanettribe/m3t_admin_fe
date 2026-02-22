@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { persist } from "zustand/middleware"
 import type { User } from "@/types/auth"
 
 interface UserState {
@@ -9,10 +10,15 @@ interface UserState {
   clearAuth: () => void
 }
 
-export const useUserStore = create<UserState>((set) => ({
-  user: null,
-  token: null,
-  setUser: (user) => set({ user }),
-  setAuth: (user, token) => set({ user, token }),
-  clearAuth: () => set({ user: null, token: null }),
-}))
+export const useUserStore = create<UserState>()(
+  persist(
+    (set) => ({
+      user: null,
+      token: null,
+      setUser: (user) => set({ user }),
+      setAuth: (user, token) => set({ user, token }),
+      clearAuth: () => set({ user: null, token: null }),
+    }),
+    { name: "m3t-admin-user" }
+  )
+)

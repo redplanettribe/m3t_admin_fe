@@ -1,12 +1,19 @@
 import * as React from "react"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
-import { ChevronRight, Home, Calendar, Settings, User } from "lucide-react"
+import { ChevronRight, Home, Settings, User } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Sidebar,
   SidebarContent,
@@ -22,9 +29,10 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarProvider,
-  SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { useEventsMe } from "@/hooks/useEvents"
+import { useEventStore } from "@/store/eventStore"
 import { useUserStore } from "@/store/userStore"
 
 const navMain = [
@@ -32,14 +40,6 @@ const navMain = [
     title: "Home",
     url: "/",
     icon: Home,
-  },
-  {
-    title: "Events",
-    icon: Calendar,
-    items: [
-      { title: "All events", url: "/events" },
-      { title: "Create", url: "/events/new" },
-    ],
   },
   {
     title: "Settings",
@@ -61,16 +61,35 @@ function getInitials(name: string): string {
 export function AppLayout(): React.ReactElement {
   const location = useLocation()
   const user = useUserStore((s) => s.user)
+  const activeEventId = useEventStore((s) => s.activeEventId)
+  const setActiveEventId = useEventStore((s) => s.setActiveEventId)
+  const { data: events = [], isLoading, isError } = useEventsMe()
 
   return (
     <TooltipProvider>
       <SidebarProvider>
         <Sidebar>
           <SidebarHeader className="border-b border-sidebar-border">
-            <div className="flex flex-1 items-center gap-2">
-              <SidebarTrigger className="-ml-1" />
-              <span className="font-semibold">M3T Admin</span>
-            </div>
+            <Select
+              value={activeEventId ?? ""}
+              onValueChange={(id) => setActiveEventId(id || null)}
+              disabled={isLoading || isError}
+            >
+              <SelectTrigger className="w-full" size="sm">
+                <SelectValue
+                  placeholder={
+                    isLoading ? "Loading…" : isError ? "Error loading events" : "Select event"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {events.map((event) => (
+                  <SelectItem key={event.id} value={event.id}>
+                    {event.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </SidebarHeader>
           <SidebarContent>
             <SidebarGroup>

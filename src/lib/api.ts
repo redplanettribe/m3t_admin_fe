@@ -54,6 +54,9 @@ async function request<T>(
 }
 
 export const apiClient = {
+  get<T>(path: string): Promise<T> {
+    return request<T>(path, { method: "GET" })
+  },
   post<T>(path: string, body: object): Promise<T> {
     return request<T>(path, { method: "POST", body })
   },
