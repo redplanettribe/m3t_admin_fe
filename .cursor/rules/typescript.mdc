@@ -1,0 +1,13 @@
+---
+description: "TypeScript standards for the project"
+globs: ["**/*.ts", "**/*.tsx"]
+alwaysApply: false
+---
+
+# TypeScript
+
+- Use **strict** TypeScript; no `any` unless strictly necessary and commented.
+- **Explicit return types** for all exported functions and hooks.
+- Prefer **interface** for public contracts (props, API response shapes); use `type` for unions or mapped types.
+- Type API responses and hook return values; avoid untyped `fetch` or `data as T` without validation.
+- Use `unknown` in catch blocks; narrow or log before use.

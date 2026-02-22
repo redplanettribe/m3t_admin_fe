@@ -1,0 +1,20 @@
+---
+description: "React component patterns and shadcn usage"
+globs: "src/**/*.tsx"
+alwaysApply: false
+---
+
+# React and Components
+
+## Component Rules
+
+- Use **functional components** only.
+- **One component per file**; named export matching file name (e.g. `EventList` in `EventList.tsx`).
+- Prefer **composition** over large single components; extract subcomponents or hooks when logic grows.
+- Use **shadcn/ui** for UI primitives; import from `@/components/ui` (e.g. `Button`, `Card`, `Dialog`). Do not reinvent components that shadcn provides.
+- Use **Tailwind** for layout and overrides; avoid inline styles except for truly dynamic values (e.g. width from props).
+
+## Structure
+
+- Props: define an `interface` for component props.
+- Keep components focused; move data fetching to hooks (TanStack Query) and keep components presentational where possible.

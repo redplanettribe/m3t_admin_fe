@@ -1,0 +1,12 @@
+---
+description: "Tailwind and shadcn styling conventions"
+globs: ["src/**/*.tsx", "src/**/*.css"]
+alwaysApply: false
+---
+
+# Styling
+
+- Use **Tailwind CSS** only for styling; no separate CSS-in-JS or global CSS except for Tailwind directives and design tokens.
+- Use **shadcn primitives** for buttons, inputs, cards, dialogs, etc.; customize via Tailwind classes on the component, not by editing shadcn source unless necessary.
+- **No inline styles** except for values that are truly dynamic (e.g. `width: ${percent}%`, `transform` from state).
+- **Design tokens**: Prefer Tailwind theme (e.g. `primary`, `muted`) in `tailwind.config`; use semantic class names (e.g. `text-muted-foreground`) rather than raw colors where possible.

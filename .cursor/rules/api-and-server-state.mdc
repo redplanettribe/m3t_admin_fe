@@ -1,0 +1,13 @@
+---
+description: "API and server state with TanStack Query"
+globs: ["src/hooks/**", "src/lib/**/*api*", "src/**/queries*.ts"]
+alwaysApply: false
+---
+
+# API and Server State
+
+- **All server state** goes through **TanStack Query** (`useQuery`, `useMutation`). Do not use ad-hoc `useState` + `useEffect` for API data.
+- **Query keys**: Define in a central module (e.g. `src/lib/queryKeys.ts`) and use a factory pattern (e.g. `events: { list: [...], detail: (id) => [...] }`).
+- **Mutations**: Invalidate or update relevant query keys after success so the UI stays in sync.
+- **Types**: Type request bodies and response shapes; align with backend DTOs or API spec. For API contract (endpoints, request/response shapes, definitions), use [docs/api/swagger.json](docs/api/swagger.json). Reference it as `@docs/api/swagger.json` when implementing or updating hooks.
+- **Errors**: Handle loading and error states in the UI; use TanStack Query’s `isLoading`, `isError`, `error` where appropriate.

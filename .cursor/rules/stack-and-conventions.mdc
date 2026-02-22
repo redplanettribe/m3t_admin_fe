@@ -1,0 +1,25 @@
+---
+description: "Project stack and global conventions (React, Vite, TS, Tailwind, shadcn, TanStack Query)"
+alwaysApply: true
+---
+
+# Stack and Conventions
+
+## Tech Stack
+
+- **Build**: Vite
+- **Framework**: React 19+ with TypeScript
+- **Styling**: Tailwind CSS
+- **Components**: shadcn/ui (from `@/components/ui`)
+- **Server state**: TanStack Query (React Query)
+- **Routing**: React Router
+- **Client state** (when needed): Zustand
+
+This is an event-admin SPA. SEO and SSR are not required; do not introduce Next.js, Nuxt, or SSR-focused patterns.
+
+## Conventions
+
+- **Components**: PascalCase (e.g. `EventList.tsx`)
+- **Files**: camelCase for non-components (e.g. `queryKeys.ts`, `useEvents.ts`)
+- **Paths**: Use `@/` alias for `src/` (e.g. `@/components/ui`, `@/hooks`)
+- **Layout**: `src/components/`, `src/hooks/`, `src/pages/`, `src/lib/`, `src/routes/`, `src/components/ui/` for shadcn
