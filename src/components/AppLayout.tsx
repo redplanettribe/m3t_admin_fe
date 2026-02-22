@@ -25,6 +25,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { useUserStore } from "@/store/userStore"
 
 const navMain = [
   {
@@ -47,8 +48,19 @@ const navMain = [
   },
 ]
 
+function getInitials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((s) => s[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2)
+}
+
 export function AppLayout(): React.ReactElement {
   const location = useLocation()
+  const user = useUserStore((s) => s.user)
 
   return (
     <TooltipProvider>
@@ -122,16 +134,31 @@ export function AppLayout(): React.ReactElement {
             </SidebarGroup>
           </SidebarContent>
           <SidebarFooter className="border-t border-sidebar-border">
-            <div className="flex items-center gap-2 p-2">
-              <Avatar>
-                <AvatarFallback>
-                  <User className="size-4" />
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col text-sm">
-                <span className="font-medium">Admin</span>
-                <span className="text-muted-foreground text-xs">User</span>
-              </div>
+            <div className="flex flex-col gap-2 p-2">
+              <NavLink
+                to="/account"
+                className={({ isActive }) =>
+                  `flex items-center gap-2 rounded-md p-1 -m-1 no-underline transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground"}`
+                }
+              >
+                <Avatar>
+                  <AvatarFallback>
+                    {user ? (
+                      getInitials(user.name)
+                    ) : (
+                      <User className="size-4" />
+                    )}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col text-sm min-w-0">
+                  <span className="font-medium truncate">
+                    {user?.name ?? "Admin"}
+                  </span>
+                  <span className="text-muted-foreground text-xs truncate">
+                    {user?.email ?? user?.role ?? "User"}
+                  </span>
+                </div>
+              </NavLink>
             </div>
           </SidebarFooter>
         </Sidebar>
