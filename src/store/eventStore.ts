@@ -7,6 +7,8 @@ interface EventState {
   /** Saved Sessionize API ID per event, used as default when reopening the import modal. */
   sessionizeIdByEventId: Record<string, string>
   setSessionizeIdForEvent: (eventId: string, sessionizeId: string) => void
+  /** Clear all event state (e.g. on logout). */
+  clearAll: () => void
 }
 
 export const useEventStore = create<EventState>()(
@@ -22,6 +24,8 @@ export const useEventStore = create<EventState>()(
             [eventId]: sessionizeId,
           },
         })),
+      clearAll: () =>
+        set({ activeEventId: null, sessionizeIdByEventId: {} }),
     }),
     { name: "m3t-admin-event" }
   )

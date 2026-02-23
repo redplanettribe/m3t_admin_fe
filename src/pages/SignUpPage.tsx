@@ -1,5 +1,6 @@
 import * as React from "react"
 import { Link, useNavigate } from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import type { ControllerRenderProps } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -16,6 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useSignUp } from "@/hooks/useSignUp"
 import { signUpSchema, type SignUpFormValues } from "@/lib/schemas/auth"
+import { useEventStore } from "@/store/eventStore"
 import { useUserStore } from "@/store/userStore"
 import type { SignUpRequest } from "@/types/auth"
 import { cn } from "@/lib/utils"
@@ -66,7 +68,9 @@ function PasswordWithToggle({
 
 export function SignUpPage(): React.ReactElement {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const clearAuth = useUserStore((s) => s.clearAuth)
+  const clearEventState = useEventStore((s) => s.clearAll)
   const signUp = useSignUp()
 
   const form = useForm<SignUpFormValues>({
@@ -74,6 +78,7 @@ export function SignUpPage(): React.ReactElement {
     defaultValues: {
       email: "",
       name: "",
+      last_name: "",
       password: "",
       confirmPassword: "",
     },
@@ -85,10 +90,13 @@ export function SignUpPage(): React.ReactElement {
       name: values.name,
       password: values.password,
       role: "admin",
+      ...(values.last_name?.trim() && { last_name: values.last_name.trim() }),
     }
     signUp.mutate(payload, {
       onSuccess: () => {
         clearAuth()
+        clearEventState()
+        queryClient.clear()
         navigate("/login", { replace: true })
       },
     })
@@ -132,9 +140,22 @@ export function SignUpPage(): React.ReactElement {
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Name</FormLabel>
+                <FormLabel>Names</FormLabel>
                 <FormControl>
                   <Input placeholder="Your name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="last_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Last name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Your last name" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

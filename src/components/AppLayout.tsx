@@ -44,6 +44,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query"
 import { useEventsMe } from "@/hooks/useEvents"
 import { queryKeys } from "@/lib/queryKeys"
+import { getDisplayName, getInitials } from "@/lib/user"
 import { useEventStore } from "@/store/eventStore"
 import { useUserStore } from "@/store/userStore"
 
@@ -75,16 +76,6 @@ const navMain: NavItem[] = [
 ]
 
 const CREATE_NEW_EVENT_VALUE = "__create_new__"
-
-function getInitials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .map((s) => s[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2)
-}
 
 function AppLayoutInner(): React.ReactElement {
   const location = useLocation()
@@ -233,7 +224,7 @@ function AppLayoutInner(): React.ReactElement {
                     <Avatar className="size-9 shrink-0">
                       <AvatarFallback>
                         {user ? (
-                          getInitials(user.name)
+                          getInitials(getDisplayName(user))
                         ) : (
                           <User className="size-4" />
                         )}
@@ -241,7 +232,7 @@ function AppLayoutInner(): React.ReactElement {
                     </Avatar>
                     <span className="flex flex-col text-sm min-w-0 shrink text-left group-data-[collapsible=icon]:hidden">
                       <span className="font-medium truncate">
-                        {user?.name ?? "Admin"}
+                        {getDisplayName(user) || "Admin"}
                       </span>
                       <span className="text-muted-foreground text-xs truncate">
                         {user?.email ?? user?.role ?? "User"}
@@ -255,7 +246,7 @@ function AppLayoutInner(): React.ReactElement {
                 align="center"
                 hidden={state !== "collapsed" || isMobile}
               >
-                {user?.name ?? "Account"}
+                {getDisplayName(user) || "Account"}
               </TooltipContent>
             </Tooltip>
           </div>

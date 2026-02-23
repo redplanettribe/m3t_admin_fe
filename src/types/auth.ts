@@ -1,6 +1,7 @@
 export interface SignUpRequest {
   email: string
   name: string
+  last_name?: string
   password: string
   role?: "admin" | "attendee"
 }
@@ -30,5 +31,6 @@ export interface User {
   id: string
   email: string
   name: string
+  last_name?: string
   role?: string
 }

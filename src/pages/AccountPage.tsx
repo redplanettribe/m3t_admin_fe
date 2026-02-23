@@ -1,5 +1,6 @@
 import * as React from "react"
 import { useNavigate } from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
 import { LogOut } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -10,25 +11,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { getDisplayName, getInitials } from "@/lib/user"
+import { useEventStore } from "@/store/eventStore"
 import { useUserStore } from "@/store/userStore"
-
-function getInitials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .map((s) => s[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2)
-}
 
 export function AccountPage(): React.ReactElement {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const user = useUserStore((s) => s.user)
   const clearAuth = useUserStore((s) => s.clearAuth)
+  const clearEventState = useEventStore((s) => s.clearAll)
 
   const handleLogout = () => {
     clearAuth()
+    clearEventState()
+    queryClient.clear()
     navigate("/login", { replace: true })
   }
 
@@ -43,11 +40,11 @@ export function AccountPage(): React.ReactElement {
           <div className="flex items-center gap-4">
             <Avatar className="size-12">
               <AvatarFallback className="text-lg">
-                {user ? getInitials(user.name) : "?"}
+                {user ? getInitials(getDisplayName(user)) : "?"}
               </AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle>{user?.name ?? "User"}</CardTitle>
+              <CardTitle>{getDisplayName(user) || "User"}</CardTitle>
               <CardDescription>{user?.email ?? "—"}</CardDescription>
             </div>
           </div>
@@ -55,8 +52,12 @@ export function AccountPage(): React.ReactElement {
         <CardContent className="space-y-4">
           <dl className="grid gap-2 text-sm">
             <div>
-              <dt className="text-muted-foreground">Name</dt>
+              <dt className="text-muted-foreground">First name</dt>
               <dd className="font-medium">{user?.name ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Last name</dt>
+              <dd className="font-medium">{user?.last_name ?? "—"}</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Email</dt>
