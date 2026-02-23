@@ -1,7 +1,7 @@
 import * as React from "react"
 import { useState } from "react"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
-import { CalendarDays, ChevronRight, Home, Settings, User } from "lucide-react"
+import { CalendarDays, ChevronRight, Home, Settings, User, Users } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { CreateEventModal } from "@/components/CreateEventModal"
 import {
@@ -67,6 +67,11 @@ const navMain: NavItem[] = [
     title: "Schedule",
     url: "/schedule",
     icon: CalendarDays,
+  },
+  {
+    title: "Team Members",
+    url: "/team-members",
+    icon: Users,
   },
   {
     title: "Settings",

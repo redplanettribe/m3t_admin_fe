@@ -10,6 +10,7 @@ import { SettingsPage } from "@/pages/SettingsPage"
 import { LoginPage } from "@/pages/LoginPage"
 import { SignUpPage } from "@/pages/SignUpPage"
 import { SchedulePage } from "@/pages/SchedulePage"
+import { TeamMembersPage } from "@/pages/TeamMembersPage"
 
 const routes: RouteObject[] = [
   {
@@ -59,6 +60,10 @@ const routes: RouteObject[] = [
       {
         path: "schedule",
         element: <SchedulePage/>,
+      },
+      {
+        path: "team-members",
+        element: <TeamMembersPage />,
       },
       {
         path: "settings",

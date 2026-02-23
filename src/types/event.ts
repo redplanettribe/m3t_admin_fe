@@ -53,3 +53,11 @@ export interface EventSchedule {
   rooms?: Room[]
   sessions?: Session[]
 }
+
+export interface EventTeamMember {
+  event_id: string
+  user_id: string
+  name?: string
+  last_name?: string
+  email?: string
+}
