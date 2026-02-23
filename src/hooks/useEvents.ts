@@ -48,3 +48,19 @@ export function useCreateEvent() {
     },
   })
 }
+
+export function useDeleteEvent(eventId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.delete<{ status?: string }>(`/events/${eventId}`)
+    },
+    onSuccess: () => {
+      if (!eventId) return
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.list })
+      queryClient.removeQueries({ queryKey: queryKeys.events.detail(eventId) })
+      useEventStore.getState().setActiveEventId(null)
+    },
+  })
+}
