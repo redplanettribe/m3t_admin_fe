@@ -1,7 +1,9 @@
 import * as React from "react"
+import { useState } from "react"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
 import { CalendarDays, ChevronRight, Home, Settings, User } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { CreateEventModal } from "@/components/CreateEventModal"
 import {
   Collapsible,
   CollapsibleContent,
@@ -39,7 +41,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useQueryClient } from "@tanstack/react-query"
 import { useEventsMe } from "@/hooks/useEvents"
+import { queryKeys } from "@/lib/queryKeys"
 import { useEventStore } from "@/store/eventStore"
 import { useUserStore } from "@/store/userStore"
 
@@ -70,6 +74,8 @@ const navMain: NavItem[] = [
   },
 ]
 
+const CREATE_NEW_EVENT_VALUE = "__create_new__"
+
 function getInitials(name: string): string {
   return name
     .trim()
@@ -85,8 +91,25 @@ function AppLayoutInner(): React.ReactElement {
   const user = useUserStore((s) => s.user)
   const activeEventId = useEventStore((s) => s.activeEventId)
   const setActiveEventId = useEventStore((s) => s.setActiveEventId)
+  const queryClient = useQueryClient()
   const { data: events = [], isLoading, isError } = useEventsMe()
   const { state, isMobile } = useSidebar()
+  const [createEventOpen, setCreateEventOpen] = useState(false)
+
+  const handleEventSelect = (value: string) => {
+    if (value === CREATE_NEW_EVENT_VALUE) {
+      setCreateEventOpen(true)
+    } else {
+      const previousEventId = activeEventId
+      setActiveEventId(value || null)
+      if (previousEventId) {
+        queryClient.removeQueries({ queryKey: queryKeys.events.detail(previousEventId) })
+      }
+      if (value) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(value) })
+      }
+    }
+  }
 
   return (
     <>
@@ -96,7 +119,7 @@ function AppLayoutInner(): React.ReactElement {
           <div className="group-data-[collapsible=icon]:hidden">
             <Select
               value={activeEventId ?? ""}
-              onValueChange={(id) => setActiveEventId(id || null)}
+              onValueChange={handleEventSelect}
               disabled={isLoading || isError}
             >
               <SelectTrigger className="w-full" size="sm">
@@ -112,6 +135,9 @@ function AppLayoutInner(): React.ReactElement {
                     {event.name}
                   </SelectItem>
                 ))}
+                <SelectItem value={CREATE_NEW_EVENT_VALUE}>
+                  Create new event
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -227,6 +253,7 @@ function AppLayoutInner(): React.ReactElement {
           <Outlet />
         </main>
       </SidebarInset>
+      <CreateEventModal open={createEventOpen} onOpenChange={setCreateEventOpen} />
     </>
   )
 }

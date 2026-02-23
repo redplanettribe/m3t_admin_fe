@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
+import { useEventStore } from "@/store/eventStore"
 import type { Event, EventSchedule } from "@/types/event"
 
 export function useEventsMe() {
@@ -31,6 +32,19 @@ export function useImportSessionize(eventId: string | null) {
       if (eventId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
       }
+    },
+  })
+}
+
+export function useCreateEvent() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { name: string; slug: string }) =>
+      apiClient.post<Event>("/events", body),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.list })
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(data.id) })
+      useEventStore.getState().setActiveEventId(data.id)
     },
   })
 }
