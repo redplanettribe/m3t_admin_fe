@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
 import { useEventStore } from "@/store/eventStore"
-import type { Event, EventSchedule } from "@/types/event"
+import type { Event, EventSchedule, Room } from "@/types/event"
 
 export function useEventsMe() {
   return useQuery({
@@ -61,6 +61,34 @@ export function useDeleteEvent(eventId: string | null) {
       queryClient.invalidateQueries({ queryKey: queryKeys.events.list })
       queryClient.removeQueries({ queryKey: queryKeys.events.detail(eventId) })
       useEventStore.getState().setActiveEventId(null)
+    },
+  })
+}
+
+export function useToggleRoomNotBookable(eventId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ roomId }: { roomId: string }) => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.patch<Room>(
+        `/events/${eventId}/rooms/${roomId}/not-bookable`
+      )
+    },
+    onSuccess: (updatedRoom, _variables, _context) => {
+      if (!eventId) return
+      const key = queryKeys.events.detail(eventId)
+      queryClient.setQueryData<EventSchedule>(key, (prev) => {
+        if (!prev?.rooms) {
+          queryClient.invalidateQueries({ queryKey: key })
+          return prev
+        }
+        return {
+          ...prev,
+          rooms: prev.rooms.map((r) =>
+            r.id === updatedRoom.id ? updatedRoom : r
+          ),
+        }
+      })
     },
   })
 }

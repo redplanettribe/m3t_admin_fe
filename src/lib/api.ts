@@ -60,6 +60,9 @@ export const apiClient = {
   post<T>(path: string, body: object): Promise<T> {
     return request<T>(path, { method: "POST", body })
   },
+  patch<T>(path: string, body?: object): Promise<T> {
+    return request<T>(path, { method: "PATCH", ...(body !== undefined && { body }) })
+  },
   delete<T>(path: string): Promise<T> {
     return request<T>(path, { method: "DELETE" })
   },

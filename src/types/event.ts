@@ -9,6 +9,7 @@ export interface Event {
 export interface Room {
   id: string
   name?: string
+  not_bookable?: boolean
 }
 
 /** Session with start/end for schedule placement. API may use starts_at/ends_at/room_id or camelCase. */

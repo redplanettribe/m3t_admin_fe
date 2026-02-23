@@ -1,7 +1,9 @@
 import * as React from "react"
-import { useEventSchedule } from "@/hooks/useEvents"
+import { useEventSchedule, useToggleRoomNotBookable } from "@/hooks/useEvents"
 import { useEventStore } from "@/store/eventStore"
 import type { EventSchedule, Session, SessionInput } from "@/types/event"
+import { Switch } from "@/components/ui/switch"
+import { cn } from "@/lib/utils"
 
 const PIXELS_PER_MINUTE = 3
 const TIME_LABEL_INTERVAL_MINUTES = 30
@@ -147,6 +149,7 @@ function getTimeRangeMinutes(sessions: Session[]): {
 export function SchedulePage(): React.ReactElement {
   const activeEventId = useEventStore((s) => s.activeEventId)
   const { data: schedule, isLoading, isError } = useEventSchedule(activeEventId)
+  const toggleNotBookable = useToggleRoomNotBookable(activeEventId)
 
   if (!activeEventId) {
     return (
@@ -178,7 +181,15 @@ export function SchedulePage(): React.ReactElement {
   const scheduleRecord = schedule as unknown as Record<string, unknown>
   const event = scheduleRecord.event as EventSchedule["event"]
   const rooms: EventSchedule["rooms"] = (scheduleRecord.rooms ?? []) as EventSchedule["rooms"]
-  const roomsList = rooms ?? []
+  const roomsList = (rooms ?? [])
+    .slice()
+    .sort((a, b) =>
+      Boolean(a.not_bookable) === Boolean(b.not_bookable)
+        ? 0
+        : a.not_bookable
+          ? -1
+          : 1
+    )
   const rawSessions = extractSessions(scheduleRecord)
   const sessions = rawSessions
     .map((s) => normalizeSession(s as SessionInput))
@@ -241,15 +252,39 @@ export function SchedulePage(): React.ReactElement {
               >
                 Time
               </div>
-              {roomsList.map((room) => (
-                <div
-                  key={room.id}
-                  className="shrink-0 border-r px-2 py-2 text-sm font-medium last:border-r-0"
-                  style={{ width: ROOM_COLUMN_WIDTH }}
-                >
-                  {room.name ?? room.id}
-                </div>
-              ))}
+              {roomsList.map((room) => {
+                const notBookable = Boolean(room.not_bookable)
+                const isToggling =
+                  toggleNotBookable.isPending &&
+                  toggleNotBookable.variables?.roomId === room.id
+                return (
+                  <div
+                    key={room.id}
+                    className={cn(
+                      "shrink-0 border-r px-2 py-2 text-sm font-medium last:border-r-0 flex flex-col gap-1",
+                      notBookable &&
+                        "bg-muted/80 text-muted-foreground opacity-90"
+                    )}
+                    style={{ width: ROOM_COLUMN_WIDTH }}
+                  >
+                    <span className="truncate">{room.name ?? room.id}</span>
+                    <label className="flex items-center gap-2 cursor-pointer justify-start">
+                      <Switch
+                        size="sm"
+                        checked={!notBookable}
+                        disabled={isToggling}
+                        onCheckedChange={() =>
+                          toggleNotBookable.mutate({ roomId: room.id })
+                        }
+                        title={notBookable ? "Click to set bookable" : "Click to set not bookable"}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        {isToggling ? "…" : notBookable ? "Not bookable" : "Bookable"}
+                      </span>
+                    </label>
+                  </div>
+                )
+              })}
             </div>
             <div
               className="flex min-w-max relative flex-none"
@@ -291,7 +326,10 @@ export function SchedulePage(): React.ReactElement {
               {roomsList.map((room, roomIndex) => (
                 <div
                   key={room.id}
-                  className="shrink-0 relative border-r last:border-r-0 overflow-visible bg-background"
+                  className={cn(
+                    "shrink-0 relative border-r last:border-r-0 overflow-visible",
+                    room.not_bookable ? "bg-muted/40" : "bg-background"
+                  )}
                   style={{ width: ROOM_COLUMN_WIDTH, minHeight: bodyHeight, height: bodyHeight }}
                 >
                   {timeLabels.map((minutes) => (
@@ -319,10 +357,16 @@ export function SchedulePage(): React.ReactElement {
                     const speakerLabel =
                       session.speaker ??
                       (session.speakers?.length ? session.speakers.join(", ") : null)
+                    const roomNotBookable = Boolean(room.not_bookable)
                     return (
                       <div
                         key={session.id}
-                        className="absolute left-1 right-1 rounded-md border border-primary/30 bg-primary/15 shadow-sm p-2 overflow-hidden flex flex-col gap-0.5"
+                        className={cn(
+                          "absolute left-1 right-1 rounded-md border shadow-sm p-2 overflow-hidden flex flex-col gap-0.5",
+                          roomNotBookable
+                            ? "border-muted bg-muted/60 text-muted-foreground opacity-90"
+                            : "border-primary/30 bg-primary/15"
+                        )}
                         style={{
                           top,
                           height: Math.max(height, 44),
