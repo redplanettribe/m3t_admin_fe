@@ -21,6 +21,7 @@ export interface Session {
   description?: string
   speaker?: string
   speakers?: string[]
+  tags?: string[]
 }
 
 /** Raw session from API (may be camelCase or different field names). */
@@ -43,6 +44,7 @@ export type SessionInput = Session | {
   description?: string
   speaker?: string
   speakers?: string[]
+  tags?: string[]
 }
 
 export interface EventSchedule {

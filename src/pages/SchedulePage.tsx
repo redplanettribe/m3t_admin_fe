@@ -10,6 +10,51 @@ const TIME_COLUMN_WIDTH = 64
 const MIN_BODY_HEIGHT_PX = 320
 const SCROLL_RIGHT_PADDING_PX = 24
 
+const TAG_PILL_CLASS =
+  "text-[10px] rounded-full bg-muted px-1.5 py-0.5 text-muted-foreground shrink-0"
+const TAGS_WRAPPER_MAX_LINES = 2
+const LINE_HEIGHT_PX = 18
+
+/** Tags with max 2 lines; ellipsis pill appears inline when content overflows. */
+function SessionTags({ tags }: { tags: string[] }) {
+  const wrapperRef = React.useRef<HTMLDivElement>(null)
+  const [showEllipsis, setShowEllipsis] = React.useState(false)
+  const [visibleCount, setVisibleCount] = React.useState(tags.length)
+  const maxHeight = TAGS_WRAPPER_MAX_LINES * LINE_HEIGHT_PX
+
+  React.useEffect(() => {
+    setVisibleCount(tags.length)
+    setShowEllipsis(false)
+  }, [tags])
+
+  React.useEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    const overflow = el.scrollHeight > el.clientHeight
+    if (!showEllipsis && overflow) {
+      setShowEllipsis(true)
+    } else if (showEllipsis && overflow && visibleCount > 0) {
+      setVisibleCount((n) => n - 1)
+    }
+  }, [tags, showEllipsis, visibleCount])
+
+  const visibleTags = showEllipsis ? tags.slice(0, visibleCount) : tags
+  return (
+    <div
+      ref={wrapperRef}
+      className="flex flex-wrap gap-1 mt-1 overflow-hidden min-h-0"
+      style={{ maxHeight }}
+    >
+      {visibleTags.map((tag) => (
+        <span key={tag} className={TAG_PILL_CLASS}>
+          {tag}
+        </span>
+      ))}
+      {showEllipsis && <span className={TAG_PILL_CLASS}>…</span>}
+    </div>
+  )
+}
+
 /** Extract sessions array from API response (may be under different keys). */
 function extractSessions(schedule: Record<string, unknown>): unknown[] {
   const s = schedule.sessions
@@ -47,6 +92,11 @@ function normalizeSession(s: SessionInput): Session | null {
     (s as { endTime?: string }).endTime ??
     (s as { end?: string }).end
   if (!roomId || !startsAt || !endsAt) return null
+  const tagsRaw = s.tags ?? (raw.tags as string[] | undefined)
+  const tags =
+    Array.isArray(tagsRaw) && tagsRaw.every((t) => typeof t === "string")
+      ? tagsRaw
+      : undefined
   return {
     id: String(s.id),
     room_id: String(roomId),
@@ -56,6 +106,7 @@ function normalizeSession(s: SessionInput): Session | null {
     description: s.description,
     speaker: s.speaker,
     speakers: s.speakers,
+    tags,
   }
 }
 
@@ -294,6 +345,9 @@ export function SchedulePage(): React.ReactElement {
                           <div className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">
                             {session.description}
                           </div>
+                        )}
+                        {session.tags && session.tags.length > 0 && (
+                          <SessionTags tags={session.tags} />
                         )}
                       </div>
                     )
