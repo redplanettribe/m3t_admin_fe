@@ -6,10 +6,10 @@ import { AccountPage } from "@/pages/AccountPage"
 import { HomePage } from "@/pages/HomePage"
 import { EventsPage } from "@/pages/EventsPage"
 import { EventNewPage } from "@/pages/EventNewPage"
-import { SchedulePage } from "@/pages/SchedulePage"
 import { SettingsPage } from "@/pages/SettingsPage"
 import { LoginPage } from "@/pages/LoginPage"
 import { SignUpPage } from "@/pages/SignUpPage"
+import { SchedulePage } from "@/pages/SchedulePage"
 
 const routes: RouteObject[] = [
   {
@@ -58,7 +58,7 @@ const routes: RouteObject[] = [
       },
       {
         path: "schedule",
-        element: <SchedulePage />,
+        element: <SchedulePage/>,
       },
       {
         path: "settings",

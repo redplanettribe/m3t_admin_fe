@@ -7,12 +7,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { SessionizeImportModal } from "@/components/SessionizeImportModal"
 import { useEventSchedule } from "@/hooks/useEvents"
 import { useEventStore } from "@/store/eventStore"
 
 export function HomePage(): React.ReactElement {
   const activeEventId = useEventStore((s) => s.activeEventId)
+  const savedSessionizeId = useEventStore((s) =>
+    activeEventId ? s.sessionizeIdByEventId[activeEventId] ?? "" : ""
+  )
   const { data: schedule, isLoading, isError } = useEventSchedule(activeEventId)
+  const [sessionizeOpen, setSessionizeOpen] = React.useState(false)
 
   if (activeEventId && schedule) {
     const { event, rooms = [], sessions = [] } = schedule
@@ -22,6 +27,13 @@ export function HomePage(): React.ReactElement {
         <p className="text-muted-foreground">
           Event details for the selected event. Slug: <code className="rounded bg-muted px-1">{event.slug}</code>
         </p>
+        <Button onClick={() => setSessionizeOpen(true)}>Update from Sessionize</Button>
+        <SessionizeImportModal
+          eventId={activeEventId}
+          open={sessionizeOpen}
+          onOpenChange={setSessionizeOpen}
+          defaultSessionizeId={savedSessionizeId}
+        />
         <div className="grid gap-4 sm:grid-cols-2 max-w-2xl">
           <Card>
             <CardHeader>
