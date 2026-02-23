@@ -96,18 +96,16 @@ export function HomePage(): React.ReactElement {
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold tracking-tight">Home</h2>
       <p className="text-muted-foreground">
-        Welcome to the M3T event admin. Use the layout and navigation to manage events and settings.
+        Select an event from the dropdown in the sidebar or create a new event to get started.
       </p>
       <Card className="max-w-md">
         <CardHeader>
           <CardTitle>Getting started</CardTitle>
           <CardDescription>
-            Select an event from the sidebar dropdown to view its details here.
+            Select an event from the dropdown in the sidebar or create a new event to get started.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Button>Example button</Button>
-        </CardContent>
+        <CardContent />
       </Card>
     </div>
   )

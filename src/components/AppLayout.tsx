@@ -148,6 +148,7 @@ function AppLayoutInner(): React.ReactElement {
               <SidebarMenu>
                 {navMain.map((item) => {
                     const subItems = "items" in item ? item.items : undefined
+                    const isDisabled = !activeEventId && item.url !== "/"
                     return subItems ? (
                       <Collapsible
                         key={item.title}
@@ -186,6 +187,19 @@ function AppLayoutInner(): React.ReactElement {
                           </CollapsibleContent>
                         </SidebarMenuItem>
                       </Collapsible>
+                    ) : isDisabled ? (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton
+                          asChild
+                          tooltip="Select an event first"
+                          className="opacity-50 pointer-events-none cursor-not-allowed text-muted-foreground"
+                        >
+                          <span>
+                            <item.icon />
+                            <span>{item.title}</span>
+                          </span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
                     ) : (
                       <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton
