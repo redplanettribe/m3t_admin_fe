@@ -226,26 +226,28 @@ function AppLayoutInner(): React.ReactElement {
                 <NavLink
                   to="/account"
                   className={({ isActive }) =>
-                    `flex items-center gap-2 rounded-md p-1 -m-1 no-underline transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground"}`
+                    `flex items-center rounded-md p-1 -m-1 no-underline transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground"}`
                   }
                 >
-                  <Avatar>
-                    <AvatarFallback>
-                      {user ? (
-                        getInitials(user.name)
-                      ) : (
-                        <User className="size-4" />
-                      )}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col text-sm min-w-0 group-data-[collapsible=icon]:hidden">
-                    <span className="font-medium truncate">
-                      {user?.name ?? "Admin"}
+                  <span className="flex flex-row flex-nowrap items-center gap-3 min-w-0 w-full">
+                    <Avatar className="size-9 shrink-0">
+                      <AvatarFallback>
+                        {user ? (
+                          getInitials(user.name)
+                        ) : (
+                          <User className="size-4" />
+                        )}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="flex flex-col text-sm min-w-0 shrink text-left group-data-[collapsible=icon]:hidden">
+                      <span className="font-medium truncate">
+                        {user?.name ?? "Admin"}
+                      </span>
+                      <span className="text-muted-foreground text-xs truncate">
+                        {user?.email ?? user?.role ?? "User"}
+                      </span>
                     </span>
-                    <span className="text-muted-foreground text-xs truncate">
-                      {user?.email ?? user?.role ?? "User"}
-                    </span>
-                  </div>
+                  </span>
                 </NavLink>
               </TooltipTrigger>
               <TooltipContent
