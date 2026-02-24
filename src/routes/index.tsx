@@ -8,21 +8,10 @@ import { EventsPage } from "@/pages/EventsPage"
 import { EventNewPage } from "@/pages/EventNewPage"
 import { SettingsPage } from "@/pages/SettingsPage"
 import { LoginPage } from "@/pages/LoginPage"
-import { SignUpPage } from "@/pages/SignUpPage"
 import { SchedulePage } from "@/pages/SchedulePage"
 import { TeamMembersPage } from "@/pages/TeamMembersPage"
 
 const routes: RouteObject[] = [
-  {
-    path: "/signup",
-    element: <AuthLayout />,
-    children: [
-      {
-        index: true,
-        element: <SignUpPage />,
-      },
-    ],
-  },
   {
     path: "/login",
     element: <AuthLayout />,

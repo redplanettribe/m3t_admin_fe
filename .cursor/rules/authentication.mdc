@@ -1,0 +1,23 @@
+---
+description: "Passwordless authentication flow and auth-related code"
+globs: ["src/types/auth.ts", "src/lib/schemas/auth.ts", "src/hooks/use*Login*.ts", "src/pages/LoginPage.tsx", "src/store/userStore.ts", "src/components/RequireAuth.tsx", "src/lib/api.ts"]
+alwaysApply: false
+---
+
+# Authentication
+
+The app uses **passwordless** login only. There is no signup flow; users go straight to login.
+
+## Login flow
+
+1. **Request code**: User enters email → `POST /auth/login/request` with `{ email }`. Backend sends a one-time code to the email.
+2. **Verify code**: User enters the code → `POST /auth/login/verify` with `{ email, code }`. Backend returns `{ token, token_type, user }`.
+3. On success, call `setAuth(user, token)` from `useUserStore` and navigate to `/`.
+
+## Conventions
+
+- **Types**: Use `RequestLoginCodeRequest`, `VerifyLoginCodeRequest`, and `LoginResponse` from `@/types/auth`. Align with [docs/api/swagger.json](docs/api/swagger.json) auth definitions.
+- **Hooks**: `useRequestLoginCode()` and `useVerifyLoginCode()` in `src/hooks/`. Mutation keys live under `queryKeys.auth` in `src/lib/queryKeys.ts`.
+- **Token**: Stored in Zustand via `useUserStore` (persisted as `m3t-admin-user`). The API client in `src/lib/api.ts` reads the token and sends `Authorization: Bearer <token>` on requests.
+- **Protected routes**: Wrap authenticated routes with `RequireAuth`; it redirects to `/login` when `user` is null.
+- **No signup**: Do not add signup routes, pages, or hooks. Do not link to a signup flow from the login page.

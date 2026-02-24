@@ -5,8 +5,8 @@
  */
 export const queryKeys = {
   auth: {
-    signup: ["auth", "signup"] as const,
-    login: ["auth", "login"] as const,
+    requestLoginCode: ["auth", "requestLoginCode"] as const,
+    verifyLoginCode: ["auth", "verifyLoginCode"] as const,
   },
   events: {
     list: ["events", "me"] as const,

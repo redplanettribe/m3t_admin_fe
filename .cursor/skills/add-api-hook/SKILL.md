@@ -9,7 +9,7 @@ Add a TanStack Query hook for a backend endpoint following project conventions.
 
 ## API contract
 
-The backend API spec lives in the repo at `docs/api/swagger.json`. When adding or changing a hook, read that file (or reference `@docs/api/swagger.json`) for endpoints, request body schemas (e.g. `CreateEventRequest`, `LoginRequest`), and response shape (`APIResponse` / `APIError`). Type the hook to match these definitions.
+The backend API spec lives in the repo at `docs/api/swagger.json`. When adding or changing a hook, read that file (or reference `@docs/api/swagger.json`) for endpoints, request body schemas (e.g. `CreateEventRequest`, `RequestLoginCodeRequest`, `VerifyLoginCodeRequest`), and response shape (`APIResponse` / `APIError`). Type the hook to match these definitions.
 
 ## Query key convention
 

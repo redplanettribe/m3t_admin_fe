@@ -1,14 +1,10 @@
-export interface SignUpRequest {
+export interface RequestLoginCodeRequest {
   email: string
-  name: string
-  last_name?: string
-  password: string
-  role?: "admin" | "attendee"
 }
 
-export interface LoginRequest {
+export interface VerifyLoginCodeRequest {
   email: string
-  password: string
+  code: string
 }
 
 export interface LoginResponse {
