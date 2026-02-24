@@ -25,7 +25,7 @@ export function HomePage(): React.ReactElement {
       <div className="space-y-6">
         <h2 className="text-2xl font-semibold tracking-tight">{event.name}</h2>
         <p className="text-muted-foreground">
-          Event details for the selected event. Slug: <code className="rounded bg-muted px-1">{event.slug}</code>
+          Event Code: <code className="rounded bg-muted px-1">{event.event_code}</code>
         </p>
         <Button onClick={() => setSessionizeOpen(true)}>Update from Sessionize</Button>
         <SessionizeImportModal

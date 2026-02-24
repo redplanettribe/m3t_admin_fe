@@ -39,12 +39,12 @@ export function CreateEventModal({
 
   const form = useForm<CreateEventFormValues>({
     resolver: zodResolver(createEventSchema),
-    defaultValues: { name: "", slug: "" },
+    defaultValues: { name: "" },
   })
 
   React.useEffect(() => {
     if (open) {
-      form.reset({ name: "", slug: "" })
+      form.reset({ name: "" })
     }
   }, [open, form])
 
@@ -52,7 +52,7 @@ export function CreateEventModal({
     createEvent.mutate(values, {
         onSuccess: () => {
         onOpenChange(false)
-        form.reset({ name: "", slug: "" })
+        form.reset({ name: "" })
       },
     })
   }
@@ -63,7 +63,7 @@ export function CreateEventModal({
         <DialogHeader>
           <DialogTitle>Create new event</DialogTitle>
           <DialogDescription>
-            Enter a name and URL-friendly slug for the new event. You can change them later in settings.
+            Enter a name for the new event. You can change it later in settings.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -89,23 +89,6 @@ export function CreateEventModal({
                   <FormControl>
                     <Input
                       placeholder="e.g. My Conference 2025"
-                      autoComplete="off"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="slug"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Slug</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="e.g. my-conference-2025"
                       autoComplete="off"
                       {...field}
                     />

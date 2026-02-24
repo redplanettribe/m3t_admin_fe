@@ -39,7 +39,7 @@ export function useImportSessionize(eventId: string | null) {
 export function useCreateEvent() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (body: { name: string; slug: string }) =>
+    mutationFn: (body: { name: string }) =>
       apiClient.post<Event>("/events", body),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.events.list })
