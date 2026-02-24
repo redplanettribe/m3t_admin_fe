@@ -8,6 +8,9 @@ export const queryKeys = {
     requestLoginCode: ["auth", "requestLoginCode"] as const,
     verifyLoginCode: ["auth", "verifyLoginCode"] as const,
   },
+  users: {
+    me: ["users", "me"] as const,
+  },
   events: {
     list: ["events", "me"] as const,
     detail: (id: string) => ["events", id] as const,

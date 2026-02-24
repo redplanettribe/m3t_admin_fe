@@ -30,3 +30,8 @@ export interface User {
   last_name?: string
   role?: string
 }
+
+export interface UpdateUserRequest {
+  name?: string
+  last_name?: string
+}

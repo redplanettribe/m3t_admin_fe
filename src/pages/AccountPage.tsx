@@ -1,8 +1,9 @@
 import * as React from "react"
 import { useNavigate } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { LogOut } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -11,7 +12,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { getDisplayName, getInitials } from "@/lib/user"
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { useUpdateUser } from "@/hooks/useUser"
+import {
+  updateProfileSchema,
+  type UpdateProfileFormValues,
+} from "@/lib/schemas/account"
+import { cn } from "@/lib/utils"
 import { useEventStore } from "@/store/eventStore"
 import { useUserStore } from "@/store/userStore"
 
@@ -21,6 +36,34 @@ export function AccountPage(): React.ReactElement {
   const user = useUserStore((s) => s.user)
   const clearAuth = useUserStore((s) => s.clearAuth)
   const clearEventState = useEventStore((s) => s.clearAll)
+  const updateUser = useUpdateUser()
+
+  const form = useForm<UpdateProfileFormValues>({
+    resolver: zodResolver(updateProfileSchema),
+    defaultValues: {
+      name: user?.name ?? "",
+      last_name: user?.last_name ?? "",
+    },
+  })
+
+  React.useEffect(() => {
+    if (user) {
+      form.reset({
+        name: user.name ?? "",
+        last_name: user.last_name ?? "",
+      })
+    }
+  }, [user?.id, user?.name, user?.last_name, form])
+
+  const onSubmit = (values: UpdateProfileFormValues) => {
+    updateUser.mutate(
+      {
+        name: values.name || undefined,
+        last_name: values.last_name || undefined,
+      },
+      { onSuccess: () => updateUser.reset() }
+    )
+  }
 
   const handleLogout = () => {
     clearAuth()
@@ -37,43 +80,78 @@ export function AccountPage(): React.ReactElement {
       </p>
       <Card className="max-w-md">
         <CardHeader>
-          <div className="flex items-center gap-4">
-            <Avatar className="size-12">
-              <AvatarFallback className="text-lg">
-                {user ? getInitials(getDisplayName(user)) : "?"}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <CardTitle>{getDisplayName(user) || "User"}</CardTitle>
-              <CardDescription>{user?.email ?? "—"}</CardDescription>
-            </div>
-          </div>
+          <CardTitle>Your profile</CardTitle>
+          <CardDescription>{user?.email ?? "—"}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <dl className="grid gap-2 text-sm">
-            <div>
-              <dt className="text-muted-foreground">First name</dt>
-              <dd className="font-medium">{user?.name ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Last name</dt>
-              <dd className="font-medium">{user?.last_name ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Email</dt>
-              <dd className="font-medium">{user?.email ?? "—"}</dd>
-            </div>
-            {user?.role != null && (
-              <div>
-                <dt className="text-muted-foreground">Role</dt>
-                <dd className="font-medium">{user.role}</dd>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {updateUser.isError && (
+                <p
+                  className={cn(
+                    "rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                  )}
+                  role="alert"
+                >
+                  {updateUser.error instanceof Error
+                    ? updateUser.error.message
+                    : "Failed to update profile"}
+                </p>
+              )}
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="First name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="last_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Last name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="space-y-2">
+                <FormLabel>Email</FormLabel>
+                <Input
+                  type="email"
+                  value={user?.email ?? ""}
+                  disabled
+                  className="bg-muted"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Email cannot be changed.
+                </p>
               </div>
-            )}
-          </dl>
-          <Button variant="outline" onClick={handleLogout} className="gap-2">
-            <LogOut className="size-4" />
-            Logout
-          </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit" disabled={updateUser.isPending}>
+                  {updateUser.isPending ? "Saving…" : "Update profile"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleLogout}
+                  className="gap-2"
+                >
+                  <LogOut className="size-4" />
+                  Logout
+                </Button>
+              </div>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </div>

@@ -1,8 +1,7 @@
 import * as React from "react"
 import { useState } from "react"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
-import { CalendarDays, ChevronRight, Home, Settings, User, Users } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { CalendarDays, ChevronRight, Home, Settings, Users } from "lucide-react"
 import { CreateEventModal } from "@/components/CreateEventModal"
 import {
   Collapsible,
@@ -44,7 +43,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query"
 import { useEventsMe } from "@/hooks/useEvents"
 import { queryKeys } from "@/lib/queryKeys"
-import { getDisplayName, getInitials } from "@/lib/user"
+import { getDisplayName } from "@/lib/user"
 import { useEventStore } from "@/store/eventStore"
 import { useUserStore } from "@/store/userStore"
 
@@ -226,15 +225,6 @@ function AppLayoutInner(): React.ReactElement {
                   }
                 >
                   <span className="flex flex-row flex-nowrap items-center gap-3 min-w-0 w-full">
-                    <Avatar className="size-9 shrink-0">
-                      <AvatarFallback>
-                        {user ? (
-                          getInitials(getDisplayName(user))
-                        ) : (
-                          <User className="size-4" />
-                        )}
-                      </AvatarFallback>
-                    </Avatar>
                     <span className="flex flex-col text-sm min-w-0 shrink text-left group-data-[collapsible=icon]:hidden">
                       <span className="font-medium truncate">
                         {getDisplayName(user) || "Admin"}
