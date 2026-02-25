@@ -1,6 +1,15 @@
 import * as React from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { useEventSchedule, useToggleRoomNotBookable, useUpdateSessionSchedule } from "@/hooks/useEvents"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { useEventSchedule, useToggleRoomNotBookable, useUpdateSessionSchedule, useDeleteSession } from "@/hooks/useEvents"
 import { useSessionDrag } from "@/hooks/useSessionDrag"
 import { useEventStore } from "@/store/eventStore"
 import type { EventSchedule, Session, SessionInput } from "@/types/event"
@@ -113,7 +122,9 @@ export function SchedulePage(): React.ReactElement {
   const { data: schedule, isLoading, isError } = useEventSchedule(activeEventId)
   const toggleNotBookable = useToggleRoomNotBookable(activeEventId)
   const updateSessionSchedule = useUpdateSessionSchedule(activeEventId)
+  const deleteSession = useDeleteSession(activeEventId)
   const [sessionizeOpen, setSessionizeOpen] = React.useState(false)
+  const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null)
 
   const scheduleRecord = schedule != null ? (schedule as unknown as Record<string, unknown>) : null
   const rooms: EventSchedule["rooms"] = (scheduleRecord?.rooms ?? []) as EventSchedule["rooms"]
@@ -341,6 +352,7 @@ export function SchedulePage(): React.ReactElement {
                         height={height}
                         roomNotBookable={roomNotBookable}
                         eventId={activeEventId ?? undefined}
+                        onDeleteClick={(s) => setSessionToDelete(s)}
                         isDraggingOrResizing={isActive}
                         previewTransform={previewTransform}
                         onPointerDown={(e, mode) =>
@@ -360,6 +372,67 @@ export function SchedulePage(): React.ReactElement {
       {roomsList.length > 0 && sessions.length === 0 && (
         <p className="text-muted-foreground text-sm">No sessions scheduled.</p>
       )}
+
+      <Dialog
+        open={sessionToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSessionToDelete(null)
+            if (!deleteSession.isPending) deleteSession.reset()
+          }
+        }}
+      >
+        <DialogContent showCloseButton>
+          <DialogHeader>
+            <DialogTitle>Delete session</DialogTitle>
+            <DialogDescription>
+              This will permanently delete the session
+              {sessionToDelete?.title ? ` "${sessionToDelete.title}"` : ""}. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {deleteSession.isError && (
+              <p
+                className={cn(
+                  "rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                )}
+                role="alert"
+              >
+                {deleteSession.error instanceof Error
+                  ? deleteSession.error.message
+                  : "Failed to delete session"}
+              </p>
+            )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setSessionToDelete(null)
+                  if (!deleteSession.isPending) deleteSession.reset()
+                }}
+                disabled={deleteSession.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => {
+                  if (!sessionToDelete) return
+                  deleteSession.mutate(
+                    { sessionId: sessionToDelete.id },
+                    { onSuccess: () => setSessionToDelete(null) }
+                  )
+                }}
+                disabled={deleteSession.isPending}
+              >
+                {deleteSession.isPending ? "Deleting…" : "Delete"}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

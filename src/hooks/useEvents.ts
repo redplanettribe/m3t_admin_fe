@@ -70,6 +70,22 @@ export function useDeleteRoom(eventId: string | null) {
   })
 }
 
+export function useDeleteSession(eventId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ sessionId }: { sessionId: string }) => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.delete<{ status?: string }>(
+        `/events/${eventId}/sessions/${sessionId}`
+      )
+    },
+    onSuccess: (_data, _variables) => {
+      if (!eventId) return
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+    },
+  })
+}
+
 export function useUpdateRoom(eventId: string | null) {
   const queryClient = useQueryClient()
   return useMutation({

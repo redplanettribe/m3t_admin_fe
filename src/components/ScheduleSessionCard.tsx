@@ -3,7 +3,7 @@ import { Link } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import type { Session } from "@/types/event"
 import { Button } from "@/components/ui/button"
-import { ExternalLink } from "lucide-react"
+import { ExternalLink, Trash2 } from "lucide-react"
 
 const TAG_PILL_CLASS =
   "text-[10px] rounded-full bg-muted px-1.5 py-0.5 text-muted-foreground shrink-0"
@@ -60,6 +60,8 @@ export interface ScheduleSessionCardProps {
   roomNotBookable: boolean
   /** When set, a hover "View" button links to the session detail page. */
   eventId?: string
+  /** When set, a delete icon is shown; called when user clicks it (confirmation is handled by parent). */
+  onDeleteClick?: (session: Session) => void
   isDraggingOrResizing?: boolean
   previewTransform?: { translateX: number; translateY: number; heightDelta?: number }
   onPointerDown: (e: React.PointerEvent, mode: SessionInteractionMode) => void
@@ -71,6 +73,7 @@ export function ScheduleSessionCard({
   height,
   roomNotBookable,
   eventId,
+  onDeleteClick,
   isDraggingOrResizing = false,
   previewTransform,
   onPointerDown,
@@ -114,7 +117,7 @@ export function ScheduleSessionCard({
     >
       {eventId && (
         <div
-          className="absolute top-1 right-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute top-1 right-1 z-20 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
@@ -129,6 +132,18 @@ export function ScheduleSessionCard({
               <ExternalLink className="h-3.5 w-3.5" />
             </Link>
           </Button>
+          {onDeleteClick && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 rounded shadow-sm text-muted-foreground hover:text-destructive"
+              aria-label="Delete session"
+              onClick={() => onDeleteClick(session)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
       )}
       {/* Resize handle: top edge */}
