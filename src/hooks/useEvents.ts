@@ -9,6 +9,7 @@ import type {
   SendEventInvitationsResult,
   ListEventInvitationsResult,
   UpdateRoomRequest,
+  UpdateEventRequest,
 } from "@/types/event"
 
 export function useEventsMe() {
@@ -134,6 +135,21 @@ export function useDeleteEvent(eventId: string | null) {
       queryClient.invalidateQueries({ queryKey: queryKeys.events.list })
       queryClient.removeQueries({ queryKey: queryKeys.events.detail(eventId) })
       useEventStore.getState().setActiveEventId(null)
+    },
+  })
+}
+
+export function useUpdateEvent(eventId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: UpdateEventRequest) => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.patch<Event>(`/events/${eventId}`, body)
+    },
+    onSuccess: () => {
+      if (!eventId) return
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.list })
     },
   })
 }

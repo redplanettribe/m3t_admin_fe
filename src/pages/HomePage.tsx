@@ -6,21 +6,48 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { EditEventModal } from "@/components/EditEventModal"
 import { useEventSchedule } from "@/hooks/useEvents"
 import { useEventStore } from "@/store/eventStore"
 
 export function HomePage(): React.ReactElement {
   const activeEventId = useEventStore((s) => s.activeEventId)
   const { data: schedule, isLoading, isError } = useEventSchedule(activeEventId)
+  const [editOpen, setEditOpen] = React.useState(false)
 
   if (activeEventId && schedule) {
     const { event, rooms = [], sessions = [] } = schedule
+    const hasLocation =
+      event.location_lat != null && event.location_lng != null
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-semibold tracking-tight">{event.name}</h2>
-        <p className="text-muted-foreground">
-          Event Code: <code className="rounded bg-muted px-1">{event.event_code}</code>
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight">{event.name}</h2>
+            <p className="text-muted-foreground">
+              Event Code: <code className="rounded bg-muted px-1">{event.event_code}</code>
+            </p>
+            {event.date && (
+              <p className="text-muted-foreground text-sm mt-1">
+                Date: {event.date.slice(0, 10)}
+              </p>
+            )}
+            {event.description && (
+              <p className="text-muted-foreground text-sm mt-2 max-w-2xl">
+                {event.description}
+              </p>
+            )}
+            {hasLocation && (
+              <p className="text-muted-foreground text-sm mt-1">
+                Location: {event.location_lat}, {event.location_lng}
+              </p>
+            )}
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+            Edit event
+          </Button>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2 max-w-2xl">
           <Card>
             <CardHeader>
@@ -57,6 +84,11 @@ export function HomePage(): React.ReactElement {
             </CardContent>
           </Card>
         </div>
+        <EditEventModal
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          event={event}
+        />
       </div>
     )
   }

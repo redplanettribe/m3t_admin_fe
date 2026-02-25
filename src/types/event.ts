@@ -5,6 +5,17 @@ export interface Event {
   owner_id?: string
   created_at?: string
   updated_at?: string
+  date?: string
+  description?: string
+  location_lat?: number
+  location_lng?: number
+}
+
+export interface UpdateEventRequest {
+  date?: string
+  description?: string
+  location_lat?: number
+  location_lng?: number
 }
 
 export interface Room {
