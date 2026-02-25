@@ -10,11 +10,13 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   sendInvitationsSchema,
   type SendInvitationsFormValues,
 } from "@/lib/schemas/event"
-import { useSendEventInvitations } from "@/hooks/useEvents"
+import { useEventInvitations, useSendEventInvitations } from "@/hooks/useEvents"
 import { useEventStore } from "@/store/eventStore"
 import { cn } from "@/lib/utils"
 
@@ -31,6 +33,11 @@ function normalizeEmailsString(raw: string): string {
 
 export function AttendeesPage(): React.ReactElement {
   const activeEventId = useEventStore((s) => s.activeEventId)
+  const [page, setPage] = React.useState(1)
+  const [pageSize] = React.useState(20)
+  const [search, setSearch] = React.useState("")
+
+  const invitations = useEventInvitations(activeEventId, { page, pageSize, search })
   const sendInvitations = useSendEventInvitations(activeEventId)
   const [lastResult, setLastResult] = React.useState<{
     sent: number
@@ -71,6 +78,14 @@ export function AttendeesPage(): React.ReactElement {
 
   const isPending = sendInvitations.isPending
 
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value)
+    setPage(1)
+  }
+
+  const pagination = invitations.data?.pagination
+  const items = invitations.data?.items ?? []
+
   return (
     <div className="space-y-6">
       <div>
@@ -79,6 +94,110 @@ export function AttendeesPage(): React.ReactElement {
           Send invitation emails so people can register for this event.
         </p>
       </div>
+
+      {/* Invited emails list - above the form */}
+      <section className="space-y-4">
+        <h3 className="text-lg font-medium tracking-tight">Invited emails</h3>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <Input
+            type="search"
+            placeholder="Search by email…"
+            value={search}
+            onChange={handleSearchChange}
+            className="max-w-xs"
+            aria-label="Search invited emails"
+          />
+        </div>
+
+        {invitations.isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        ) : invitations.isError ? (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+            <p className="text-sm text-destructive">Failed to load invited emails.</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              onClick={() => invitations.refetch()}
+            >
+              Retry
+            </Button>
+          </div>
+        ) : (
+          <div className="rounded-md border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="h-10 px-4 text-left font-medium">Email</th>
+                  <th className="h-10 px-4 text-left font-medium">Sent at</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={2}
+                      className="px-4 py-8 text-center text-muted-foreground"
+                    >
+                      {search.trim()
+                        ? "No matching emails."
+                        : "No invitations sent yet."}
+                    </td>
+                  </tr>
+                ) : (
+                  items.map((inv) => (
+                    <tr key={inv.id} className="border-b last:border-0">
+                      <td className="px-4 py-3">{inv.email ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {inv.sent_at
+                          ? new Date(inv.sent_at).toLocaleString()
+                          : "—"}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {pagination && pagination.total_pages > 0 && (
+          <div className="flex flex-wrap items-center gap-4">
+            <p className="text-sm text-muted-foreground">
+              Page {pagination.page} of {pagination.total_pages}
+              {pagination.total > 0 &&
+                ` (${pagination.total} total)`}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={pagination.page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={pagination.page >= pagination.total_pages}
+                onClick={() =>
+                  setPage((p) => Math.min(pagination.total_pages, p + 1))
+                }
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </section>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-w-xl">

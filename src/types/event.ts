@@ -63,6 +63,28 @@ export interface EventTeamMember {
   email?: string
 }
 
+/** Single invitation from GET /events/{eventID}/invitations */
+export interface EventInvitation {
+  id: string
+  email?: string
+  event_id: string
+  sent_at?: string
+}
+
+/** Pagination metadata from list endpoints */
+export interface PaginationMeta {
+  page: number
+  page_size: number
+  total: number
+  total_pages: number
+}
+
+/** Unwrapped response from GET /events/{eventID}/invitations (api returns data wrapper) */
+export interface ListEventInvitationsResult {
+  items: EventInvitation[]
+  pagination: PaginationMeta
+}
+
 /** Response from POST /events/{eventID}/invitations */
 export interface SendEventInvitationsResult {
   sent: number

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
 import { useEventStore } from "@/store/eventStore"
-import type { Event, EventSchedule, Room, SendEventInvitationsResult } from "@/types/event"
+import type { Event, EventSchedule, Room, SendEventInvitationsResult, ListEventInvitationsResult } from "@/types/event"
 
 export function useEventsMe() {
   return useQuery({
@@ -93,7 +93,38 @@ export function useToggleRoomNotBookable(eventId: string | null) {
   })
 }
 
+export interface UseEventInvitationsParams {
+  page: number
+  pageSize: number
+  search?: string
+}
+
+export function useEventInvitations(
+  eventId: string | null,
+  params: UseEventInvitationsParams
+) {
+  const { page, pageSize, search = "" } = params
+  return useQuery({
+    queryKey: queryKeys.events.invitations(eventId ?? "", page, pageSize, search),
+    queryFn: () => {
+      if (!eventId) throw new Error("No event selected")
+      const searchParams = new URLSearchParams({
+        page: String(page),
+        page_size: String(pageSize),
+      })
+      if (search.trim()) {
+        searchParams.set("search", search.trim())
+      }
+      return apiClient.get<ListEventInvitationsResult>(
+        `/events/${eventId}/invitations?${searchParams.toString()}`
+      )
+    },
+    enabled: !!eventId,
+  })
+}
+
 export function useSendEventInvitations(eventId: string | null) {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ emails }: { emails: string }) => {
       if (!eventId) throw new Error("No event selected")
@@ -101,6 +132,11 @@ export function useSendEventInvitations(eventId: string | null) {
         `/events/${eventId}/invitations`,
         { emails }
       )
+    },
+    onSuccess: (_data, _variables, _context) => {
+      if (eventId) {
+        queryClient.invalidateQueries({ queryKey: ["events", eventId, "invitations"] })
+      }
     },
   })
 }
