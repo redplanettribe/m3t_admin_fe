@@ -340,6 +340,7 @@ export function SchedulePage(): React.ReactElement {
                         top={top}
                         height={height}
                         roomNotBookable={roomNotBookable}
+                        eventId={activeEventId ?? undefined}
                         isDraggingOrResizing={isActive}
                         previewTransform={previewTransform}
                         onPointerDown={(e, mode) =>

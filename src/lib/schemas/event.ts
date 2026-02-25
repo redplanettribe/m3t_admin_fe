@@ -19,6 +19,7 @@ export const updateEventSchema = z.object({
     .transform((v) => (v === "" ? undefined : v)),
 })
 
+export type UpdateEventFormInput = z.input<typeof updateEventSchema>
 export type UpdateEventFormValues = z.infer<typeof updateEventSchema>
 
 export const sendInvitationsSchema = z.object({

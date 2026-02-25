@@ -1,6 +1,9 @@
 import * as React from "react"
+import { Link } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import type { Session } from "@/types/event"
+import { Button } from "@/components/ui/button"
+import { ExternalLink } from "lucide-react"
 
 const TAG_PILL_CLASS =
   "text-[10px] rounded-full bg-muted px-1.5 py-0.5 text-muted-foreground shrink-0"
@@ -55,6 +58,8 @@ export interface ScheduleSessionCardProps {
   top: number
   height: number
   roomNotBookable: boolean
+  /** When set, a hover "View" button links to the session detail page. */
+  eventId?: string
   isDraggingOrResizing?: boolean
   previewTransform?: { translateX: number; translateY: number; heightDelta?: number }
   onPointerDown: (e: React.PointerEvent, mode: SessionInteractionMode) => void
@@ -65,6 +70,7 @@ export function ScheduleSessionCard({
   top,
   height,
   roomNotBookable,
+  eventId,
   isDraggingOrResizing = false,
   previewTransform,
   onPointerDown,
@@ -98,7 +104,7 @@ export function ScheduleSessionCard({
   return (
     <div
       className={cn(
-        "absolute left-1 right-1 rounded-md border shadow-sm overflow-hidden flex flex-col gap-0.5 select-none touch-none",
+        "absolute left-1 right-1 rounded-md border shadow-sm overflow-hidden flex flex-col gap-0.5 select-none touch-none group",
         roomNotBookable
           ? "border-muted bg-muted/60 text-muted-foreground opacity-90"
           : "border-primary/30 bg-primary/15",
@@ -106,6 +112,25 @@ export function ScheduleSessionCard({
       )}
       style={style}
     >
+      {eventId && (
+        <div
+          className="absolute top-1 right-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <Button
+            asChild
+            variant="secondary"
+            size="icon"
+            className="h-7 w-7 rounded shadow-sm"
+            aria-label="View session details"
+          >
+            <Link to={`/events/${eventId}/sessions/${session.id}`}>
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Link>
+          </Button>
+        </div>
+      )}
       {/* Resize handle: top edge */}
       <div
         className="absolute left-0 right-0 top-0 z-10 cursor-n-resize"

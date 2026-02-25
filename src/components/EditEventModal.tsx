@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input"
 import { useUpdateEvent } from "@/hooks/useEvents"
 import {
   updateEventSchema,
-  type UpdateEventFormValues,
+  type UpdateEventFormInput,
 } from "@/lib/schemas/event"
 import type { Event } from "@/types/event"
 import { cn } from "@/lib/utils"
@@ -40,7 +40,7 @@ export function EditEventModal({
 }: EditEventModalProps): React.ReactElement {
   const updateEvent = useUpdateEvent(event.id)
 
-  const form = useForm<UpdateEventFormValues>({
+  const form = useForm<UpdateEventFormInput>({
     resolver: zodResolver(updateEventSchema),
     defaultValues: {
       date: "",
@@ -62,14 +62,18 @@ export function EditEventModal({
     }
   }, [open, event?.id, event?.date, event?.description, event?.location_lat, event?.location_lng, form])
 
-  const onSubmit = (values: UpdateEventFormValues) => {
+  const onSubmit = (values: UpdateEventFormInput) => {
     const body = {
       ...(values.date !== undefined && values.date !== "" && {
         date: `${values.date}T12:00:00Z`,
       }),
-      ...(values.description !== undefined && values.description !== "" && { description: values.description }),
-      ...(values.location_lat !== undefined && { location_lat: values.location_lat }),
-      ...(values.location_lng !== undefined && { location_lng: values.location_lng }),
+      ...(values.description !== undefined && values.description !== "" && {
+        description: values.description,
+      }),
+      ...(values.location_lat !== undefined &&
+        values.location_lat !== "" && { location_lat: values.location_lat }),
+      ...(values.location_lng !== undefined &&
+        values.location_lng !== "" && { location_lng: values.location_lng }),
     }
     updateEvent.mutate(body, {
       onSuccess: () => {
