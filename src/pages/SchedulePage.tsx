@@ -1,9 +1,11 @@
 import * as React from "react"
+import { Button } from "@/components/ui/button"
 import { useEventSchedule, useToggleRoomNotBookable } from "@/hooks/useEvents"
 import { useEventStore } from "@/store/eventStore"
 import type { EventSchedule, Session, SessionInput } from "@/types/event"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
+import { SessionizeImportModal } from "@/components/SessionizeImportModal"
 
 const PIXELS_PER_MINUTE = 3
 const TIME_LABEL_INTERVAL_MINUTES = 30
@@ -148,8 +150,12 @@ function getTimeRangeMinutes(sessions: Session[]): {
 
 export function SchedulePage(): React.ReactElement {
   const activeEventId = useEventStore((s) => s.activeEventId)
+  const savedSessionizeId = useEventStore((s) =>
+    activeEventId ? s.sessionizeIdByEventId[activeEventId] ?? "" : ""
+  )
   const { data: schedule, isLoading, isError } = useEventSchedule(activeEventId)
   const toggleNotBookable = useToggleRoomNotBookable(activeEventId)
+  const [sessionizeOpen, setSessionizeOpen] = React.useState(false)
 
   if (!activeEventId) {
     return (
@@ -230,6 +236,14 @@ export function SchedulePage(): React.ReactElement {
         <h2 className="text-2xl font-semibold tracking-tight">Schedule</h2>
         <p className="text-muted-foreground">{event.name}</p>
       </div>
+
+      <Button onClick={() => setSessionizeOpen(true)}>Update from Sessionize</Button>
+      <SessionizeImportModal
+        eventId={activeEventId}
+        open={sessionizeOpen}
+        onOpenChange={setSessionizeOpen}
+        defaultSessionizeId={savedSessionizeId}
+      />
 
       {roomsList.length === 0 ? (
         <p className="text-muted-foreground">No rooms for this event.</p>
