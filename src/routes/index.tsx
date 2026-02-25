@@ -11,6 +11,8 @@ import { LoginPage } from "@/pages/LoginPage"
 import { SchedulePage } from "@/pages/SchedulePage"
 import { TeamMembersPage } from "@/pages/TeamMembersPage"
 import { AttendeesPage } from "@/pages/AttendeesPage"
+import { RoomsPage } from "@/pages/RoomsPage"
+import { RoomDetailPage } from "@/pages/RoomDetailPage"
 
 const routes: RouteObject[] = [
   {
@@ -50,6 +52,14 @@ const routes: RouteObject[] = [
       {
         path: "schedule",
         element: <SchedulePage/>,
+      },
+      {
+        path: "rooms",
+        element: <RoomsPage />,
+      },
+      {
+        path: "rooms/:roomId",
+        element: <RoomDetailPage />,
       },
       {
         path: "team-members",

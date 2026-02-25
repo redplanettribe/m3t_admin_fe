@@ -2,7 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
 import { useEventStore } from "@/store/eventStore"
-import type { Event, EventSchedule, Room, SendEventInvitationsResult, ListEventInvitationsResult } from "@/types/event"
+import type {
+  Event,
+  EventSchedule,
+  Room,
+  SendEventInvitationsResult,
+  ListEventInvitationsResult,
+  UpdateRoomRequest,
+} from "@/types/event"
 
 export function useEventsMe() {
   return useQuery({
@@ -17,6 +24,72 @@ export function useEventSchedule(eventId: string | null) {
     queryFn: () =>
       apiClient.get<EventSchedule>(`/events/${eventId}`),
     enabled: !!eventId,
+  })
+}
+
+export function useEventRooms(eventId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.events.rooms(eventId ?? ""),
+    queryFn: () => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.get<Room[]>(`/events/${eventId}/rooms`)
+    },
+    enabled: !!eventId,
+  })
+}
+
+export function useRoom(eventId: string | null, roomId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.events.room(eventId ?? "", roomId ?? ""),
+    queryFn: () => {
+      if (!eventId) throw new Error("No event selected")
+      if (!roomId) throw new Error("No room selected")
+      return apiClient.get<Room>(`/events/${eventId}/rooms/${roomId}`)
+    },
+    enabled: !!eventId && !!roomId,
+  })
+}
+
+export function useDeleteRoom(eventId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ roomId }: { roomId: string }) => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.delete<{ status?: string }>(
+        `/events/${eventId}/rooms/${roomId}`
+      )
+    },
+    onSuccess: (_data, _variables) => {
+      if (!eventId) return
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.rooms(eventId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+    },
+  })
+}
+
+export function useUpdateRoom(eventId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      roomId,
+      ...body
+    }: {
+      roomId: string
+    } & UpdateRoomRequest) => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.patch<Room>(`/events/${eventId}/rooms/${roomId}`, body)
+    },
+    onSuccess: (_room, variables) => {
+      if (!eventId) return
+      const roomKey = queryKeys.events.room(eventId, variables.roomId)
+      queryClient.invalidateQueries({ queryKey: roomKey })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.events.rooms(eventId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.events.detail(eventId),
+      })
+    },
   })
 }
 

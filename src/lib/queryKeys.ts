@@ -14,6 +14,9 @@ export const queryKeys = {
   events: {
     list: ["events", "me"] as const,
     detail: (id: string) => ["events", id] as const,
+    rooms: (eventId: string) => ["events", eventId, "rooms"] as const,
+    room: (eventId: string, roomId: string) =>
+      ["events", eventId, "rooms", roomId] as const,
     teamMembers: (eventId: string) => ["events", eventId, "team-members"] as const,
     invitations: (eventId: string, page: number, pageSize: number, search: string) =>
       ["events", eventId, "invitations", page, pageSize, search ?? ""] as const,

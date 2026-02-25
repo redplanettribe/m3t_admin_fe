@@ -11,6 +11,20 @@ export interface Room {
   id: string
   name?: string
   not_bookable?: boolean
+  capacity?: number
+  description?: string
+  how_to_get_there?: string
+  event_id?: string
+  created_at?: string
+  updated_at?: string
+  sessionize_room_id?: number
+}
+
+export interface UpdateRoomRequest {
+  capacity?: number
+  description?: string
+  how_to_get_there?: string
+  not_bookable?: boolean
 }
 
 /** Session with start/end for schedule placement. API may use starts_at/ends_at/room_id or camelCase. */
