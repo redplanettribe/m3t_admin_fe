@@ -62,3 +62,9 @@ export interface EventTeamMember {
   last_name?: string
   email?: string
 }
+
+/** Response from POST /events/{eventID}/invitations */
+export interface SendEventInvitationsResult {
+  sent: number
+  failed: string[]
+}

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
 import { useEventStore } from "@/store/eventStore"
-import type { Event, EventSchedule, Room } from "@/types/event"
+import type { Event, EventSchedule, Room, SendEventInvitationsResult } from "@/types/event"
 
 export function useEventsMe() {
   return useQuery({
@@ -89,6 +89,18 @@ export function useToggleRoomNotBookable(eventId: string | null) {
           ),
         }
       })
+    },
+  })
+}
+
+export function useSendEventInvitations(eventId: string | null) {
+  return useMutation({
+    mutationFn: ({ emails }: { emails: string }) => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.post<SendEventInvitationsResult>(
+        `/events/${eventId}/invitations`,
+        { emails }
+      )
     },
   })
 }

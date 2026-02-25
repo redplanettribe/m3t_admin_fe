@@ -1,7 +1,7 @@
 import * as React from "react"
 import { useState } from "react"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
-import { CalendarDays, ChevronRight, Home, Settings, Users } from "lucide-react"
+import { CalendarDays, ChevronRight, Home, Settings, UserPlus, Users } from "lucide-react"
 import { CreateEventModal } from "@/components/CreateEventModal"
 import {
   Collapsible,
@@ -71,6 +71,11 @@ const navMain: NavItem[] = [
     title: "Team Members",
     url: "/team-members",
     icon: Users,
+  },
+  {
+    title: "Attendees",
+    url: "/attendees",
+    icon: UserPlus,
   },
   {
     title: "Settings",

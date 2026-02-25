@@ -5,3 +5,9 @@ export const createEventSchema = z.object({
 })
 
 export type CreateEventFormValues = z.infer<typeof createEventSchema>
+
+export const sendInvitationsSchema = z.object({
+  emails: z.string().trim().min(1, "Enter at least one email"),
+})
+
+export type SendInvitationsFormValues = z.infer<typeof sendInvitationsSchema>
