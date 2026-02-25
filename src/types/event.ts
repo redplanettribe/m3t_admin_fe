@@ -51,6 +51,13 @@ export interface Session {
   tags?: string[]
 }
 
+/** Request body for PATCH /events/{eventID}/sessions/{sessionID} */
+export interface UpdateSessionScheduleRequest {
+  room_id?: string
+  start_time?: string
+  end_time?: string
+}
+
 /** Raw session from API (may be camelCase or different field names). */
 export type SessionInput = Session | {
   id: string

@@ -6,10 +6,12 @@ import type {
   Event,
   EventSchedule,
   Room,
+  Session,
   SendEventInvitationsResult,
   ListEventInvitationsResult,
   UpdateRoomRequest,
   UpdateEventRequest,
+  UpdateSessionScheduleRequest,
 } from "@/types/event"
 
 export function useEventsMe() {
@@ -103,6 +105,57 @@ export function useImportSessionize(eventId: string | null) {
         {}
       ),
     onSuccess: () => {
+      if (eventId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+      }
+    },
+  })
+}
+
+/** API returns start_time/end_time; we normalize to starts_at/ends_at for cache. */
+function sessionFromApiResponse(data: { id: string; room_id: string; start_time: string; end_time: string; title?: string; description?: string; tags?: string[] }): Session {
+  return {
+    id: data.id,
+    room_id: data.room_id,
+    starts_at: data.start_time,
+    ends_at: data.end_time,
+    title: data.title,
+    description: data.description,
+    tags: data.tags,
+  }
+}
+
+export function useUpdateSessionSchedule(eventId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      sessionId,
+      ...body
+    }: { sessionId: string } & UpdateSessionScheduleRequest) => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.patch<{ id: string; room_id: string; start_time: string; end_time: string; title?: string; description?: string; tags?: string[] }>(
+        `/events/${eventId}/sessions/${sessionId}`,
+        body
+      )
+    },
+    onSuccess: (updated, variables) => {
+      if (!eventId) return
+      const key = queryKeys.events.detail(eventId)
+      queryClient.setQueryData<EventSchedule>(key, (prev) => {
+        if (!prev?.sessions) {
+          queryClient.invalidateQueries({ queryKey: key })
+          return prev
+        }
+        const session = sessionFromApiResponse(updated)
+        return {
+          ...prev,
+          sessions: prev.sessions.map((s) =>
+            s.id === variables.sessionId ? session : s
+          ),
+        }
+      })
+    },
+    onError: () => {
       if (eventId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
       }
