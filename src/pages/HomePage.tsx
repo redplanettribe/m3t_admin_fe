@@ -1,4 +1,5 @@
 import * as React from "react"
+import { X } from "lucide-react"
 import {
   Card,
   CardContent,
@@ -7,14 +8,25 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { EditEventModal } from "@/components/EditEventModal"
-import { useEventSchedule } from "@/hooks/useEvents"
+import {
+  useEventSchedule,
+  useEventTags,
+  useAddEventTags,
+  useDeleteEventTag,
+} from "@/hooks/useEvents"
 import { useEventStore } from "@/store/eventStore"
+import { cn } from "@/lib/utils"
 
 export function HomePage(): React.ReactElement {
   const activeEventId = useEventStore((s) => s.activeEventId)
   const { data: schedule, isLoading, isError } = useEventSchedule(activeEventId)
+  const { data: eventTags = [] } = useEventTags(activeEventId)
+  const addTags = useAddEventTags(activeEventId)
+  const deleteTag = useDeleteEventTag(activeEventId)
   const [editOpen, setEditOpen] = React.useState(false)
+  const [newTagName, setNewTagName] = React.useState("")
 
   if (activeEventId && schedule) {
     const { event, rooms = [], sessions = [] } = schedule
@@ -48,7 +60,7 @@ export function HomePage(): React.ReactElement {
             Edit event
           </Button>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 max-w-2xl">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-w-4xl">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Rooms</CardTitle>
@@ -81,6 +93,94 @@ export function HomePage(): React.ReactElement {
               ) : (
                 <p className="text-sm text-muted-foreground">No sessions yet.</p>
               )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Tags</CardTitle>
+              <CardDescription>
+                Event tags for sessions. Add or remove tags.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {eventTags.length > 0 ? (
+                <ul className="flex flex-wrap gap-1.5">
+                  {eventTags.map((tag) => (
+                    <li
+                      key={tag.id}
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                      )}
+                    >
+                      {tag.name}
+                      <button
+                        type="button"
+                        className="rounded-full hover:bg-muted-foreground/20 p-0.5 -mr-0.5"
+                        onClick={() =>
+                          deleteTag.mutate({ tagId: tag.id })
+                        }
+                        disabled={deleteTag.isPending}
+                        aria-label={`Remove ${tag.name}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">No tags yet.</p>
+              )}
+              <div className="flex gap-2 flex-wrap items-center">
+                <Input
+                  placeholder="New tag name"
+                  value={newTagName}
+                  onChange={(e) => setNewTagName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      const name = newTagName.trim()
+                      if (name) {
+                        addTags.mutate(
+                          { tags: [name] },
+                          {
+                            onSuccess: () => setNewTagName(""),
+                            onError: () => {},
+                          }
+                        )
+                      }
+                    }
+                  }}
+                  className="w-[140px]"
+                />
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const name = newTagName.trim()
+                    if (name) {
+                      addTags.mutate(
+                        { tags: [name] },
+                        {
+                          onSuccess: () => setNewTagName(""),
+                          onError: () => {},
+                        }
+                      )
+                    }
+                  }}
+                  disabled={addTags.isPending || !newTagName.trim()}
+                >
+                  {addTags.isPending ? "Adding…" : "Add"}
+                </Button>
+                {addTags.isError && (
+                  <span className="text-sm text-destructive">
+                    {addTags.error?.message}
+                  </span>
+                )}
+                {deleteTag.isError && (
+                  <span className="text-sm text-destructive">
+                    {deleteTag.error?.message}
+                  </span>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>

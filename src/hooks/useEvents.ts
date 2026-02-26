@@ -64,6 +64,40 @@ export function useEventTags(eventId: string | null) {
   })
 }
 
+/** Add tags to the event by name (creates if missing). */
+export function useAddEventTags(eventId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ tags }: { tags: string[] }) => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.post<EventTag[]>(`/events/${eventId}/tags`, { tags })
+    },
+    onSuccess: () => {
+      if (eventId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.events.tags(eventId) })
+        queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+      }
+    },
+  })
+}
+
+/** Remove a tag from the event. */
+export function useDeleteEventTag(eventId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ tagId }: { tagId: string }) => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.delete<undefined>(`/events/${eventId}/tags/${tagId}`)
+    },
+    onSuccess: () => {
+      if (eventId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.events.tags(eventId) })
+        queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+      }
+    },
+  })
+}
+
 export function useRoom(eventId: string | null, roomId: string | null) {
   return useQuery({
     queryKey: queryKeys.events.room(eventId ?? "", roomId ?? ""),
