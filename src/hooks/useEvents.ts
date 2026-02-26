@@ -12,6 +12,7 @@ import type {
   UpdateRoomRequest,
   UpdateEventRequest,
   UpdateSessionScheduleRequest,
+  UpdateSessionContentRequest,
 } from "@/types/event"
 
 export function useEventsMe() {
@@ -139,6 +140,42 @@ function sessionFromApiResponse(data: { id: string; room_id: string; start_time:
     description: data.description,
     tags: data.tags,
   }
+}
+
+export function useUpdateSessionContent(eventId: string | null, sessionId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: UpdateSessionContentRequest) => {
+      if (!eventId) throw new Error("No event selected")
+      if (!sessionId) throw new Error("No session selected")
+      return apiClient.patch<{ id: string; room_id: string; start_time: string; end_time: string; title?: string; description?: string; tags?: string[] }>(
+        `/events/${eventId}/sessions/${sessionId}/content`,
+        body
+      )
+    },
+    onSuccess: (updated, _variables) => {
+      if (!eventId) return
+      const key = queryKeys.events.detail(eventId)
+      queryClient.setQueryData<EventSchedule>(key, (prev) => {
+        if (!prev?.sessions) {
+          queryClient.invalidateQueries({ queryKey: key })
+          return prev
+        }
+        const session = sessionFromApiResponse(updated)
+        return {
+          ...prev,
+          sessions: prev.sessions.map((s) =>
+            s.id === updated.id ? session : s
+          ),
+        }
+      })
+    },
+    onError: () => {
+      if (eventId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+      }
+    },
+  })
 }
 
 export function useUpdateSessionSchedule(eventId: string | null) {

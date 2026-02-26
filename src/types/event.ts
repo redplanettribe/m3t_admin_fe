@@ -58,6 +58,12 @@ export interface UpdateSessionScheduleRequest {
   end_time?: string
 }
 
+/** Request body for PATCH /events/{eventID}/sessions/{sessionID}/content */
+export interface UpdateSessionContentRequest {
+  title?: string
+  description?: string
+}
+
 /** Raw session from API (may be camelCase or different field names). */
 export type SessionInput = Session | {
   id: string

@@ -8,7 +8,9 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { useEventSchedule } from "@/hooks/useEvents"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { useEventSchedule, useUpdateSessionContent } from "@/hooks/useEvents"
 import { useEventStore } from "@/store/eventStore"
 import type { EventSchedule, Session, SessionInput } from "@/types/event"
 import { cn } from "@/lib/utils"
@@ -76,10 +78,36 @@ export function SessionDetailPage(): React.ReactElement {
 
   const { data: schedule, isLoading, isError } = useEventSchedule(eventId)
   const setActiveEventId = useEventStore((s) => s.setActiveEventId)
+  const updateContent = useUpdateSessionContent(eventId, sessionId)
+
+  const [isEditingContent, setIsEditingContent] = React.useState(false)
+  const [editTitle, setEditTitle] = React.useState("")
+  const [editDescription, setEditDescription] = React.useState("")
 
   React.useEffect(() => {
     if (eventId) setActiveEventId(eventId)
   }, [eventId, setActiveEventId])
+
+  const startEditingContent = React.useCallback((s: Session) => {
+    setEditTitle(s.title ?? "")
+    setEditDescription(s.description ?? "")
+    setIsEditingContent(true)
+  }, [])
+
+  const cancelEditingContent = React.useCallback(() => {
+    setIsEditingContent(false)
+  }, [])
+
+  const saveContent = React.useCallback(() => {
+    updateContent.mutate(
+      { title: editTitle || undefined, description: editDescription || undefined },
+      {
+        onSuccess: () => {
+          setIsEditingContent(false)
+        },
+      }
+    )
+  }, [editTitle, editDescription, updateContent])
 
   const scheduleRecord = schedule != null ? (schedule as unknown as Record<string, unknown>) : null
   const event = scheduleRecord?.event as EventSchedule["event"] | undefined
@@ -169,7 +197,7 @@ export function SessionDetailPage(): React.ReactElement {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Session details</CardTitle>
-          <CardDescription>Time, room, speakers, and description.</CardDescription>
+          <CardDescription>Time, room, and speakers.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <dl className="grid gap-3 text-sm">
@@ -190,12 +218,6 @@ export function SessionDetailPage(): React.ReactElement {
                 <dd className="mt-0.5">{speakerLabel}</dd>
               </div>
             )}
-            {session.description && (
-              <div>
-                <dt className="font-medium text-muted-foreground">Description</dt>
-                <dd className="mt-0.5 whitespace-pre-wrap">{session.description}</dd>
-              </div>
-            )}
             {session.tags && session.tags.length > 0 && (
               <div>
                 <dt className="font-medium text-muted-foreground">Tags</dt>
@@ -214,6 +236,85 @@ export function SessionDetailPage(): React.ReactElement {
               </div>
             )}
           </dl>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 gap-2">
+          <div>
+            <CardTitle className="text-base">Session content</CardTitle>
+            <CardDescription>Title and description. Only the event owner can edit.</CardDescription>
+          </div>
+          {!isEditingContent ? (
+            <Button variant="outline" size="sm" onClick={() => startEditingContent(session)}>
+              Edit content
+            </Button>
+          ) : null}
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isEditingContent ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="session-title">Title</Label>
+                <Input
+                  id="session-title"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder="Session title"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="session-description">Description</Label>
+                <textarea
+                  id="session-description"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="Session description"
+                  rows={4}
+                  className={cn(
+                    "flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none",
+                    "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+                    "placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  )}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={saveContent}
+                  disabled={updateContent.isPending}
+                >
+                  {updateContent.isPending ? "Saving…" : "Save"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={cancelEditingContent}
+                  disabled={updateContent.isPending}
+                >
+                  Cancel
+                </Button>
+                {updateContent.isError && (
+                  <span className="text-sm text-destructive self-center">
+                    {updateContent.error?.message}
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <dl className="grid gap-3 text-sm">
+              <div>
+                <dt className="font-medium text-muted-foreground">Title</dt>
+                <dd className="mt-0.5">{session.title ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="font-medium text-muted-foreground">Description</dt>
+                <dd className="mt-0.5 whitespace-pre-wrap">
+                  {session.description ?? "—"}
+                </dd>
+              </div>
+            </dl>
+          )}
         </CardContent>
       </Card>
 
