@@ -130,13 +130,20 @@ export function SchedulePage(): React.ReactElement {
   const rooms: EventSchedule["rooms"] = (scheduleRecord?.rooms ?? []) as EventSchedule["rooms"]
   const roomsList = (rooms ?? [])
     .slice()
-    .sort((a, b) =>
-      Boolean(a.not_bookable) === Boolean(b.not_bookable)
-        ? 0
-        : a.not_bookable
-          ? -1
-          : 1
-    )
+    .sort((a, b) => {
+      const aNotBookable = Boolean(a.not_bookable)
+      const bNotBookable = Boolean(b.not_bookable)
+
+      if (aNotBookable && !bNotBookable) return -1
+      if (!aNotBookable && bNotBookable) return 1
+      if (aNotBookable && bNotBookable) return 0
+
+      const aCapacity = a.capacity ?? Number.NEGATIVE_INFINITY
+      const bCapacity = b.capacity ?? Number.NEGATIVE_INFINITY
+
+      if (aCapacity === bCapacity) return 0
+      return bCapacity - aCapacity
+    })
   const rawSessions = extractSessions(scheduleRecord ?? {})
   const sessions = rawSessions
     .map((s) => normalizeSession(s as SessionInput))
