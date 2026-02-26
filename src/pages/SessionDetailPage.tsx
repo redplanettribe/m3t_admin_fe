@@ -1,5 +1,6 @@
 import * as React from "react"
 import { Link, useParams } from "react-router-dom"
+import { X } from "lucide-react"
 import {
   Card,
   CardContent,
@@ -10,7 +11,20 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useEventSchedule, useUpdateSessionContent } from "@/hooks/useEvents"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  useEventSchedule,
+  useEventTags,
+  useAddSessionTag,
+  useRemoveSessionTag,
+  useUpdateSessionContent,
+} from "@/hooks/useEvents"
 import { useEventStore } from "@/store/eventStore"
 import type { EventSchedule, EventTag, Session, SessionInput } from "@/types/event"
 import { cn } from "@/lib/utils"
@@ -78,8 +92,11 @@ export function SessionDetailPage(): React.ReactElement {
   }>()
 
   const { data: schedule, isLoading, isError } = useEventSchedule(eventId)
+  const { data: eventTags = [] } = useEventTags(eventId)
   const setActiveEventId = useEventStore((s) => s.setActiveEventId)
   const updateContent = useUpdateSessionContent(eventId, sessionId)
+  const addTag = useAddSessionTag(eventId, sessionId)
+  const removeTag = useRemoveSessionTag(eventId, sessionId)
 
   const [isEditingContent, setIsEditingContent] = React.useState(false)
   const [editTitle, setEditTitle] = React.useState("")
@@ -227,12 +244,79 @@ export function SessionDetailPage(): React.ReactElement {
                     <span
                       key={tag.id || tag.name}
                       className={cn(
-                        "rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                        "inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
                       )}
                     >
                       {tag.name}
+                      {tag.id && (
+                        <button
+                          type="button"
+                          className="rounded-full hover:bg-muted-foreground/20 p-0.5 -mr-0.5"
+                          onClick={() =>
+                            removeTag.mutate(
+                              { tagId: tag.id },
+                              { onError: () => {} }
+                            )
+                          }
+                          disabled={removeTag.isPending}
+                          aria-label={`Remove ${tag.name}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
                     </span>
                   ))}
+                </dd>
+              </div>
+            )}
+            {eventTags.length > 0 && (
+              <div>
+                <dt className="font-medium text-muted-foreground">
+                  {session.tags && session.tags.length > 0 ? "Add tag" : "Tags"}
+                </dt>
+                <dd className="mt-1">
+                  {(() => {
+                    const availableToAdd = eventTags.filter(
+                      (et) =>
+                        !session.tags?.some(
+                          (st) => st.id === et.id || st.name === et.name
+                        )
+                    )
+                    if (availableToAdd.length === 0) {
+                      return (
+                        <p className="text-xs text-muted-foreground">
+                          All event tags are on this session
+                        </p>
+                      )
+                    }
+                    return (
+                      <>
+                        <Select
+                          value=""
+                          onValueChange={(tagId) => {
+                            if (tagId) addTag.mutate({ tagId })
+                          }}
+                          disabled={addTag.isPending}
+                        >
+                          <SelectTrigger className="w-[180px]" size="sm">
+                            <SelectValue placeholder="Add a tag…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableToAdd.map((tag) => (
+                              <SelectItem key={tag.id} value={tag.id}>
+                                {tag.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {addTag.isError && (
+                          <p className="mt-1 text-xs text-destructive">
+                            {addTag.error?.message}
+                          </p>
+                        )}
+                      </>
+                    )
+                  })()}
                 </dd>
               </div>
             )}

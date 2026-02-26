@@ -238,6 +238,45 @@ export function useUpdateSessionContent(eventId: string | null, sessionId: strin
   })
 }
 
+/** Add a tag (by id) to a session. Tag must belong to the event. */
+export function useAddSessionTag(eventId: string | null, sessionId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ tagId }: { tagId: string }) => {
+      if (!eventId) throw new Error("No event selected")
+      if (!sessionId) throw new Error("No session selected")
+      return apiClient.post<undefined>(
+        `/events/${eventId}/sessions/${sessionId}/tags`,
+        { tag_id: tagId }
+      )
+    },
+    onSuccess: () => {
+      if (eventId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+      }
+    },
+  })
+}
+
+/** Remove a tag from a session. */
+export function useRemoveSessionTag(eventId: string | null, sessionId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ tagId }: { tagId: string }) => {
+      if (!eventId) throw new Error("No event selected")
+      if (!sessionId) throw new Error("No session selected")
+      return apiClient.delete<undefined>(
+        `/events/${eventId}/sessions/${sessionId}/tags/${tagId}`
+      )
+    },
+    onSuccess: () => {
+      if (eventId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+      }
+    },
+  })
+}
+
 export function useUpdateSessionSchedule(eventId: string | null) {
   const queryClient = useQueryClient()
   return useMutation({
