@@ -48,6 +48,7 @@ export interface Session {
   description?: string
   speaker?: string
   speakers?: string[]
+  speaker_ids?: string[]
   tags?: string[]
 }
 
@@ -84,6 +85,7 @@ export type SessionInput = Session | {
   description?: string
   speaker?: string
   speakers?: string[]
+  speaker_ids?: string[]
   tags?: string[]
 }
 
