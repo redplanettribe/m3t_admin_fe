@@ -14,6 +14,8 @@ import { AttendeesPage } from "@/pages/AttendeesPage"
 import { RoomsPage } from "@/pages/RoomsPage"
 import { RoomDetailPage } from "@/pages/RoomDetailPage"
 import { SessionDetailPage } from "@/pages/SessionDetailPage"
+import { SpeakerDetailPage } from "@/pages/SpeakerDetailPage"
+import { SpeakersPage } from "@/pages/SpeakersPage"
 
 const routes: RouteObject[] = [
   {
@@ -57,6 +59,14 @@ const routes: RouteObject[] = [
       {
         path: "events/:eventId/sessions/:sessionId",
         element: <SessionDetailPage />,
+      },
+      {
+        path: "events/:eventId/speakers/:speakerId",
+        element: <SpeakerDetailPage />,
+      },
+      {
+        path: "speakers",
+        element: <SpeakersPage />,
       },
       {
         path: "rooms",

@@ -130,3 +130,36 @@ export interface SendEventInvitationsResult {
   sent: number
   failed: string[]
 }
+
+/** Speaker from GET /events/{eventID}/speakers or get-by-id */
+export interface Speaker {
+  id: string
+  event_id: string
+  first_name?: string
+  last_name?: string
+  full_name?: string
+  bio?: string
+  tag_line?: string
+  profile_picture?: string
+  is_top_speaker?: boolean
+  sessionize_speaker_id?: string
+  created_at?: string
+  updated_at?: string
+}
+
+/** Request body for POST /events/{eventID}/speakers */
+export interface CreateSpeakerRequest {
+  first_name?: string
+  last_name?: string
+  full_name?: string
+  bio?: string
+  tag_line?: string
+  profile_picture?: string
+  is_top_speaker?: boolean
+}
+
+/** Response from GET /events/{eventID}/speakers/{speakerID} (data shape after apiClient unwraps) */
+export interface GetEventSpeakerResponse {
+  speaker: Speaker
+  sessions: Session[]
+}

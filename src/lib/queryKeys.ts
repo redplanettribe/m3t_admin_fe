@@ -18,6 +18,9 @@ export const queryKeys = {
     room: (eventId: string, roomId: string) =>
       ["events", eventId, "rooms", roomId] as const,
     teamMembers: (eventId: string) => ["events", eventId, "team-members"] as const,
+    speakers: (eventId: string) => ["events", eventId, "speakers"] as const,
+    speaker: (eventId: string, speakerId: string) =>
+      ["events", eventId, "speakers", speakerId] as const,
     invitations: (eventId: string, page: number, pageSize: number, search: string) =>
       ["events", eventId, "invitations", page, pageSize, search ?? ""] as const,
   },
