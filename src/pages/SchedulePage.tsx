@@ -14,6 +14,7 @@ import { useSessionDrag } from "@/hooks/useSessionDrag"
 import { useEventStore } from "@/store/eventStore"
 import type { EventSchedule, EventTag, Session, SessionInput } from "@/types/event"
 import { Switch } from "@/components/ui/switch"
+import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { SessionizeImportModal } from "@/components/SessionizeImportModal"
 import { ScheduleSessionCard } from "@/components/ScheduleSessionCard"
@@ -26,6 +27,21 @@ const TIME_COLUMN_WIDTH = 64
 const MIN_BODY_HEIGHT_PX = 320
 const SCROLL_RIGHT_PADDING_PX = 24
 const DEFAULT_SESSION_DURATION_MINUTES = 30
+
+/** Format a Date as "HH:mm" for use with <input type="time"> */
+function toTimeValue(date: Date): string {
+  const h = date.getHours()
+  const m = date.getMinutes()
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`
+}
+
+/** Parse "HH:mm" and return a Date on the given day (start of day in ms) */
+function timeValueToDate(timeValue: string, dayStartMs: number): Date {
+  const [h, m] = timeValue.split(":").map(Number)
+  const d = new Date(dayStartMs)
+  d.setHours(h, m ?? 0, 0, 0)
+  return d
+}
 
 /** Extract sessions array from API response (may be under different keys). */
 function extractSessions(schedule: Record<string, unknown>): unknown[] {
@@ -542,6 +558,72 @@ export function SchedulePage(): React.ReactElement {
               )
             }}
           >
+            <div className="grid grid-cols-2 gap-4">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium">Start time</span>
+                <Input
+                  type="time"
+                  value={
+                    createSessionDraft
+                      ? toTimeValue(createSessionDraft.startsAt)
+                      : ""
+                  }
+                  onChange={(e) => {
+                    if (!createSessionDraft) return
+                    const value = e.target.value
+                    const newStartsAt = timeValueToDate(
+                      value,
+                      scheduleDayStart
+                    )
+                    const endsAtMs = createSessionDraft.endsAt.getTime()
+                    let newEndsAt = createSessionDraft.endsAt
+                    if (newStartsAt.getTime() >= endsAtMs) {
+                      newEndsAt = new Date(
+                        newStartsAt.getTime() +
+                          DEFAULT_SESSION_DURATION_MINUTES * 60_000
+                      )
+                    }
+                    setCreateSessionDraft({
+                      ...createSessionDraft,
+                      startsAt: newStartsAt,
+                      endsAt: newEndsAt,
+                    })
+                  }}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium">End time</span>
+                <Input
+                  type="time"
+                  value={
+                    createSessionDraft
+                      ? toTimeValue(createSessionDraft.endsAt)
+                      : ""
+                  }
+                  onChange={(e) => {
+                    if (!createSessionDraft) return
+                    const value = e.target.value
+                    const newEndsAt = timeValueToDate(
+                      value,
+                      scheduleDayStart
+                    )
+                    const startsAtMs = createSessionDraft.startsAt.getTime()
+                    let newStartsAt = createSessionDraft.startsAt
+                    if (newEndsAt.getTime() <= startsAtMs) {
+                      newStartsAt = new Date(
+                        newEndsAt.getTime() -
+                          DEFAULT_SESSION_DURATION_MINUTES * 60_000
+                      )
+                    }
+                    setCreateSessionDraft({
+                      ...createSessionDraft,
+                      startsAt: newStartsAt,
+                      endsAt: newEndsAt,
+                    })
+                  }}
+                />
+              </label>
+            </div>
             <div className="space-y-2">
               <label className="flex flex-col gap-1 text-sm">
                 <span className="font-medium">Title</span>
