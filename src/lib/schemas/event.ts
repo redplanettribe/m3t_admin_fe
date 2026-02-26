@@ -49,10 +49,7 @@ export type CreateSpeakerFormValues = z.infer<typeof createSpeakerSchema>
 export const createRoomSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  capacity: z.preprocess(
-    (v) => (v === "" || v === undefined ? undefined : Number(v)),
-    z.number().int().positive().optional()
-  ),
+  capacity: z.number().int().positive().optional(),
   how_to_get_there: z.string().optional(),
   not_bookable: z.boolean().optional(),
 })
