@@ -5,6 +5,7 @@ import { useEventStore } from "@/store/eventStore"
 import type {
   Event,
   EventSchedule,
+  EventTag,
   Room,
   Session,
   SendEventInvitationsResult,
@@ -15,6 +16,15 @@ import type {
   UpdateSessionContentRequest,
   CreateSessionRequest,
 } from "@/types/event"
+
+/** Normalize tags from API (Tag[] or string[]) to EventTag[] for Session. */
+function normalizeTags(tags: EventTag[] | string[] | undefined): EventTag[] | undefined {
+  if (!tags?.length) return undefined
+  if (typeof tags[0] === "string") {
+    return (tags as string[]).map((name) => ({ id: "", name }))
+  }
+  return tags as EventTag[]
+}
 
 export function useEventsMe() {
   return useQuery({
@@ -38,6 +48,17 @@ export function useEventRooms(eventId: string | null) {
     queryFn: () => {
       if (!eventId) throw new Error("No event selected")
       return apiClient.get<Room[]>(`/events/${eventId}/rooms`)
+    },
+    enabled: !!eventId,
+  })
+}
+
+export function useEventTags(eventId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.events.tags(eventId ?? ""),
+    queryFn: () => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.get<EventTag[]>(`/events/${eventId}/tags`)
     },
     enabled: !!eventId,
   })
@@ -142,19 +163,34 @@ export function useCreateSession(eventId: string | null) {
         end_time: string
         title?: string
         description?: string
-        tags?: string[]
+        tags?: EventTag[]
       }>(`/events/${eventId}/sessions`, body)
     },
-    onSuccess: (_created, _variables) => {
+    onSuccess: (created, _variables) => {
       if (!eventId) return
       const key = queryKeys.events.detail(eventId)
-      queryClient.invalidateQueries({ queryKey: key })
+      queryClient.setQueryData<EventSchedule>(key, (prev) => {
+        if (!prev?.sessions) {
+          queryClient.invalidateQueries({ queryKey: key })
+          return prev
+        }
+        const session = sessionFromApiResponse(created)
+        return { ...prev, sessions: [...prev.sessions, session] }
+      })
     },
   })
 }
 
-/** API returns start_time/end_time; we normalize to starts_at/ends_at for cache. */
-function sessionFromApiResponse(data: { id: string; room_id: string; start_time: string; end_time: string; title?: string; description?: string; tags?: string[] }): Session {
+/** API returns start_time/end_time and tags as Tag[]; we normalize to starts_at/ends_at and EventTag[] for cache. */
+function sessionFromApiResponse(data: {
+  id: string
+  room_id: string
+  start_time: string
+  end_time: string
+  title?: string
+  description?: string
+  tags?: EventTag[] | string[]
+}): Session {
   return {
     id: data.id,
     room_id: data.room_id,
@@ -162,7 +198,7 @@ function sessionFromApiResponse(data: { id: string; room_id: string; start_time:
     ends_at: data.end_time,
     title: data.title,
     description: data.description,
-    tags: data.tags,
+    tags: normalizeTags(data.tags),
   }
 }
 
@@ -172,7 +208,7 @@ export function useUpdateSessionContent(eventId: string | null, sessionId: strin
     mutationFn: (body: UpdateSessionContentRequest) => {
       if (!eventId) throw new Error("No event selected")
       if (!sessionId) throw new Error("No session selected")
-      return apiClient.patch<{ id: string; room_id: string; start_time: string; end_time: string; title?: string; description?: string; tags?: string[] }>(
+      return apiClient.patch<{ id: string; room_id: string; start_time: string; end_time: string; title?: string; description?: string; tags?: EventTag[] }>(
         `/events/${eventId}/sessions/${sessionId}/content`,
         body
       )
@@ -210,7 +246,7 @@ export function useUpdateSessionSchedule(eventId: string | null) {
       ...body
     }: { sessionId: string } & UpdateSessionScheduleRequest) => {
       if (!eventId) throw new Error("No event selected")
-      return apiClient.patch<{ id: string; room_id: string; start_time: string; end_time: string; title?: string; description?: string; tags?: string[] }>(
+      return apiClient.patch<{ id: string; room_id: string; start_time: string; end_time: string; title?: string; description?: string; tags?: EventTag[] }>(
         `/events/${eventId}/sessions/${sessionId}`,
         body
       )

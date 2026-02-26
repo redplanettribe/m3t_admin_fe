@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react"
-import type { Session } from "@/types/event"
+import type { EventTag, Session } from "@/types/event"
 import type { UseMutationResult } from "@tanstack/react-query"
 import type { UpdateSessionScheduleRequest } from "@/types/event"
 
@@ -15,7 +15,7 @@ export interface UseSessionDragParams {
   rangeStartMinutes: number
   scheduleDayStartMs: number
   updateSession: UseMutationResult<
-    { id: string; room_id: string; start_time: string; end_time: string; title?: string; description?: string; tags?: string[] },
+    { id: string; room_id: string; start_time: string; end_time: string; title?: string; description?: string; tags?: EventTag[] },
     Error,
     { sessionId: string } & UpdateSessionScheduleRequest,
     unknown

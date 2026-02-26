@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Link } from "react-router-dom"
 import { cn } from "@/lib/utils"
-import type { Session } from "@/types/event"
+import type { EventTag, Session } from "@/types/event"
 import { Button } from "@/components/ui/button"
 import { ExternalLink, Trash2 } from "lucide-react"
 
@@ -11,8 +11,8 @@ const TAGS_WRAPPER_MAX_LINES = 2
 const LINE_HEIGHT_PX = 18
 const RESIZE_HANDLE_HEIGHT_PX = 6
 
-/** Tags with max 2 lines; ellipsis pill appears inline when content overflows. */
-function SessionTags({ tags }: { tags: string[] }) {
+/** Tags with max 2 lines; ellipsis pill appears inline when content overflows. Always shows at least one tag. */
+function SessionTags({ tags }: { tags: EventTag[] }) {
   const wrapperRef = React.useRef<HTMLDivElement>(null)
   const [showEllipsis, setShowEllipsis] = React.useState(false)
   const [visibleCount, setVisibleCount] = React.useState(tags.length)
@@ -29,7 +29,7 @@ function SessionTags({ tags }: { tags: string[] }) {
     const overflow = el.scrollHeight > el.clientHeight
     if (!showEllipsis && overflow) {
       setShowEllipsis(true)
-    } else if (showEllipsis && overflow && visibleCount > 0) {
+    } else if (showEllipsis && overflow && visibleCount > 1) {
       setVisibleCount((n) => n - 1)
     }
   }, [tags, showEllipsis, visibleCount])
@@ -38,15 +38,17 @@ function SessionTags({ tags }: { tags: string[] }) {
   return (
     <div
       ref={wrapperRef}
-      className="flex flex-wrap gap-1 mt-1 overflow-hidden min-h-0"
+      className="flex flex-wrap gap-1 mt-1 overflow-hidden shrink-0"
       style={{ maxHeight }}
     >
       {visibleTags.map((tag) => (
-        <span key={tag} className={TAG_PILL_CLASS}>
-          {tag}
+        <span key={tag.id || tag.name} className={TAG_PILL_CLASS}>
+          {tag.name}
         </span>
       ))}
-      {showEllipsis && <span className={TAG_PILL_CLASS}>…</span>}
+      {showEllipsis && visibleCount < tags.length && (
+        <span className={TAG_PILL_CLASS}>…</span>
+      )}
     </div>
   )
 }

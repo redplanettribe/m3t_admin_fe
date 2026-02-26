@@ -9,14 +9,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { useEventSchedule, useToggleRoomNotBookable, useUpdateSessionSchedule, useDeleteSession, useCreateSession } from "@/hooks/useEvents"
+import { useEventSchedule, useToggleRoomNotBookable, useUpdateSessionSchedule, useDeleteSession, useCreateSession, useEventTags } from "@/hooks/useEvents"
 import { useSessionDrag } from "@/hooks/useSessionDrag"
 import { useEventStore } from "@/store/eventStore"
-import type { EventSchedule, Session, SessionInput } from "@/types/event"
+import type { EventSchedule, EventTag, Session, SessionInput } from "@/types/event"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import { SessionizeImportModal } from "@/components/SessionizeImportModal"
 import { ScheduleSessionCard } from "@/components/ScheduleSessionCard"
+import { TagInput } from "@/components/TagInput"
 
 const PIXELS_PER_MINUTE = 3
 const TIME_LABEL_INTERVAL_MINUTES = 30
@@ -63,11 +64,12 @@ function normalizeSession(s: SessionInput): Session | null {
     (s as { endTime?: string }).endTime ??
     (s as { end?: string }).end
   if (!roomId || !startsAt || !endsAt) return null
-  const tagsRaw = s.tags ?? (raw.tags as string[] | undefined)
-  const tags =
-    Array.isArray(tagsRaw) && tagsRaw.every((t) => typeof t === "string")
-      ? tagsRaw
-      : undefined
+  const tagsRaw = s.tags ?? (raw.tags as string[] | EventTag[] | undefined)
+  const tags: EventTag[] | undefined = Array.isArray(tagsRaw)
+    ? tagsRaw.every((t) => typeof t === "string")
+      ? (tagsRaw as string[]).map((name) => ({ id: "", name }))
+      : (tagsRaw as EventTag[])
+    : undefined
   return {
     id: String(s.id),
     room_id: String(roomId),
@@ -125,6 +127,7 @@ export function SchedulePage(): React.ReactElement {
   const updateSessionSchedule = useUpdateSessionSchedule(activeEventId)
   const deleteSession = useDeleteSession(activeEventId)
   const createSession = useCreateSession(activeEventId)
+  const { data: eventTags, isLoading: tagsLoading } = useEventTags(activeEventId)
   const [sessionizeOpen, setSessionizeOpen] = React.useState(false)
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null)
   const [createSessionDraft, setCreateSessionDraft] = useState<{
@@ -132,6 +135,7 @@ export function SchedulePage(): React.ReactElement {
     startsAt: Date
     endsAt: Date
   } | null>(null)
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [hoverPreview, setHoverPreview] = useState<{
     roomIndex: number
     topPx: number
@@ -487,6 +491,7 @@ export function SchedulePage(): React.ReactElement {
         onOpenChange={(open) => {
           if (!open && !createSession.isPending) {
             setCreateSessionDraft(null)
+            setSelectedTags([])
           }
         }}
       >
@@ -518,15 +523,6 @@ export function SchedulePage(): React.ReactElement {
               const formData = new FormData(e.currentTarget)
               const title = String(formData.get("title") ?? "").trim()
               const description = String(formData.get("description") ?? "").trim()
-              const tagsRaw = String(formData.get("tags") ?? "").trim()
-
-              const tags =
-                tagsRaw.length > 0
-                  ? tagsRaw
-                      .split(",")
-                      .map((t) => t.trim())
-                      .filter(Boolean)
-                  : undefined
 
               createSession.mutate(
                 {
@@ -535,11 +531,12 @@ export function SchedulePage(): React.ReactElement {
                   end_time: createSessionDraft.endsAt.toISOString(),
                   title: title || undefined,
                   description: description || undefined,
-                  tags,
+                  tags: selectedTags.length > 0 ? selectedTags : undefined,
                 },
                 {
                   onSuccess: () => {
                     setCreateSessionDraft(null)
+                    setSelectedTags([])
                   },
                 }
               )
@@ -564,15 +561,12 @@ export function SchedulePage(): React.ReactElement {
                   placeholder="Optional description"
                 />
               </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium">Tags</span>
-                <input
-                  name="tags"
-                  type="text"
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="Comma-separated tags (optional)"
-                />
-              </label>
+              <TagInput
+                suggestions={(eventTags ?? []).map((t) => t.name)}
+                value={selectedTags}
+                onChange={setSelectedTags}
+                isLoading={tagsLoading}
+              />
             </div>
             {createSession.isError && (
               <p
@@ -593,6 +587,7 @@ export function SchedulePage(): React.ReactElement {
                 onClick={() => {
                   if (!createSession.isPending) {
                     setCreateSessionDraft(null)
+                    setSelectedTags([])
                   }
                 }}
                 disabled={createSession.isPending}

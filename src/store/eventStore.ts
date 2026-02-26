@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import { persist } from "zustand/middleware"
+import { devtools, persist } from "zustand/middleware"
 
 interface EventState {
   activeEventId: string | null
@@ -12,21 +12,24 @@ interface EventState {
 }
 
 export const useEventStore = create<EventState>()(
-  persist(
-    (set) => ({
-      activeEventId: null,
-      setActiveEventId: (id) => set({ activeEventId: id }),
-      sessionizeIdByEventId: {},
-      setSessionizeIdForEvent: (eventId, sessionizeId) =>
-        set((state) => ({
-          sessionizeIdByEventId: {
-            ...state.sessionizeIdByEventId,
-            [eventId]: sessionizeId,
-          },
-        })),
-      clearAll: () =>
-        set({ activeEventId: null, sessionizeIdByEventId: {} }),
-    }),
-    { name: "m3t-admin-event" }
+  devtools(
+    persist(
+      (set) => ({
+        activeEventId: null,
+        setActiveEventId: (id) => set({ activeEventId: id }),
+        sessionizeIdByEventId: {},
+        setSessionizeIdForEvent: (eventId, sessionizeId) =>
+          set((state) => ({
+            sessionizeIdByEventId: {
+              ...state.sessionizeIdByEventId,
+              [eventId]: sessionizeId,
+            },
+          })),
+        clearAll: () =>
+          set({ activeEventId: null, sessionizeIdByEventId: {} }),
+      }),
+      { name: "m3t-admin-event" }
+    ),
+    { name: "EventStore" }
   )
 )

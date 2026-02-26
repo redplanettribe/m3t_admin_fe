@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useEventSchedule, useUpdateSessionContent } from "@/hooks/useEvents"
 import { useEventStore } from "@/store/eventStore"
-import type { EventSchedule, Session, SessionInput } from "@/types/event"
+import type { EventSchedule, EventTag, Session, SessionInput } from "@/types/event"
 import { cn } from "@/lib/utils"
 
 /** Extract sessions array from API response. */
@@ -52,11 +52,12 @@ function normalizeSession(s: SessionInput): Session | null {
     (s as { endTime?: string }).endTime ??
     (s as { end?: string }).end
   if (!roomId || !startsAt || !endsAt) return null
-  const tagsRaw = s.tags ?? (raw.tags as string[] | undefined)
-  const tags =
-    Array.isArray(tagsRaw) && tagsRaw.every((t) => typeof t === "string")
-      ? tagsRaw
-      : undefined
+  const tagsRaw = s.tags ?? (raw.tags as string[] | EventTag[] | undefined)
+  const tags: EventTag[] | undefined = Array.isArray(tagsRaw)
+    ? tagsRaw.every((t) => typeof t === "string")
+      ? (tagsRaw as string[]).map((name) => ({ id: "", name }))
+      : (tagsRaw as EventTag[])
+    : undefined
   return {
     id: String(s.id),
     room_id: String(roomId),
@@ -224,12 +225,12 @@ export function SessionDetailPage(): React.ReactElement {
                 <dd className="mt-1 flex flex-wrap gap-1">
                   {session.tags.map((tag) => (
                     <span
-                      key={tag}
+                      key={tag.id || tag.name}
                       className={cn(
                         "rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
                       )}
                     >
-                      {tag}
+                      {tag.name}
                     </span>
                   ))}
                 </dd>

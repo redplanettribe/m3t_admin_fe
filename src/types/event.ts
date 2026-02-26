@@ -38,7 +38,7 @@ export interface UpdateRoomRequest {
   not_bookable?: boolean
 }
 
-/** Session with start/end for schedule placement. API may use starts_at/ends_at/room_id or camelCase. */
+/** Session with start/end for schedule placement. API may use starts_at/ends_at/room_id or camelCase. Tags from API are objects with id and name. */
 export interface Session {
   id: string
   room_id: string
@@ -49,7 +49,7 @@ export interface Session {
   speaker?: string
   speakers?: string[]
   speaker_ids?: string[]
-  tags?: string[]
+  tags?: EventTag[]
 }
 
 /** Request body for PATCH /events/{eventID}/sessions/{sessionID} */
@@ -76,7 +76,7 @@ export interface UpdateSessionContentRequest {
   description?: string
 }
 
-/** Raw session from API (may be camelCase or different field names). */
+/** Raw session from API (may be camelCase or different field names). Tags may be string[] or EventTag[]. */
 export type SessionInput = Session | {
   id: string
   room_id?: string
@@ -97,13 +97,24 @@ export type SessionInput = Session | {
   speaker?: string
   speakers?: string[]
   speaker_ids?: string[]
-  tags?: string[]
+  tags?: string[] | EventTag[]
 }
 
 export interface EventSchedule {
   event: Event
   rooms?: Room[]
   sessions?: Session[]
+}
+
+export interface EventTag {
+  id: string
+  name: string
+}
+
+/** Response shape from GET /events/{eventID}/tags (apiClient returns .data as EventTag[]) */
+export interface ListEventTagsSuccessResponse {
+  data: EventTag[]
+  error?: { code?: string; message?: string }
 }
 
 export interface EventTeamMember {
