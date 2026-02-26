@@ -15,6 +15,7 @@ import type {
   UpdateSessionScheduleRequest,
   UpdateSessionContentRequest,
   CreateSessionRequest,
+  CreateRoomRequest,
 } from "@/types/event"
 
 /** Normalize tags from API (Tag[] or string[]) to EventTag[] for Session. */
@@ -50,6 +51,21 @@ export function useEventRooms(eventId: string | null) {
       return apiClient.get<Room[]>(`/events/${eventId}/rooms`)
     },
     enabled: !!eventId,
+  })
+}
+
+export function useCreateRoom(eventId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: CreateRoomRequest) => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.post<Room>(`/events/${eventId}/rooms`, body)
+    },
+    onSuccess: () => {
+      if (!eventId) return
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.rooms(eventId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+    },
   })
 }
 

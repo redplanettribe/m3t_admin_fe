@@ -38,6 +38,15 @@ export interface UpdateRoomRequest {
   not_bookable?: boolean
 }
 
+/** Request body for POST /events/{eventID}/rooms */
+export interface CreateRoomRequest {
+  name?: string
+  capacity?: number
+  description?: string
+  how_to_get_there?: string
+  not_bookable?: boolean
+}
+
 /** Session with start/end for schedule placement. API may use starts_at/ends_at/room_id or camelCase. Tags from API are objects with id and name. */
 export interface Session {
   id: string

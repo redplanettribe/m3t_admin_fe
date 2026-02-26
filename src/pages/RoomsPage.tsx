@@ -21,12 +21,14 @@ import { useEventRooms, useDeleteRoom } from "@/hooks/useEvents"
 import { useEventStore } from "@/store/eventStore"
 import type { Room } from "@/types/event"
 import { cn } from "@/lib/utils"
+import { AddRoomModal } from "@/components/AddRoomModal"
 
 export function RoomsPage(): React.ReactElement {
   const activeEventId = useEventStore((s) => s.activeEventId)
   const { data: rooms = [], isLoading, isError, refetch } = useEventRooms(activeEventId)
   const deleteRoom = useDeleteRoom(activeEventId)
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null)
+  const [addRoomOpen, setAddRoomOpen] = useState(false)
 
   const deleteDialogOpen = roomToDelete !== null
 
@@ -92,10 +94,20 @@ export function RoomsPage(): React.ReactElement {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Event rooms</CardTitle>
-          <CardDescription>
-            {rooms.length} room{rooms.length !== 1 ? "s" : ""} for this event
-          </CardDescription>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <CardTitle className="text-base">Event rooms</CardTitle>
+              <CardDescription>
+                {rooms.length} room{rooms.length !== 1 ? "s" : ""} for this event
+              </CardDescription>
+            </div>
+            <Button
+              type="button"
+              onClick={() => setAddRoomOpen(true)}
+            >
+              Add room
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {rooms.length === 0 ? (
@@ -187,6 +199,12 @@ export function RoomsPage(): React.ReactElement {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AddRoomModal
+        open={addRoomOpen}
+        onOpenChange={setAddRoomOpen}
+        eventId={activeEventId}
+      />
     </div>
   )
 }
