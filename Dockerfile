@@ -9,6 +9,10 @@ RUN npm ci
 
 # Copy source and build
 COPY . .
+# Add environment variable to the build stage
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+RUN echo ">>> environment variable: $VITE_API_URL"
 RUN npm run build
 
 # Production stage: serve static build
@@ -18,6 +22,7 @@ WORKDIR /app
 
 # Sevalla sets PORT automatically; default for local runs
 ENV PORT=3000
+
 
 # Copy built assets from builder
 COPY --from=builder /app/dist ./dist
