@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 export const roomUpdateSchema = z.object({
+  name: z.string().trim().optional(),
   capacity: z
     .union([z.number(), z.nan()])
     .optional()

@@ -50,6 +50,7 @@ export function RoomDetailPage(): React.ReactElement {
   const form = useForm<RoomUpdateFormValues>({
     resolver: zodResolver(roomUpdateSchema),
     defaultValues: {
+      name: "",
       capacity: undefined,
       description: "",
       how_to_get_there: "",
@@ -60,6 +61,7 @@ export function RoomDetailPage(): React.ReactElement {
   useEffect(() => {
     if (room) {
       form.reset({
+        name: room.name ?? "",
         capacity: room.capacity,
         description: room.description ?? "",
         how_to_get_there: room.how_to_get_there ?? "",
@@ -68,6 +70,7 @@ export function RoomDetailPage(): React.ReactElement {
     }
   }, [
     room?.id,
+    room?.name,
     room?.capacity,
     room?.description,
     room?.how_to_get_there,
@@ -176,7 +179,7 @@ export function RoomDetailPage(): React.ReactElement {
         <CardHeader>
           <CardTitle className="text-base">Room details</CardTitle>
           <CardDescription>
-            Edit capacity, description, how to get there, and booking status.
+            Edit name, capacity, description, how to get there, and booking status.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -207,10 +210,19 @@ export function RoomDetailPage(): React.ReactElement {
                 </p>
               )}
 
-              <div className="space-y-1">
-                <FormLabel>Name</FormLabel>
-                <Input value={room.name ?? room.id} disabled className="bg-muted" />
-              </div>
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder={room.id} {...field} value={field.value ?? ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}

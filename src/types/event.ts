@@ -32,6 +32,7 @@ export interface Room {
 }
 
 export interface UpdateRoomRequest {
+  name?: string
   capacity?: number
   description?: string
   how_to_get_there?: string
