@@ -159,7 +159,6 @@ export interface Speaker {
   event_id: string
   first_name?: string
   last_name?: string
-  full_name?: string
   bio?: string
   tag_line?: string
   profile_picture?: string
@@ -173,7 +172,6 @@ export interface Speaker {
 export interface CreateSpeakerRequest {
   first_name?: string
   last_name?: string
-  full_name?: string
   bio?: string
   tag_line?: string
   profile_picture?: string

@@ -16,7 +16,6 @@ import type { Speaker } from "@/types/event"
 import { cn } from "@/lib/utils"
 
 function speakerDisplayName(s: Speaker): string {
-  if (s.full_name?.trim()) return s.full_name.trim()
   return [s.first_name, s.last_name].filter(Boolean).join(" ").trim() || "—"
 }
 
@@ -24,12 +23,11 @@ function speakerInitials(s: Speaker): string {
   if (s.first_name && s.last_name) {
     return `${s.first_name[0]}${s.last_name[0]}`.toUpperCase()
   }
-  if (s.full_name?.trim()) {
-    const parts = s.full_name.trim().split(/\s+/)
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
-    }
-    return s.full_name.slice(0, 2).toUpperCase()
+  if (s.first_name?.trim()) {
+    return s.first_name.slice(0, 2).toUpperCase()
+  }
+  if (s.last_name?.trim()) {
+    return s.last_name.slice(0, 2).toUpperCase()
   }
   return "?"
 }

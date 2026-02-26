@@ -32,7 +32,6 @@ export const createSpeakerSchema = z
   .object({
     first_name: z.string().optional(),
     last_name: z.string().optional(),
-    full_name: z.string().optional(),
     bio: z.string().optional(),
     tag_line: z.string().optional(),
     profile_picture: z.string().optional(),
@@ -40,9 +39,9 @@ export const createSpeakerSchema = z
   })
   .refine(
     (data) =>
-      (data.full_name?.trim()?.length ?? 0) > 0 ||
-      (data.first_name?.trim()?.length ?? 0) > 0,
-    { message: "Enter full name or first name", path: ["full_name"] }
+      (data.first_name?.trim()?.length ?? 0) > 0 ||
+      (data.last_name?.trim()?.length ?? 0) > 0,
+    { message: "Enter first name or last name", path: ["first_name"] }
   )
 
 export type CreateSpeakerFormValues = z.infer<typeof createSpeakerSchema>

@@ -37,7 +37,6 @@ type AddSpeakerModalProps = {
 const defaultValues: CreateSpeakerFormValues = {
   first_name: "",
   last_name: "",
-  full_name: "",
   bio: "",
   tag_line: "",
   profile_picture: "",
@@ -50,7 +49,6 @@ function toCreateSpeakerRequest(
   const req: CreateSpeakerRequest = {}
   if (values.first_name?.trim()) req.first_name = values.first_name.trim()
   if (values.last_name?.trim()) req.last_name = values.last_name.trim()
-  if (values.full_name?.trim()) req.full_name = values.full_name.trim()
   if (values.bio?.trim()) req.bio = values.bio.trim()
   if (values.tag_line?.trim()) req.tag_line = values.tag_line.trim()
   if (values.profile_picture?.trim())
@@ -93,7 +91,7 @@ export function AddSpeakerModal({
         <DialogHeader>
           <DialogTitle>Add speaker</DialogTitle>
           <DialogDescription>
-            Add a new speaker for this event. At least a full name or first name
+            Add a new speaker for this event. At least first name or last name
             is required.
           </DialogDescription>
         </DialogHeader>
@@ -111,23 +109,6 @@ export function AddSpeakerModal({
                   : "Failed to add speaker"}
               </p>
             )}
-            <FormField
-              control={form.control}
-              name="full_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full name</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="e.g. Jane Doe"
-                      autoComplete="name"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
