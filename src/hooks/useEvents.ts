@@ -13,6 +13,7 @@ import type {
   UpdateEventRequest,
   UpdateSessionScheduleRequest,
   UpdateSessionContentRequest,
+  CreateSessionRequest,
 } from "@/types/event"
 
 export function useEventsMe() {
@@ -125,6 +126,29 @@ export function useImportSessionize(eventId: string | null) {
       if (eventId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
       }
+    },
+  })
+}
+
+export function useCreateSession(eventId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: CreateSessionRequest) => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.post<{
+        id: string
+        room_id: string
+        start_time: string
+        end_time: string
+        title?: string
+        description?: string
+        tags?: string[]
+      }>(`/events/${eventId}/sessions`, body)
+    },
+    onSuccess: (_created, _variables) => {
+      if (!eventId) return
+      const key = queryKeys.events.detail(eventId)
+      queryClient.invalidateQueries({ queryKey: key })
     },
   })
 }

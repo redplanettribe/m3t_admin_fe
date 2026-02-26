@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { useEventSchedule, useToggleRoomNotBookable, useUpdateSessionSchedule, useDeleteSession } from "@/hooks/useEvents"
+import { useEventSchedule, useToggleRoomNotBookable, useUpdateSessionSchedule, useDeleteSession, useCreateSession } from "@/hooks/useEvents"
 import { useSessionDrag } from "@/hooks/useSessionDrag"
 import { useEventStore } from "@/store/eventStore"
 import type { EventSchedule, Session, SessionInput } from "@/types/event"
@@ -24,6 +24,7 @@ const ROOM_COLUMN_WIDTH = 200
 const TIME_COLUMN_WIDTH = 64
 const MIN_BODY_HEIGHT_PX = 320
 const SCROLL_RIGHT_PADDING_PX = 24
+const DEFAULT_SESSION_DURATION_MINUTES = 30
 
 /** Extract sessions array from API response (may be under different keys). */
 function extractSessions(schedule: Record<string, unknown>): unknown[] {
@@ -123,8 +124,19 @@ export function SchedulePage(): React.ReactElement {
   const toggleNotBookable = useToggleRoomNotBookable(activeEventId)
   const updateSessionSchedule = useUpdateSessionSchedule(activeEventId)
   const deleteSession = useDeleteSession(activeEventId)
+  const createSession = useCreateSession(activeEventId)
   const [sessionizeOpen, setSessionizeOpen] = React.useState(false)
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null)
+  const [createSessionDraft, setCreateSessionDraft] = useState<{
+    roomId: string
+    startsAt: Date
+    endsAt: Date
+  } | null>(null)
+  const [hoverPreview, setHoverPreview] = useState<{
+    roomIndex: number
+    topPx: number
+    timeLabel: string
+  } | null>(null)
 
   const scheduleRecord = schedule != null ? (schedule as unknown as Record<string, unknown>) : null
   const rooms: EventSchedule["rooms"] = (scheduleRecord?.rooms ?? []) as EventSchedule["rooms"]
@@ -162,6 +174,77 @@ export function SchedulePage(): React.ReactElement {
     scheduleDayStartMs: scheduleDayStart,
     updateSession: updateSessionSchedule.mutateAsync,
   })
+
+  const formatTime = (date: Date) =>
+    date.toLocaleTimeString(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+
+  function snapMinutesFromEvent(
+    e: React.MouseEvent<HTMLDivElement>
+  ): number {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const relativeY = e.clientY - rect.top
+    const rawMinutes = rangeStart + relativeY / PIXELS_PER_MINUTE
+    return Math.round(rawMinutes / 15) * 15
+  }
+
+  function handleRoomColumnClick(
+    e: React.MouseEvent<HTMLDivElement>,
+    room: NonNullable<EventSchedule["rooms"]>[number]
+  ) {
+    const target = e.target as HTMLElement
+    if (target.closest("[data-session-card]")) return
+
+    const snappedMinutes = snapMinutesFromEvent(e)
+    const startsAt = new Date(scheduleDayStart + snappedMinutes * 60_000)
+    const endsAt = new Date(
+      startsAt.getTime() + DEFAULT_SESSION_DURATION_MINUTES * 60_000
+    )
+
+    setCreateSessionDraft({
+      roomId: String(room.id),
+      startsAt,
+      endsAt,
+    })
+  }
+
+  function handleRoomColumnMouseMove(
+    e: React.MouseEvent<HTMLDivElement>,
+    roomIndex: number
+  ) {
+    if (activeSessionId) {
+      if (hoverPreview) setHoverPreview(null)
+      return
+    }
+    const target = e.target as HTMLElement
+    if (target.closest("[data-session-card]")) {
+      if (hoverPreview) setHoverPreview(null)
+      return
+    }
+
+    const snappedMinutes = snapMinutesFromEvent(e)
+    const topPx = (snappedMinutes - rangeStart) * PIXELS_PER_MINUTE
+    const endMinutes = snappedMinutes + DEFAULT_SESSION_DURATION_MINUTES
+
+    const fmt = (mins: number) => {
+      const h = Math.floor(mins / 60)
+      const m = mins % 60
+      return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`
+    }
+    const timeLabel = `${fmt(snappedMinutes)} – ${fmt(endMinutes)}`
+
+    setHoverPreview((prev) => {
+      if (
+        prev &&
+        prev.roomIndex === roomIndex &&
+        prev.topPx === topPx
+      )
+        return prev
+      return { roomIndex, topPx, timeLabel }
+    })
+  }
 
   if (!activeEventId) {
     return (
@@ -331,6 +414,11 @@ export function SchedulePage(): React.ReactElement {
                     room.not_bookable ? "bg-muted/40" : "bg-background"
                   )}
                   style={{ width: ROOM_COLUMN_WIDTH, minHeight: bodyHeight, height: bodyHeight }}
+                  onClick={(e) => handleRoomColumnClick(e, room)}
+                  onMouseMove={(e) =>
+                    handleRoomColumnMouseMove(e, roomIndex)
+                  }
+                  onMouseLeave={() => setHoverPreview(null)}
                 >
                   {timeLabels.map((minutes) => (
                     <div
@@ -341,6 +429,20 @@ export function SchedulePage(): React.ReactElement {
                       }}
                     />
                   ))}
+                  {hoverPreview?.roomIndex === roomIndex && (
+                    <div
+                      className="absolute left-1 right-1 rounded-md border border-dashed border-primary/40 bg-primary/5 pointer-events-none flex items-center justify-center transition-[top] duration-100"
+                      style={{
+                        top: hoverPreview.topPx,
+                        height:
+                          DEFAULT_SESSION_DURATION_MINUTES * PIXELS_PER_MINUTE,
+                      }}
+                    >
+                      <span className="text-xs text-primary/60 tabular-nums select-none">
+                        {hoverPreview.timeLabel}
+                      </span>
+                    </div>
+                  )}
                   {sessionsByRoom[roomIndex].map(({ session, top, height }) => {
                     const roomNotBookable = Boolean(room.not_bookable)
                     const isActive = activeSessionId === session.id
@@ -379,6 +481,131 @@ export function SchedulePage(): React.ReactElement {
       {roomsList.length > 0 && sessions.length === 0 && (
         <p className="text-muted-foreground text-sm">No sessions scheduled.</p>
       )}
+
+      <Dialog
+        open={createSessionDraft !== null}
+        onOpenChange={(open) => {
+          if (!open && !createSession.isPending) {
+            setCreateSessionDraft(null)
+          }
+        }}
+      >
+        <DialogContent showCloseButton>
+          <DialogHeader>
+            <DialogTitle>New session</DialogTitle>
+            <DialogDescription>
+              {createSessionDraft && (
+                <>
+                  {(() => {
+                    const room = roomsList.find(
+                      (r) => String(r.id) === createSessionDraft.roomId
+                    )
+                    const roomLabel = room?.name ?? room?.id ?? createSessionDraft.roomId
+                    return `${roomLabel} · ${formatTime(
+                      createSessionDraft.startsAt
+                    )} – ${formatTime(createSessionDraft.endsAt)}`
+                  })()}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (!createSessionDraft || !activeEventId) return
+
+              const formData = new FormData(e.currentTarget)
+              const title = String(formData.get("title") ?? "").trim()
+              const description = String(formData.get("description") ?? "").trim()
+              const tagsRaw = String(formData.get("tags") ?? "").trim()
+
+              const tags =
+                tagsRaw.length > 0
+                  ? tagsRaw
+                      .split(",")
+                      .map((t) => t.trim())
+                      .filter(Boolean)
+                  : undefined
+
+              createSession.mutate(
+                {
+                  room_id: createSessionDraft.roomId,
+                  start_time: createSessionDraft.startsAt.toISOString(),
+                  end_time: createSessionDraft.endsAt.toISOString(),
+                  title: title || undefined,
+                  description: description || undefined,
+                  tags,
+                },
+                {
+                  onSuccess: () => {
+                    setCreateSessionDraft(null)
+                  },
+                }
+              )
+            }}
+          >
+            <div className="space-y-2">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium">Title</span>
+                <input
+                  name="title"
+                  type="text"
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="Session title"
+                  required
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium">Description</span>
+                <textarea
+                  name="description"
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="Optional description"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium">Tags</span>
+                <input
+                  name="tags"
+                  type="text"
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="Comma-separated tags (optional)"
+                />
+              </label>
+            </div>
+            {createSession.isError && (
+              <p
+                className={cn(
+                  "rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                )}
+                role="alert"
+              >
+                {createSession.error instanceof Error
+                  ? createSession.error.message
+                  : "Failed to create session"}
+              </p>
+            )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  if (!createSession.isPending) {
+                    setCreateSessionDraft(null)
+                  }
+                }}
+                disabled={createSession.isPending}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={createSession.isPending}>
+                {createSession.isPending ? "Creating…" : "Create"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={sessionToDelete !== null}

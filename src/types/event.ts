@@ -59,6 +59,17 @@ export interface UpdateSessionScheduleRequest {
   end_time?: string
 }
 
+/** Request body for POST /events/{eventID}/sessions */
+export interface CreateSessionRequest {
+  room_id: string
+  start_time: string
+  end_time: string
+  title?: string
+  description?: string
+  tags?: string[]
+  speaker_ids?: string[]
+}
+
 /** Request body for PATCH /events/{eventID}/sessions/{sessionID}/content */
 export interface UpdateSessionContentRequest {
   title?: string

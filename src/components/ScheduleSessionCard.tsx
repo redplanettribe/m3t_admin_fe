@@ -106,6 +106,7 @@ export function ScheduleSessionCard({
 
   return (
     <div
+      data-session-card=""
       className={cn(
         "absolute left-1 right-1 rounded-md border shadow-sm overflow-hidden flex flex-col gap-0.5 select-none touch-none group",
         roomNotBookable
