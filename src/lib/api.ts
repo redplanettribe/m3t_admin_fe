@@ -5,6 +5,9 @@ const baseUrl =
   import.meta.env.VITE_API_URL ??
   (import.meta.env.DEV ? "/api" : "http://localhost:8080")
 
+console.log("baseUrl", baseUrl)
+console.log("import.meta.env.DEV", import.meta.env.DEV)
+console.log("import.meta.env.VITE_API_URL", import.meta.env.VITE_API_URL)
 export class ApiError extends Error {
   code?: string
   status?: number
