@@ -1,6 +1,6 @@
 import * as React from "react"
 import { Link, useParams } from "react-router-dom"
-import { X } from "lucide-react"
+import { ChevronsUpDown, X } from "lucide-react"
 import {
   Card,
   CardContent,
@@ -9,8 +9,10 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Select,
   SelectContent,
@@ -19,14 +21,28 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
   useEventSchedule,
   useEventTags,
   useAddSessionTag,
   useRemoveSessionTag,
   useUpdateSessionContent,
 } from "@/hooks/useEvents"
+import { useAddSessionSpeaker, useRemoveSessionSpeaker, useSessionSpeakers, useSpeakers } from "@/hooks/useSpeakers"
 import { useEventStore } from "@/store/eventStore"
-import type { EventSchedule, EventTag, Session, SessionInput } from "@/types/event"
+import type { EventSchedule, EventTag, Session, SessionInput, Speaker } from "@/types/event"
 import { cn } from "@/lib/utils"
 
 /** Extract sessions array from API response. */
@@ -85,6 +101,90 @@ function normalizeSession(s: SessionInput): Session | null {
   }
 }
 
+function speakerDisplayName(s: Speaker): string {
+  return [s.first_name, s.last_name].filter(Boolean).join(" ").trim() || "—"
+}
+
+function speakerInitials(s: Speaker): string {
+  if (s.first_name && s.last_name) {
+    return `${s.first_name[0]}${s.last_name[0]}`.toUpperCase()
+  }
+  if (s.first_name?.trim()) {
+    return s.first_name.slice(0, 2).toUpperCase()
+  }
+  if (s.last_name?.trim()) {
+    return s.last_name.slice(0, 2).toUpperCase()
+  }
+  return "?"
+}
+
+function AddSpeakerCombobox({
+  speakers,
+  disabled,
+  onSelect,
+}: {
+  speakers: Speaker[]
+  disabled?: boolean
+  onSelect: (speakerId: string) => void
+}) {
+  const [open, setOpen] = React.useState(false)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          role="combobox"
+          aria-expanded={open}
+          className="w-[260px] justify-between font-normal"
+          disabled={disabled}
+        >
+          Add a speaker…
+          <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[260px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search speakers…" />
+          <CommandList>
+            <CommandEmpty>No speakers found.</CommandEmpty>
+            <CommandGroup>
+              {speakers.map((sp) => {
+                const name = speakerDisplayName(sp)
+                return (
+                  <CommandItem
+                    key={sp.id}
+                    value={name}
+                    onSelect={() => {
+                      onSelect(sp.id)
+                      setOpen(false)
+                    }}
+                  >
+                    <Avatar size="sm" className="size-5 mr-1">
+                      {sp.profile_picture ? (
+                        <AvatarImage
+                          src={sp.profile_picture}
+                          alt={name}
+                          className="object-cover"
+                        />
+                      ) : null}
+                      <AvatarFallback className="text-[8px]">
+                        {speakerInitials(sp)}
+                      </AvatarFallback>
+                    </Avatar>
+                    {name}
+                  </CommandItem>
+                )
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 export function SessionDetailPage(): React.ReactElement {
   const { eventId = null, sessionId = null } = useParams<{
     eventId: string
@@ -97,6 +197,18 @@ export function SessionDetailPage(): React.ReactElement {
   const updateContent = useUpdateSessionContent(eventId, sessionId)
   const addTag = useAddSessionTag(eventId, sessionId)
   const removeTag = useRemoveSessionTag(eventId, sessionId)
+  const {
+    data: sessionSpeakers = [],
+    isLoading: isSpeakersLoading,
+    isError: isSpeakersError,
+  } = useSessionSpeakers(eventId, sessionId)
+  const {
+    data: eventSpeakers = [],
+    isLoading: isEventSpeakersLoading,
+    isError: isEventSpeakersError,
+  } = useSpeakers(eventId)
+  const removeSpeaker = useRemoveSessionSpeaker(eventId, sessionId)
+  const addSpeaker = useAddSessionSpeaker(eventId, sessionId)
 
   const [isEditingContent, setIsEditingContent] = React.useState(false)
   const [editTitle, setEditTitle] = React.useState("")
@@ -110,11 +222,11 @@ export function SessionDetailPage(): React.ReactElement {
     setEditTitle(s.title ?? "")
     setEditDescription(s.description ?? "")
     setIsEditingContent(true)
-  }, [])
+  }, [setEditTitle, setEditDescription, setIsEditingContent])
 
   const cancelEditingContent = React.useCallback(() => {
     setIsEditingContent(false)
-  }, [])
+  }, [setIsEditingContent])
 
   const saveContent = React.useCallback(() => {
     updateContent.mutate(
@@ -193,8 +305,6 @@ export function SessionDetailPage(): React.ReactElement {
   const durationMin = Math.round(
     (new Date(session.ends_at).getTime() - new Date(session.starts_at).getTime()) / 60000
   )
-  const speakerLabel =
-    session.speaker ?? (session.speakers?.length ? session.speakers.join(", ") : null)
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -230,12 +340,122 @@ export function SessionDetailPage(): React.ReactElement {
               <dt className="font-medium text-muted-foreground">Room</dt>
               <dd className="mt-0.5">{room?.name ?? session.room_id}</dd>
             </div>
-            {speakerLabel && (
-              <div>
-                <dt className="font-medium text-muted-foreground">Speaker(s)</dt>
-                <dd className="mt-0.5">{speakerLabel}</dd>
-              </div>
-            )}
+            <div>
+              <dt className="font-medium text-muted-foreground">Speakers</dt>
+              <dd className="mt-1 space-y-2">
+                {isSpeakersLoading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-8 w-56" />
+                    <Skeleton className="h-8 w-44" />
+                  </div>
+                ) : isSpeakersError ? (
+                  <p className="text-xs text-muted-foreground">
+                    Speakers are available to event owners only.
+                  </p>
+                ) : sessionSpeakers.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No speakers assigned.</p>
+                ) : (
+                  <>
+                    <ul className="space-y-2">
+                      {sessionSpeakers.map((sp) => {
+                        const name = speakerDisplayName(sp)
+                        return (
+                          <li
+                            key={sp.id}
+                            className="flex items-center justify-between gap-2"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Avatar size="sm" className="size-7">
+                                {sp.profile_picture ? (
+                                  <AvatarImage
+                                    src={sp.profile_picture}
+                                    alt={name}
+                                    className="object-cover"
+                                  />
+                                ) : null}
+                                <AvatarFallback className="text-[10px]">
+                                  {speakerInitials(sp)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0">
+                                <Link
+                                  to={`/events/${eventId}/speakers/${sp.id}`}
+                                  className="text-sm text-primary underline underline-offset-2 hover:no-underline"
+                                >
+                                  {name}
+                                </Link>
+                                {sp.tag_line?.trim() ? (
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {sp.tag_line.trim()}
+                                  </p>
+                                ) : null}
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label={`Remove ${name} from session`}
+                              onClick={() => removeSpeaker.mutate({ speakerId: sp.id })}
+                              disabled={removeSpeaker.isPending}
+                              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <X className="size-4" />
+                            </Button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                    {removeSpeaker.isError ? (
+                      <p className="text-xs text-destructive">
+                        {removeSpeaker.error instanceof Error
+                          ? removeSpeaker.error.message
+                          : "Failed to remove speaker"}
+                      </p>
+                    ) : null}
+                  </>
+                )}
+
+                {!isSpeakersLoading && !isSpeakersError ? (
+                  <div className="pt-2">
+                    {isEventSpeakersLoading ? (
+                      <Skeleton className="h-8 w-56" />
+                    ) : isEventSpeakersError ? (
+                      <p className="text-xs text-muted-foreground">
+                        Failed to load event speakers.
+                      </p>
+                    ) : (() => {
+                      const availableToAdd = eventSpeakers.filter(
+                        (sp) => !sessionSpeakers.some((ss) => ss.id === sp.id)
+                      )
+                      if (availableToAdd.length === 0) {
+                        return (
+                          <p className="text-xs text-muted-foreground">
+                            All event speakers are already on this session.
+                          </p>
+                        )
+                      }
+                      return (
+                        <>
+                          <AddSpeakerCombobox
+                            speakers={availableToAdd}
+                            disabled={addSpeaker.isPending}
+                            onSelect={(speakerId) => addSpeaker.mutate({ speakerId })}
+                          />
+                          {addSpeaker.isError ? (
+                            <p className="mt-1 text-xs text-destructive">
+                              {addSpeaker.error instanceof Error
+                                ? addSpeaker.error.message
+                                : "Failed to add speaker"}
+                            </p>
+                          ) : null}
+                        </>
+                      )
+                    })()}
+                  </div>
+                ) : null}
+              </dd>
+            </div>
             {session.tags && session.tags.length > 0 && (
               <div>
                 <dt className="font-medium text-muted-foreground">Tags</dt>

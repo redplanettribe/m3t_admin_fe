@@ -27,6 +27,72 @@ export function useSpeaker(eventId: string | null, speakerId: string | null) {
   })
 }
 
+export function useSessionSpeakers(eventId: string | null, sessionId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.events.sessionSpeakers(eventId ?? "", sessionId ?? ""),
+    queryFn: () => {
+      if (!eventId) throw new Error("No event selected")
+      if (!sessionId) throw new Error("No session selected")
+      return apiClient.get<Speaker[]>(
+        `/events/${eventId}/sessions/${sessionId}/speakers`
+      )
+    },
+    enabled: !!eventId && !!sessionId,
+  })
+}
+
+export function useRemoveSessionSpeaker(eventId: string | null, sessionId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ speakerId }: { speakerId: string }) => {
+      if (!eventId) throw new Error("No event selected")
+      if (!sessionId) throw new Error("No session selected")
+      return apiClient.delete<undefined>(
+        `/events/${eventId}/sessions/${sessionId}/speakers/${speakerId}`
+      )
+    },
+    onSuccess: (_data, variables) => {
+      if (!eventId || !sessionId) return
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.events.sessionSpeakers(eventId, sessionId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.events.detail(eventId),
+      })
+      // If speaker detail is cached, ensure its sessions list updates.
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.events.speaker(eventId, variables.speakerId),
+      })
+    },
+  })
+}
+
+export function useAddSessionSpeaker(eventId: string | null, sessionId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ speakerId }: { speakerId: string }) => {
+      if (!eventId) throw new Error("No event selected")
+      if (!sessionId) throw new Error("No session selected")
+      return apiClient.post<undefined>(
+        `/events/${eventId}/sessions/${sessionId}/speakers`,
+        { speaker_id: speakerId }
+      )
+    },
+    onSuccess: (_data, variables) => {
+      if (!eventId || !sessionId) return
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.events.sessionSpeakers(eventId, sessionId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.events.detail(eventId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.events.speaker(eventId, variables.speakerId),
+      })
+    },
+  })
+}
+
 export function useCreateSpeaker(eventId: string | null) {
   const queryClient = useQueryClient()
   return useMutation({
