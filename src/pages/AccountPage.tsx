@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { LogOut } from "lucide-react"
+import { LogOut, Upload } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -21,7 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { useUpdateUser } from "@/hooks/useUser"
+import { useUpdateUser, useUpdateUserAvatar } from "@/hooks/useUser"
 import {
   updateProfileSchema,
   type UpdateProfileFormValues,
@@ -29,6 +30,25 @@ import {
 import { cn } from "@/lib/utils"
 import { useEventStore } from "@/store/eventStore"
 import { useUserStore } from "@/store/userStore"
+import type { User } from "@/types/auth"
+
+function userInitials(user: User | null): string {
+  if (!user) return "?"
+  const parts = [user.name, user.last_name]
+    .filter((p): p is string => Boolean(p))
+    .map((p) => p.trim())
+  if (parts.length > 0) {
+    return parts
+      .map((p) => p[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase()
+  }
+  if (user.email) {
+    return user.email.slice(0, 2).toUpperCase()
+  }
+  return "?"
+}
 
 export function AccountPage(): React.ReactElement {
   const navigate = useNavigate()
@@ -37,6 +57,8 @@ export function AccountPage(): React.ReactElement {
   const clearAuth = useUserStore((s) => s.clearAuth)
   const clearEventState = useEventStore((s) => s.clearAll)
   const updateUser = useUpdateUser()
+  const updateAvatar = useUpdateUserAvatar()
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null)
 
   const form = useForm<UpdateProfileFormValues>({
     resolver: zodResolver(updateProfileSchema),
@@ -65,6 +87,19 @@ export function AccountPage(): React.ReactElement {
     )
   }
 
+  const handleAvatarFileChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0]
+    event.target.value = ""
+    if (!file) return
+    updateAvatar.mutate({ file })
+  }
+
+  const handleChooseAvatarFile = () => {
+    fileInputRef.current?.click()
+  }
+
   const handleLogout = () => {
     clearAuth()
     clearEventState()
@@ -80,8 +115,49 @@ export function AccountPage(): React.ReactElement {
       </p>
       <Card className="max-w-md">
         <CardHeader>
-          <CardTitle>Your profile</CardTitle>
-          <CardDescription>{user?.email ?? "—"}</CardDescription>
+          <div className="flex items-center gap-4">
+            <Avatar size="lg">
+              {user?.profile_picture_url ? (
+                <AvatarImage
+                  src={user.profile_picture_url}
+                  alt={user?.name || user?.email || "Profile picture"}
+                  className="object-cover"
+                />
+              ) : null}
+              <AvatarFallback>{userInitials(user)}</AvatarFallback>
+            </Avatar>
+            <div className="space-y-1">
+              <CardTitle>Your profile</CardTitle>
+              <CardDescription>{user?.email ?? "—"}</CardDescription>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarFileChange}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleChooseAvatarFile}
+                  disabled={updateAvatar.isPending}
+                >
+                  <Upload className="size-4" />
+                  {updateAvatar.isPending ? "Uploading…" : "Change picture"}
+                </Button>
+                {updateAvatar.isError && (
+                  <p className="text-xs text-destructive">
+                    {updateAvatar.error instanceof Error
+                      ? updateAvatar.error.message
+                      : "Failed to update profile picture"}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <Form {...form}>

@@ -1564,7 +1564,7 @@
                 }
             }
         },
-        "/events/{eventID}/sessions/{sessionID}/speakers" : {
+        "/events/{eventID}/sessions/{sessionID}/speakers": {
             "get": {
                 "security": [
                     {
@@ -2823,6 +2823,106 @@
                     }
                 }
             }
+        },
+        "/users/me/avatar": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Confirms the uploaded profile picture by storing the object key on the user and returning the updated user profile. Requires Bearer token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Confirm uploaded profile picture",
+                "parameters": [
+                    {
+                        "description": "Uploaded avatar object key",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.ConfirmAvatarRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data contains the updated user",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.UpdateUserSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: bad_request",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/avatar/upload-url": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a presigned URL and object key that the client can use to upload the user's profile picture directly to storage. Requires Bearer token.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get presigned upload URL for profile picture",
+                "responses": {
+                    "200": {
+                        "description": "data contains upload_url and key",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.RequestAvatarUploadResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -2882,6 +2982,14 @@
             "type": "object",
             "properties": {
                 "tag_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.ConfirmAvatarRequest": {
+            "type": "object",
+            "properties": {
+                "key": {
                     "type": "string"
                 }
             }
@@ -3331,6 +3439,17 @@
                 },
                 "error": {
                     "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
+        "controllers.RequestAvatarUploadResponse": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "upload_url": {
+                    "type": "string"
                 }
             }
         },
@@ -3818,6 +3937,9 @@
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "profile_picture_url": {
                     "type": "string"
                 },
                 "updated_at": {

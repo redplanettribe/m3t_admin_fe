@@ -2,6 +2,7 @@ import * as React from "react"
 import { useState } from "react"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
 import { CalendarDays, ChevronRight, Home, LayoutGrid, Mic2, Settings, UserPlus, Users } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { CreateEventModal } from "@/components/CreateEventModal"
 import {
   Collapsible,
@@ -43,7 +44,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query"
 import { useEventsMe } from "@/hooks/useEvents"
 import { queryKeys } from "@/lib/queryKeys"
-import { getDisplayName } from "@/lib/user"
+import { getDisplayName, getInitials } from "@/lib/user"
 import { useEventStore } from "@/store/eventStore"
 import { useUserStore } from "@/store/userStore"
 
@@ -240,6 +241,18 @@ function AppLayoutInner(): React.ReactElement {
                   }
                 >
                   <span className="flex flex-row flex-nowrap items-center gap-3 min-w-0 w-full">
+                    <Avatar size="sm">
+                      {user?.profile_picture_url ? (
+                        <AvatarImage
+                          src={user.profile_picture_url}
+                          alt={getDisplayName(user) || user?.email || "Profile picture"}
+                          className="object-cover"
+                        />
+                      ) : null}
+                      <AvatarFallback>
+                        {getInitials(getDisplayName(user) || user?.email || "U")}
+                      </AvatarFallback>
+                    </Avatar>
                     <span className="flex flex-col text-sm min-w-0 shrink text-left group-data-[collapsible=icon]:hidden">
                       <span className="font-medium truncate">
                         {getDisplayName(user) || "Admin"}

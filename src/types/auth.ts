@@ -29,9 +29,15 @@ export interface User {
   name: string
   last_name?: string
   role?: string
+  profile_picture_url?: string
 }
 
 export interface UpdateUserRequest {
   name?: string
   last_name?: string
+}
+
+export interface AvatarUploadInfo {
+  key: string
+  upload_url: string
 }
