@@ -9,6 +9,11 @@ export function AuthLayout(): React.ReactElement {
   }
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-muted/30 p-4">
+      <img
+        src="/icon_foreground.png"
+        alt="M3T Admin"
+        className="mb-6 h-12 w-auto"
+      />
       <Outlet />
     </div>
   )

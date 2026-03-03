@@ -22,7 +22,6 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarHeader,
   SidebarInset,
   SidebarMenu,
   SidebarMenuButton,
@@ -126,33 +125,6 @@ function AppLayoutInner(): React.ReactElement {
     <>
       <Sidebar collapsible="icon">
         <SidebarRail />
-        <SidebarHeader className="border-b border-sidebar-border">
-          <div className="group-data-[collapsible=icon]:hidden">
-            <Select
-              value={activeEventId ?? ""}
-              onValueChange={handleEventSelect}
-              disabled={isLoading || isError}
-            >
-              <SelectTrigger className="w-full" size="sm">
-                <SelectValue
-                  placeholder={
-                    isLoading ? "Loading…" : isError ? "Error loading events" : "Select event"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {events.map((event) => (
-                  <SelectItem key={event.id} value={event.id}>
-                    {event.name}
-                  </SelectItem>
-                ))}
-                <SelectItem value={CREATE_NEW_EVENT_VALUE}>
-                  Create new event
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupContent>
@@ -276,8 +248,41 @@ function AppLayoutInner(): React.ReactElement {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <div className="flex items-center gap-2 border-b border-border bg-background px-6 py-2 sticky top-0 z-10">
-          <SidebarTrigger />
+        <div className="flex items-center border-b border-border bg-background px-6 py-2 sticky top-0 z-10">
+          <div className="flex flex-1 items-center">
+            <SidebarTrigger />
+          </div>
+          <div className="flex flex-shrink-0 items-center gap-3">
+            <img
+              src="/icon_foreground.png"
+              alt="M3T Admin"
+              className="h-8 w-auto shrink-0 object-contain"
+            />
+            <Select
+              value={activeEventId ?? ""}
+              onValueChange={handleEventSelect}
+              disabled={isLoading || isError}
+            >
+              <SelectTrigger className="w-[200px]" size="sm">
+                <SelectValue
+                  placeholder={
+                    isLoading ? "Loading…" : isError ? "Error loading events" : "Select event"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {events.map((event) => (
+                  <SelectItem key={event.id} value={event.id}>
+                    {event.name}
+                  </SelectItem>
+                ))}
+                <SelectItem value={CREATE_NEW_EVENT_VALUE}>
+                  Create new event
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-1" />
         </div>
         <main className="flex-1 p-6 min-w-0 max-w-full overflow-x-hidden overflow-y-auto">
           <Outlet />
