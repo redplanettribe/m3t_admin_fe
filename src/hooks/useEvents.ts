@@ -7,6 +7,7 @@ import type {
   EventSchedule,
   EventTag,
   Room,
+  RoomWithSessions,
   Session,
   SendEventInvitationsResult,
   ListEventInvitationsResult,
@@ -220,12 +221,20 @@ export function useCreateSession(eventId: string | null) {
       if (!eventId) return
       const key = queryKeys.events.detail(eventId)
       queryClient.setQueryData<EventSchedule>(key, (prev) => {
-        if (!prev?.sessions) {
+        if (!prev?.rooms) {
           queryClient.invalidateQueries({ queryKey: key })
           return prev
         }
         const session = sessionFromApiResponse(created)
-        return { ...prev, sessions: [...prev.sessions, session] }
+        const roomIndex = prev.rooms.findIndex((rw) => rw.room.id === created.room_id)
+        if (roomIndex < 0) {
+          queryClient.invalidateQueries({ queryKey: key })
+          return prev
+        }
+        const rooms: RoomWithSessions[] = prev.rooms.map((rw, i) =>
+          i === roomIndex ? { ...rw, sessions: [...rw.sessions, session] } : rw
+        )
+        return { ...prev, rooms }
       })
     },
   })
@@ -267,17 +276,16 @@ export function useUpdateSessionContent(eventId: string | null, sessionId: strin
       if (!eventId) return
       const key = queryKeys.events.detail(eventId)
       queryClient.setQueryData<EventSchedule>(key, (prev) => {
-        if (!prev?.sessions) {
+        if (!prev?.rooms) {
           queryClient.invalidateQueries({ queryKey: key })
           return prev
         }
         const session = sessionFromApiResponse(updated)
-        return {
-          ...prev,
-          sessions: prev.sessions.map((s) =>
-            s.id === updated.id ? session : s
-          ),
-        }
+        const rooms: RoomWithSessions[] = prev.rooms.map((rw) => ({
+          ...rw,
+          sessions: rw.sessions.map((s) => (String(s.id) === updated.id ? session : s)),
+        }))
+        return { ...prev, rooms }
       })
     },
     onError: () => {
@@ -344,17 +352,22 @@ export function useUpdateSessionSchedule(eventId: string | null) {
       if (!eventId) return
       const key = queryKeys.events.detail(eventId)
       queryClient.setQueryData<EventSchedule>(key, (prev) => {
-        if (!prev?.sessions) {
+        if (!prev?.rooms) {
           queryClient.invalidateQueries({ queryKey: key })
           return prev
         }
         const session = sessionFromApiResponse(updated)
-        return {
-          ...prev,
-          sessions: prev.sessions.map((s) =>
-            s.id === variables.sessionId ? session : s
-          ),
-        }
+        const rooms: RoomWithSessions[] = prev.rooms.map((rw) => {
+          if (rw.room.id === updated.room_id) {
+            const idx = rw.sessions.findIndex((s) => String(s.id) === variables.sessionId)
+            if (idx >= 0) {
+              return { ...rw, sessions: rw.sessions.map((s, i) => (i === idx ? session : s)) }
+            }
+            return { ...rw, sessions: [...rw.sessions, session] }
+          }
+          return { ...rw, sessions: rw.sessions.filter((s) => String(s.id) !== variables.sessionId) }
+        })
+        return { ...prev, rooms }
       })
     },
     onError: () => {
@@ -428,8 +441,8 @@ export function useToggleRoomNotBookable(eventId: string | null) {
         }
         return {
           ...prev,
-          rooms: prev.rooms.map((r) =>
-            r.id === updatedRoom.id ? updatedRoom : r
+          rooms: prev.rooms.map((rw) =>
+            rw.room.id === updatedRoom.id ? { ...rw, room: updatedRoom } : rw
           ),
         }
       })

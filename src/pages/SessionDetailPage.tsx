@@ -42,24 +42,8 @@ import {
 } from "@/hooks/useEvents"
 import { useAddSessionSpeaker, useRemoveSessionSpeaker, useSessionSpeakers, useSpeakers } from "@/hooks/useSpeakers"
 import { useEventStore } from "@/store/eventStore"
-import type { EventSchedule, EventTag, Session, SessionInput, Speaker } from "@/types/event"
+import type { EventSchedule, EventTag, Room, Session, SessionInput, Speaker } from "@/types/event"
 import { cn } from "@/lib/utils"
-
-/** Extract sessions array from API response. */
-function extractSessions(schedule: Record<string, unknown>): unknown[] {
-  const s = schedule.sessions
-  if (Array.isArray(s)) return s
-  const scheduleNested = schedule.schedule
-  if (scheduleNested != null && typeof scheduleNested === "object") {
-    const nested = (scheduleNested as Record<string, unknown>).sessions
-    if (Array.isArray(nested)) return nested
-  }
-  const slots = schedule.slots
-  if (Array.isArray(slots)) return slots
-  const items = schedule.items
-  if (Array.isArray(items)) return items
-  return []
-}
 
 function normalizeSession(s: SessionInput): Session | null {
   const raw = s as Record<string, unknown>
@@ -239,10 +223,9 @@ export function SessionDetailPage(): React.ReactElement {
     )
   }, [editTitle, editDescription, updateContent])
 
-  const scheduleRecord = schedule != null ? (schedule as unknown as Record<string, unknown>) : null
-  const event = scheduleRecord?.event as EventSchedule["event"] | undefined
-  const rooms: EventSchedule["rooms"] = (scheduleRecord?.rooms ?? []) as EventSchedule["rooms"]
-  const rawSessions = extractSessions(scheduleRecord ?? {})
+  const event = schedule?.event
+  const rooms: Room[] = schedule != null ? schedule.rooms.map((rw) => rw.room) : []
+  const rawSessions = schedule != null ? schedule.rooms.flatMap((rw) => rw.sessions) : []
   const sessions = rawSessions
     .map((s) => normalizeSession(s as SessionInput))
     .filter((s): s is Session => s !== null)

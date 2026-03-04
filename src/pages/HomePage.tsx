@@ -29,7 +29,9 @@ export function HomePage(): React.ReactElement {
   const [newTagName, setNewTagName] = React.useState("")
 
   if (activeEventId && schedule) {
-    const { event, rooms = [], sessions = [] } = schedule
+    const event = schedule.event
+    const rooms = schedule.rooms.map((rw) => rw.room)
+    const sessions = schedule.rooms.flatMap((rw) => rw.sessions)
     const hasLocation =
       event.location_lat != null && event.location_lng != null
     return (

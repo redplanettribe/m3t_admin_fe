@@ -29,6 +29,14 @@ export interface Room {
   created_at?: string
   updated_at?: string
   sessionize_room_id?: number
+  source?: string
+  source_session_id?: number
+}
+
+/** Room with nested sessions — shape returned by GET /events/{eventID}. */
+export interface RoomWithSessions {
+  room: Room
+  sessions: SessionInput[]
 }
 
 export interface UpdateRoomRequest {
@@ -110,10 +118,10 @@ export type SessionInput = Session | {
   tags?: string[] | EventTag[]
 }
 
+/** Response from GET /events/{eventID}: event plus rooms each with nested sessions. */
 export interface EventSchedule {
   event: Event
-  rooms?: Room[]
-  sessions?: Session[]
+  rooms: RoomWithSessions[]
 }
 
 export interface EventTag {

@@ -12,7 +12,7 @@ import {
 import { useEventSchedule, useToggleRoomNotBookable, useUpdateSessionSchedule, useDeleteSession, useCreateSession, useEventTags } from "@/hooks/useEvents"
 import { useSessionDrag } from "@/hooks/useSessionDrag"
 import { useEventStore } from "@/store/eventStore"
-import type { EventSchedule, EventTag, Session, SessionInput } from "@/types/event"
+import type { EventSchedule, EventTag, Room, Session, SessionInput } from "@/types/event"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -43,20 +43,11 @@ function timeValueToDate(timeValue: string, dayStartMs: number): Date {
   return d
 }
 
-/** Extract sessions array from API response (may be under different keys). */
-function extractSessions(schedule: Record<string, unknown>): unknown[] {
-  const s = schedule.sessions
-  if (Array.isArray(s)) return s
-  const scheduleNested = schedule.schedule
-  if (scheduleNested != null && typeof scheduleNested === "object") {
-    const nested = (scheduleNested as Record<string, unknown>).sessions
-    if (Array.isArray(nested)) return nested
-  }
-  const slots = schedule.slots
-  if (Array.isArray(slots)) return slots
-  const items = schedule.items
-  if (Array.isArray(items)) return items
-  return []
+/** Derive flat rooms and sessions from GET /events/{eventID} response (event + rooms with nested sessions). */
+function getRoomsAndSessions(schedule: EventSchedule): { rooms: Room[]; rawSessions: unknown[] } {
+  const rooms = schedule.rooms.map((rw) => rw.room)
+  const rawSessions = schedule.rooms.flatMap((rw) => rw.sessions)
+  return { rooms, rawSessions }
 }
 
 function normalizeSession(s: SessionInput): Session | null {
@@ -158,9 +149,9 @@ export function SchedulePage(): React.ReactElement {
     timeLabel: string
   } | null>(null)
 
-  const scheduleRecord = schedule != null ? (schedule as unknown as Record<string, unknown>) : null
-  const rooms: EventSchedule["rooms"] = (scheduleRecord?.rooms ?? []) as EventSchedule["rooms"]
-  const roomsList = (rooms ?? [])
+  const { rooms: roomsFromSchedule, rawSessions: rawSessionsFromSchedule } =
+    schedule != null ? getRoomsAndSessions(schedule) : { rooms: [] as Room[], rawSessions: [] as unknown[] }
+  const roomsList = roomsFromSchedule
     .slice()
     .sort((a, b) => {
       const aNotBookable = Boolean(a.not_bookable)
@@ -176,8 +167,7 @@ export function SchedulePage(): React.ReactElement {
       if (aCapacity === bCapacity) return 0
       return bCapacity - aCapacity
     })
-  const rawSessions = extractSessions(scheduleRecord ?? {})
-  const sessions = rawSessions
+  const sessions = rawSessionsFromSchedule
     .map((s) => normalizeSession(s as SessionInput))
     .filter((s): s is Session => s !== null)
   const {
@@ -212,7 +202,7 @@ export function SchedulePage(): React.ReactElement {
 
   function handleRoomColumnClick(
     e: React.MouseEvent<HTMLDivElement>,
-    room: NonNullable<EventSchedule["rooms"]>[number]
+    room: Room
   ) {
     const target = e.target as HTMLElement
     if (target.closest("[data-session-card]")) return
@@ -293,7 +283,7 @@ export function SchedulePage(): React.ReactElement {
     )
   }
 
-  const event = scheduleRecord!.event as EventSchedule["event"]
+  const event = schedule!.event
   const totalMinutes = Math.max(0, rangeEnd - rangeStart)
   const bodyHeight = Math.max(
     MIN_BODY_HEIGHT_PX,
