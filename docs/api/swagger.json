@@ -66,6 +66,76 @@
                 }
             }
         },
+        "/attendee/events/{eventID}/check-in": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Records the authenticated user's check-in to the event. The user must be registered for the event. Idempotent: returns 201 when a new check-in is created, 200 when already checked in.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "attendee"
+                ],
+                "summary": "Self-check-in to an event",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Already checked in",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.CheckInToEventSuccessResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Check-in created",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.CheckInToEventSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: bad_request",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: forbidden (not registered for event)",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/attendee/events/{eventID}/registrations": {
             "post": {
                 "security": [
@@ -181,6 +251,161 @@
                     },
                     "404": {
                         "description": "error.code: not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/attendee/events/{eventID}/sessions/{sessionID}/bookings": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Books the given session for the authenticated attendee. The user must be registered for the event. If the session overlaps with other booked sessions, returns 409 unless override=true (then removes overlapping bookings and books this session). Room capacity is enforced. Idempotent: returns 200 when already booked.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "attendee"
+                ],
+                "summary": "Book a session for the current attendee",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Session ID (UUID)",
+                        "name": "sessionID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "If true, remove overlapping bookings and book this session (default false)",
+                        "name": "override",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Already booked",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.BookSessionSuccessResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Booking created",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.BookSessionSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: bad_request (e.g. session in non-bookable room)",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: forbidden (not registered for event)",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "error.code: conflict (session full or schedule conflict)",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes the authenticated attendee's booking for the given session. The user must be registered for the event; the session must belong to the event. Idempotent: returns 204 when the booking was removed or when no booking existed.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "attendee"
+                ],
+                "summary": "Cancel a session booking for the current attendee",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Session ID (UUID)",
+                        "name": "sessionID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content - booking cancelled or already absent"
+                    },
+                    "400": {
+                        "description": "error.code: bad_request (invalid or missing eventID/sessionID)",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: forbidden (not registered for event)",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: not_found (event or session not found)",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -637,6 +862,88 @@
                 }
             }
         },
+        "/events/{eventID}/check-ins": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Records check-in of an attendee for the event. Caller must be the event owner or a team member. If the user is not registered for the event, they are auto-registered first. Idempotent: returns 201 when a new check-in is created, 200 when already checked in.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Check in an attendee (owner or team member)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Attendee user ID to check in",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.CheckInAttendeeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Already checked in",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.CheckInAttendeeSuccessResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Check-in created (user auto-registered if needed)",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.CheckInAttendeeSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: bad_request",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: forbidden (not owner or team member)",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/events/{eventID}/import/sessionize/{sessionizeID}": {
             "post": {
                 "security": [
@@ -856,7 +1163,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns a paginated list of user registrations for the event (registration + user info). Only the event owner or team members can list. Use page and page_size query params. Optional search filters by attendee name or email (case-insensitive). Requires authentication.",
+                "description": "Returns a paginated list of user registrations for the event (registration + user info). Each item includes checked_in indicating whether the user has checked in to the event. Only the event owner or team members can list. Use page and page_size query params. Optional search filters by attendee name or email (case-insensitive). Requires authentication.",
                 "produces": [
                     "application/json"
                 ],
@@ -3503,6 +3810,47 @@
                 }
             }
         },
+        "controllers.BookSessionSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/domain.SessionBooking"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
+        "controllers.CheckInAttendeeRequest": {
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.CheckInAttendeeSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/domain.EventCheckIn"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
+        "controllers.CheckInToEventSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/domain.EventCheckIn"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
         "controllers.ConfirmAvatarRequest": {
             "type": "object",
             "properties": {
@@ -3690,6 +4038,9 @@
         "controllers.EventRegistrationItem": {
             "type": "object",
             "properties": {
+                "checked_in": {
+                    "type": "boolean"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -4326,6 +4677,26 @@
                 }
             }
         },
+        "domain.EventCheckIn": {
+            "type": "object",
+            "properties": {
+                "checked_in_by": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "event_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.EventInvitation": {
             "type": "object",
             "properties": {
@@ -4513,6 +4884,23 @@
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.SessionBooking": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "session_id": {
+                    "type": "string"
+                },
+                "user_id": {
                     "type": "string"
                 }
             }

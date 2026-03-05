@@ -161,6 +161,8 @@ export interface EventRegistrationItem {
   email?: string
   created_at?: string
   updated_at?: string
+  /** Whether the attendee has checked in to the event */
+  checked_in?: boolean
 }
 
 /** Pagination metadata from list endpoints */

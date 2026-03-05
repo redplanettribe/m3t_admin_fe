@@ -21,6 +21,7 @@ import {
   useEventInvitations,
   useEventRegistrations,
   useSendEventInvitations,
+  useCheckInAttendee,
 } from "@/hooks/useEvents"
 import { useEventStore } from "@/store/eventStore"
 import { cn } from "@/lib/utils"
@@ -56,6 +57,7 @@ export function AttendeesPage(): React.ReactElement {
     search: registrationsSearch,
   })
   const sendInvitations = useSendEventInvitations(activeEventId)
+  const checkInAttendee = useCheckInAttendee(activeEventId)
   const [lastResult, setLastResult] = React.useState<{
     sent: number
     failed: string[]
@@ -364,13 +366,14 @@ export function AttendeesPage(): React.ReactElement {
                       <th className="h-10 px-4 text-left font-medium">Name</th>
                       <th className="h-10 px-4 text-left font-medium">Email</th>
                       <th className="h-10 px-4 text-left font-medium">Registered at</th>
+                      <th className="h-10 px-4 text-left font-medium">Check-in</th>
                     </tr>
                   </thead>
                   <tbody>
                     {registrationItems.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={3}
+                          colSpan={4}
                           className="px-4 py-8 text-center text-muted-foreground"
                         >
                           {registrationsSearch.trim()
@@ -394,6 +397,33 @@ export function AttendeesPage(): React.ReactElement {
                             {reg.created_at
                               ? new Date(reg.created_at).toLocaleString()
                               : "—"}
+                          </td>
+                          <td className="px-4 py-3">
+                            {reg.checked_in === true ? (
+                              <span className="inline-flex items-center rounded-md bg-green-500/15 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
+                                Checked in
+                              </span>
+                            ) : (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={
+                                  !reg.user_id ||
+                                  checkInAttendee.isPending &&
+                                    checkInAttendee.variables?.userId === reg.user_id
+                                }
+                                onClick={() =>
+                                  reg.user_id &&
+                                  checkInAttendee.mutate({ userId: reg.user_id })
+                                }
+                              >
+                                {checkInAttendee.isPending &&
+                                checkInAttendee.variables?.userId === reg.user_id
+                                  ? "Checking in…"
+                                  : "Check in"}
+                              </Button>
+                            )}
                           </td>
                         </tr>
                       ))

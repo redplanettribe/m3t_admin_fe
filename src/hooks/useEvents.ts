@@ -528,3 +528,22 @@ export function useSendEventInvitations(eventId: string | null) {
     },
   })
 }
+
+/** Check in an attendee for the event (POST /events/{eventID}/check-ins). */
+export function useCheckInAttendee(eventId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ userId }: { userId: string }) => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.post<{ data?: unknown }>(
+        `/events/${eventId}/check-ins`,
+        { user_id: userId }
+      )
+    },
+    onSuccess: () => {
+      if (eventId) {
+        queryClient.invalidateQueries({ queryKey: ["events", eventId, "registrations"] })
+      }
+    },
+  })
+}
