@@ -1,5 +1,7 @@
 import * as React from "react"
 import { useState } from "react"
+import { Link } from "react-router-dom"
+import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -19,6 +21,7 @@ import { cn } from "@/lib/utils"
 import { SessionizeImportModal } from "@/components/SessionizeImportModal"
 import { ScheduleSessionCard } from "@/components/ScheduleSessionCard"
 import { TagInput } from "@/components/TagInput"
+import { AddRoomModal } from "@/components/AddRoomModal"
 
 const PIXELS_PER_MINUTE = 3
 const TIME_LABEL_INTERVAL_MINUTES = 30
@@ -27,6 +30,7 @@ const TIME_COLUMN_WIDTH = 64
 const MIN_BODY_HEIGHT_PX = 320
 const SCROLL_RIGHT_PADDING_PX = 24
 const DEFAULT_SESSION_DURATION_MINUTES = 30
+const ADD_ROOM_COLUMN_WIDTH = 120
 
 /** Format a Date as "HH:mm" for use with <input type="time"> */
 function toTimeValue(date: Date): string {
@@ -148,6 +152,8 @@ export function SchedulePage(): React.ReactElement {
     topPx: number
     timeLabel: string
   } | null>(null)
+  const [addRoomOpen, setAddRoomOpen] = useState(false)
+  const [addRoomHovered, setAddRoomHovered] = useState(false)
 
   const { rooms: roomsFromSchedule, rawSessions: rawSessionsFromSchedule } =
     schedule != null ? getRoomsAndSessions(schedule) : { rooms: [] as Room[], rawSessions: [] as unknown[] }
@@ -290,6 +296,12 @@ export function SchedulePage(): React.ReactElement {
     totalMinutes * PIXELS_PER_MINUTE
   )
 
+  const scheduleWidth =
+    TIME_COLUMN_WIDTH +
+    roomsList.length * ROOM_COLUMN_WIDTH +
+    ADD_ROOM_COLUMN_WIDTH +
+    SCROLL_RIGHT_PADDING_PX
+
   const timeLabels: number[] = []
   for (let m = rangeStart; m <= rangeEnd; m += TIME_LABEL_INTERVAL_MINUTES) {
     timeLabels.push(m)
@@ -328,7 +340,10 @@ export function SchedulePage(): React.ReactElement {
         <p className="text-muted-foreground">No rooms for this event.</p>
       ) : (
         <div className="w-full min-w-0 max-w-full mr-6 overflow-hidden">
-          <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden w-full min-w-0 max-w-full">
+          <div
+            className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden mx-auto"
+            style={{ width: scheduleWidth, maxWidth: "100%" }}
+          >
             <div
               className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-12rem)] w-full min-w-0 max-w-full"
               style={{ scrollPaddingRight: SCROLL_RIGHT_PADDING_PX }}
@@ -336,7 +351,7 @@ export function SchedulePage(): React.ReactElement {
               <div
                 className="flex min-w-max border-b bg-muted/50"
                 style={{
-                  width: TIME_COLUMN_WIDTH + roomsList.length * ROOM_COLUMN_WIDTH + SCROLL_RIGHT_PADDING_PX,
+                  width: scheduleWidth,
                 }}
               >
               <div
@@ -360,7 +375,12 @@ export function SchedulePage(): React.ReactElement {
                     )}
                     style={{ width: ROOM_COLUMN_WIDTH }}
                   >
-                    <span className="truncate">{room.name ?? room.id}</span>
+                    <Link
+                      to={`/rooms/${room.id}`}
+                      className="truncate hover:underline"
+                    >
+                      {room.name ?? room.id}
+                    </Link>
                     <label className="flex items-center gap-2 cursor-pointer justify-start">
                       <Switch
                         size="sm"
@@ -378,13 +398,32 @@ export function SchedulePage(): React.ReactElement {
                   </div>
                 )
               })}
+              <div
+                className={cn(
+                  "shrink-0 border-l px-2 py-2 flex items-center justify-center transition-colors",
+                  addRoomHovered ? "bg-muted" : "bg-background/80"
+                )}
+                style={{ width: ADD_ROOM_COLUMN_WIDTH }}
+              >
+                <Button
+                  size="icon"
+                  variant={addRoomHovered ? "default" : "outline"}
+                  className="h-9 w-9"
+                  onClick={() => setAddRoomOpen(true)}
+                  onMouseEnter={() => setAddRoomHovered(true)}
+                  onMouseLeave={() => setAddRoomHovered(false)}
+                  aria-label="Add room"
+                >
+                  <Plus className="h-5 w-5" aria-hidden="true" />
+                </Button>
+              </div>
             </div>
             <div
               className="flex min-w-max relative flex-none"
               style={{
                 minHeight: bodyHeight + 24,
                 height: bodyHeight + 24,
-                width: TIME_COLUMN_WIDTH + roomsList.length * ROOM_COLUMN_WIDTH + SCROLL_RIGHT_PADDING_PX,
+                width: scheduleWidth,
               }}
             >
               <div
@@ -420,7 +459,7 @@ export function SchedulePage(): React.ReactElement {
                 <div
                   key={room.id}
                   className={cn(
-                    "shrink-0 relative border-r last:border-r-0 overflow-visible",
+                    "shrink-0 relative border-r overflow-visible",
                     room.not_bookable ? "bg-muted/40" : "bg-background"
                   )}
                   style={{ width: ROOM_COLUMN_WIDTH, minHeight: bodyHeight, height: bodyHeight }}
@@ -482,6 +521,13 @@ export function SchedulePage(): React.ReactElement {
                   })}
                 </div>
               ))}
+              <div
+                className={cn(
+                  "shrink-0 relative border-l transition-colors",
+                  addRoomHovered ? "bg-muted" : "bg-muted/20"
+                )}
+                style={{ width: ADD_ROOM_COLUMN_WIDTH, minHeight: bodyHeight, height: bodyHeight }}
+              />
             </div>
             </div>
           </div>
@@ -491,6 +537,12 @@ export function SchedulePage(): React.ReactElement {
       {roomsList.length > 0 && sessions.length === 0 && (
         <p className="text-muted-foreground text-sm">No sessions scheduled.</p>
       )}
+
+      <AddRoomModal
+        open={addRoomOpen}
+        onOpenChange={setAddRoomOpen}
+        eventId={activeEventId}
+      />
 
       <Dialog
         open={createSessionDraft !== null}
