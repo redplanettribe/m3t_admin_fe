@@ -4041,6 +4041,10 @@
         "controllers.EventRegistrationItem": {
             "type": "object",
             "properties": {
+                "tier": {
+                    "description": "Event tier assigned to the attendee, if any",
+                    "$ref": "#/definitions/domain.EventTier"
+                },
                 "checked_in": {
                     "type": "boolean"
                 },

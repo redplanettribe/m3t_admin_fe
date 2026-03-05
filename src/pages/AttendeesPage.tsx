@@ -1,6 +1,8 @@
 import * as React from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { queryKeys } from "@/lib/queryKeys"
 import {
   Dialog,
   DialogContent,
@@ -77,6 +79,7 @@ export function AttendeesPage(): React.ReactElement {
     failed: string[]
   } | null>(null)
 
+  const queryClient = useQueryClient()
   const tiers = useEventTiers(activeEventId)
   const deleteTier = useDeleteEventTier(activeEventId)
   const assignTierUsers = useAssignTierUsers(activeEventId)
@@ -702,6 +705,7 @@ export function AttendeesPage(): React.ReactElement {
                     <tr className="border-b bg-muted/50">
                       <th className="h-10 px-4 text-left font-medium">Name</th>
                       <th className="h-10 px-4 text-left font-medium">Email</th>
+                      <th className="h-10 px-4 text-left font-medium">Tier</th>
                       <th className="h-10 px-4 text-left font-medium">Registered at</th>
                       <th className="h-10 px-4 text-left font-medium">Check-in</th>
                     </tr>
@@ -710,7 +714,7 @@ export function AttendeesPage(): React.ReactElement {
                     {registrationItems.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={4}
+                          colSpan={5}
                           className="px-4 py-8 text-center text-muted-foreground"
                         >
                           {registrationsSearch.trim()
@@ -730,6 +734,58 @@ export function AttendeesPage(): React.ReactElement {
                               : "—"}
                           </td>
                           <td className="px-4 py-3">{reg.email ?? "—"}</td>
+                          <td className="px-4 py-3">
+                            <Select
+                              value={reg.tier?.id ?? ""}
+                              onValueChange={(tierId) => {
+                                if (!tierId || !reg.email) return
+                                assignTierUsers.mutate(
+                                  { tierId, emails: reg.email },
+                                  {
+                                    onSuccess: () => {
+                                      if (activeEventId) {
+                                        queryClient.invalidateQueries({
+                                          queryKey: queryKeys.events.registrations(
+                                            activeEventId,
+                                            registrationsPage,
+                                            registrationsPageSize,
+                                            registrationsSearch
+                                          ),
+                                        })
+                                      }
+                                    },
+                                  }
+                                )
+                              }}
+                              disabled={
+                                assignTierUsers.isPending &&
+                                assignTierUsers.variables?.emails === reg.email
+                              }
+                            >
+                              <SelectTrigger
+                                className="h-8 min-w-[7rem] border-0 bg-transparent shadow-none hover:bg-muted/50 data-[state=open]:bg-muted/50"
+                                aria-label={`Change tier for ${reg.email ?? "attendee"}`}
+                              >
+                                <SelectValue placeholder="Assign tier…" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(tiers.data ?? []).map((tier) => (
+                                  <SelectItem key={tier.id} value={tier.id}>
+                                    <span className="inline-flex items-center gap-1.5">
+                                      {tier.color && (
+                                        <span
+                                          className="inline-block h-3.5 w-4 rounded border border-border shrink-0"
+                                          style={{ backgroundColor: tier.color }}
+                                          aria-hidden
+                                        />
+                                      )}
+                                      {tier.name ?? tier.id}
+                                    </span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
                           <td className="px-4 py-3 text-muted-foreground">
                             {reg.created_at
                               ? new Date(reg.created_at).toLocaleString()

@@ -191,6 +191,8 @@ export interface EventRegistrationItem {
   updated_at?: string
   /** Whether the attendee has checked in to the event */
   checked_in?: boolean
+  /** Event tier assigned to the attendee, if any */
+  tier?: EventTier | null
 }
 
 /** Pagination metadata from list endpoints */
