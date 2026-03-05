@@ -151,6 +151,18 @@ export interface EventInvitation {
   sent_at?: string
 }
 
+/** Single registration item from GET /events/{eventID}/registrations (registration + user info) */
+export interface EventRegistrationItem {
+  registration_id: string
+  user_id: string
+  event_id: string
+  name?: string
+  last_name?: string
+  email?: string
+  created_at?: string
+  updated_at?: string
+}
+
 /** Pagination metadata from list endpoints */
 export interface PaginationMeta {
   page: number
@@ -162,6 +174,12 @@ export interface PaginationMeta {
 /** Unwrapped response from GET /events/{eventID}/invitations (api returns data wrapper) */
 export interface ListEventInvitationsResult {
   items: EventInvitation[]
+  pagination: PaginationMeta
+}
+
+/** Unwrapped response from GET /events/{eventID}/registrations (api returns data wrapper) */
+export interface ListEventRegistrationsResult {
+  items: EventRegistrationItem[]
   pagination: PaginationMeta
 }
 

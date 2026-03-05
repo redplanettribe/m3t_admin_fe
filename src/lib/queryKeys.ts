@@ -26,5 +26,11 @@ export const queryKeys = {
     tags: (eventId: string) => ["events", eventId, "tags"] as const,
     invitations: (eventId: string, page: number, pageSize: number, search: string) =>
       ["events", eventId, "invitations", page, pageSize, search ?? ""] as const,
+    registrations: (
+      eventId: string,
+      page: number,
+      pageSize: number,
+      search: string
+    ) => ["events", eventId, "registrations", page, pageSize, search ?? ""] as const,
   },
 } as const

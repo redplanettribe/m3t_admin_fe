@@ -11,6 +11,7 @@ import type {
   Session,
   SendEventInvitationsResult,
   ListEventInvitationsResult,
+  ListEventRegistrationsResult,
   UpdateRoomRequest,
   UpdateEventRequest,
   UpdateSessionScheduleRequest,
@@ -456,6 +457,12 @@ export interface UseEventInvitationsParams {
   search?: string
 }
 
+export interface UseEventRegistrationsParams {
+  page: number
+  pageSize: number
+  search?: string
+}
+
 export function useEventInvitations(
   eventId: string | null,
   params: UseEventInvitationsParams
@@ -474,6 +481,30 @@ export function useEventInvitations(
       }
       return apiClient.get<ListEventInvitationsResult>(
         `/events/${eventId}/invitations?${searchParams.toString()}`
+      )
+    },
+    enabled: !!eventId,
+  })
+}
+
+export function useEventRegistrations(
+  eventId: string | null,
+  params: UseEventRegistrationsParams
+) {
+  const { page, pageSize, search = "" } = params
+  return useQuery({
+    queryKey: queryKeys.events.registrations(eventId ?? "", page, pageSize, search),
+    queryFn: () => {
+      if (!eventId) throw new Error("No event selected")
+      const searchParams = new URLSearchParams({
+        page: String(page),
+        page_size: String(pageSize),
+      })
+      if (search.trim()) {
+        searchParams.set("search", search.trim())
+      }
+      return apiClient.get<ListEventRegistrationsResult>(
+        `/events/${eventId}/registrations?${searchParams.toString()}`
       )
     },
     enabled: !!eventId,
