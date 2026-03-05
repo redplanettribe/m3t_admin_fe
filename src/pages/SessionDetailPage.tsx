@@ -42,7 +42,7 @@ import {
 } from "@/hooks/useEvents"
 import { useAddSessionSpeaker, useRemoveSessionSpeaker, useSessionSpeakers, useSpeakers } from "@/hooks/useSpeakers"
 import { useEventStore } from "@/store/eventStore"
-import type { EventSchedule, EventTag, Room, Session, SessionInput, Speaker } from "@/types/event"
+import type {  EventTag, Room, Session, SessionInput, Speaker } from "@/types/event"
 import { cn } from "@/lib/utils"
 
 function normalizeSession(s: SessionInput): Session | null {

@@ -87,27 +87,17 @@ export function RoomsPage(): React.ReactElement {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-semibold tracking-tight">Rooms</h2>
-      <p className="text-muted-foreground">
-        View and manage rooms for the selected event.
-      </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-2xl font-semibold tracking-tight">Rooms</h2>
+        <Button onClick={() => setAddRoomOpen(true)}>Add room</Button>
+      </div>
 
       <Card>
         <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <CardTitle className="text-base">Event rooms</CardTitle>
-              <CardDescription>
-                {rooms.length} room{rooms.length !== 1 ? "s" : ""} for this event
-              </CardDescription>
-            </div>
-            <Button
-              type="button"
-              onClick={() => setAddRoomOpen(true)}
-            >
-              Add room
-            </Button>
-          </div>
+          <CardTitle className="text-base">Event rooms</CardTitle>
+          <CardDescription>
+            {rooms.length} room{rooms.length !== 1 ? "s" : ""} for this event
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {rooms.length === 0 ? (
