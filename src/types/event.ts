@@ -129,6 +129,34 @@ export interface EventTag {
   name: string
 }
 
+/** Event tier from GET /events/{eventID}/tiers */
+export interface EventTier {
+  id: string
+  event_id: string
+  name: string
+  color?: string
+  created_at?: string
+  updated_at?: string
+}
+
+/** Request body for POST /events/{eventID}/tiers */
+export interface CreateEventTierRequest {
+  name: string
+  color?: string
+}
+
+/** Request body for PATCH /events/{eventID}/tiers/{tierID} */
+export interface UpdateEventTierRequest {
+  name?: string
+  color?: string
+}
+
+/** Response from POST /events/{eventID}/tiers/{tierID}/assignments */
+export interface AssignTierUsersResult {
+  added: number
+  failed: string[]
+}
+
 /** Response shape from GET /events/{eventID}/tags (apiClient returns .data as EventTag[]) */
 export interface ListEventTagsSuccessResponse {
   data: EventTag[]

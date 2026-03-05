@@ -6,6 +6,7 @@ import type {
   Event,
   EventSchedule,
   EventTag,
+  EventTier,
   Room,
   RoomWithSessions,
   Session,
@@ -18,6 +19,9 @@ import type {
   UpdateSessionContentRequest,
   CreateSessionRequest,
   CreateRoomRequest,
+  CreateEventTierRequest,
+  UpdateEventTierRequest,
+  AssignTierUsersResult,
 } from "@/types/event"
 
 /** Normalize tags from API (Tag[] or string[]) to EventTag[] for Session. */
@@ -112,6 +116,80 @@ export function useDeleteEventTag(eventId: string | null) {
         queryClient.invalidateQueries({ queryKey: queryKeys.events.tags(eventId) })
         queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
       }
+    },
+  })
+}
+
+export function useEventTiers(eventId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.events.tiers(eventId ?? ""),
+    queryFn: () => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.get<EventTier[]>(`/events/${eventId}/tiers`)
+    },
+    enabled: !!eventId,
+  })
+}
+
+export function useCreateEventTier(eventId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: CreateEventTierRequest) => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.post<EventTier>(`/events/${eventId}/tiers`, body)
+    },
+    onSuccess: () => {
+      if (eventId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.events.tiers(eventId) })
+      }
+    },
+  })
+}
+
+export function useUpdateEventTier(eventId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      tierId,
+      body,
+    }: { tierId: string; body: UpdateEventTierRequest }) => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.patch<EventTier>(`/events/${eventId}/tiers/${tierId}`, body)
+    },
+    onSuccess: () => {
+      if (eventId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.events.tiers(eventId) })
+      }
+    },
+  })
+}
+
+export function useDeleteEventTier(eventId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ tierId }: { tierId: string }) => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.delete<undefined>(`/events/${eventId}/tiers/${tierId}`)
+    },
+    onSuccess: () => {
+      if (eventId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.events.tiers(eventId) })
+      }
+    },
+  })
+}
+
+export function useAssignTierUsers(eventId: string | null) {
+  return useMutation({
+    mutationFn: ({
+      tierId,
+      emails,
+    }: { tierId: string; emails: string }) => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.post<AssignTierUsersResult>(
+        `/events/${eventId}/tiers/${tierId}/assignments`,
+        { emails }
+      )
     },
   })
 }

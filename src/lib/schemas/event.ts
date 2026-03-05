@@ -55,3 +55,31 @@ export const createRoomSchema = z.object({
 })
 
 export type CreateRoomFormValues = z.infer<typeof createRoomSchema>
+
+export const createTierSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  color: z.string().optional(),
+})
+
+export type CreateTierFormValues = z.infer<typeof createTierSchema>
+
+export const updateTierSchema = z.object({
+  name: z.string().optional(),
+  color: z.string().optional(),
+})
+
+export type UpdateTierFormValues = z.infer<typeof updateTierSchema>
+
+/** For edit tier modal: name required so we never submit empty. */
+export const editTierFormSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  color: z.string().optional(),
+})
+
+export type EditTierFormValues = z.infer<typeof editTierFormSchema>
+
+export const assignTierEmailsSchema = z.object({
+  emails: z.string().trim().min(1, "Enter at least one email"),
+})
+
+export type AssignTierEmailsFormValues = z.infer<typeof assignTierEmailsSchema>

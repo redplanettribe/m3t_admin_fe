@@ -3212,7 +3212,7 @@
                         "required": true
                     },
                     {
-                        "description": "Tier name",
+                        "description": "Tier name and optional color (hex)",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -3367,7 +3367,7 @@
                         "required": true
                     },
                     {
-                        "description": "New tier name",
+                        "description": "New tier name and optional color (hex)",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -3881,6 +3881,9 @@
         "controllers.CreateEventTierRequest": {
             "type": "object",
             "properties": {
+                "color": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 }
@@ -4515,6 +4518,9 @@
         "controllers.UpdateEventTierRequest": {
             "type": "object",
             "properties": {
+                "color": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 }
@@ -4771,6 +4777,9 @@
         "domain.EventTier": {
             "type": "object",
             "properties": {
+                "color": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
