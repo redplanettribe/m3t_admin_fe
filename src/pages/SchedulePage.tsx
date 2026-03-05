@@ -400,8 +400,8 @@ export function SchedulePage(): React.ReactElement {
               })}
               <div
                 className={cn(
-                  "shrink-0 border-l px-2 py-2 flex items-center justify-center transition-colors",
-                  addRoomHovered ? "bg-muted" : "bg-background/80"
+                  "shrink-0 border-l px-2 py-2 flex items-center justify-center transition-colors bg-muted/50",
+                  addRoomHovered && "bg-muted"
                 )}
                 style={{ width: ADD_ROOM_COLUMN_WIDTH }}
               >
