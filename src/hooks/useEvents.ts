@@ -4,9 +4,11 @@ import { queryKeys } from "@/lib/queryKeys"
 import { useEventStore } from "@/store/eventStore"
 import type {
   Event,
+  ConfirmThumbnailRequest,
   EventSchedule,
   EventTag,
   EventTier,
+  RequestThumbnailUploadResult,
   Room,
   RoomWithSessions,
   Session,
@@ -492,6 +494,33 @@ export function useUpdateEvent(eventId: string | null) {
     mutationFn: (body: UpdateEventRequest) => {
       if (!eventId) throw new Error("No event selected")
       return apiClient.patch<Event>(`/events/${eventId}`, body)
+    },
+    onSuccess: () => {
+      if (!eventId) return
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.list })
+    },
+  })
+}
+
+export function useRequestEventThumbnailUpload(eventId: string | null) {
+  return useMutation({
+    mutationFn: () => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.post<RequestThumbnailUploadResult>(
+        `/events/${eventId}/thumbnail/upload-url`,
+        {}
+      )
+    },
+  })
+}
+
+export function useConfirmEventThumbnail(eventId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ key }: ConfirmThumbnailRequest) => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.put<Event>(`/events/${eventId}/thumbnail`, { key })
     },
     onSuccess: () => {
       if (!eventId) return

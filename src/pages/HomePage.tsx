@@ -35,34 +35,48 @@ export function HomePage(): React.ReactElement {
     const hasLocation =
       event.location_lat != null && event.location_lng != null
     return (
-      <div className="space-y-6">
+      <div className="mx-auto max-w-4xl space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">{event.name}</h2>
-            <p className="text-muted-foreground">
-              Event Code: <code className="rounded bg-muted px-1">{event.event_code}</code>
-            </p>
-            {event.date && (
-              <p className="text-muted-foreground text-sm mt-1">
-                Date: {event.date.slice(0, 10)}
-              </p>
+          <div className="flex items-start gap-4">
+            {event.thumbnail_url && (
+              <img
+                src={event.thumbnail_url}
+                alt={
+                  event.name ? `${event.name} thumbnail` : "Event thumbnail"
+                }
+                className="h-30 w-30 rounded-md border bg-muted object-cover"
+              />
             )}
-            {event.description && (
-              <p className="text-muted-foreground text-sm mt-2 max-w-2xl">
-                {event.description}
+            <div>
+              <h2 className="text-2xl font-semibold tracking-tight">
+                {event.name}
+              </h2>
+              <p className="text-muted-foreground">
+                Event Code:{" "}
+                <code className="rounded bg-muted px-1">
+                  {event.event_code}
+                </code>
               </p>
-            )}
-            {hasLocation && (
-              <p className="text-muted-foreground text-sm mt-1">
-                Location: {event.location_lat}, {event.location_lng}
-              </p>
-            )}
+              {event.date && (
+                <p className="text-muted-foreground text-sm mt-1">
+                  Date: {event.date.slice(0, 10)}
+                </p>
+              )}
+              {event.description && (
+                <p className="text-muted-foreground text-sm mt-2 max-w-2xl">
+                  {event.description}
+                </p>
+              )}
+              {hasLocation && (
+                <p className="text-muted-foreground text-sm mt-1">
+                  Location: {event.location_lat}, {event.location_lng}
+                </p>
+              )}
+            </div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-            Edit event
-          </Button>
+          <Button onClick={() => setEditOpen(true)}>Edit event</Button>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-w-4xl">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Rooms</CardTitle>
@@ -197,7 +211,7 @@ export function HomePage(): React.ReactElement {
 
   if (activeEventId && isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="mx-auto max-w-4xl space-y-6">
         <h2 className="text-2xl font-semibold tracking-tight">Home</h2>
         <p className="text-muted-foreground">Loading event details…</p>
       </div>
@@ -206,7 +220,7 @@ export function HomePage(): React.ReactElement {
 
   if (activeEventId && isError) {
     return (
-      <div className="space-y-6">
+      <div className="mx-auto max-w-4xl space-y-6">
         <h2 className="text-2xl font-semibold tracking-tight">Home</h2>
         <p className="text-muted-foreground text-destructive">Failed to load event details.</p>
       </div>
@@ -214,7 +228,7 @@ export function HomePage(): React.ReactElement {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       <h2 className="text-2xl font-semibold tracking-tight">Home</h2>
       <p className="text-muted-foreground">
         Select an event from the dropdown in the sidebar or create a new event to get started.

@@ -19,7 +19,11 @@ import {
 } from "@/components/ui/form"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useUpdateEvent } from "@/hooks/useEvents"
+import {
+  useConfirmEventThumbnail,
+  useRequestEventThumbnailUpload,
+  useUpdateEvent,
+} from "@/hooks/useEvents"
 import {
   updateEventSchema,
   type UpdateEventFormInput,
@@ -39,6 +43,14 @@ export function EditEventModal({
   event,
 }: EditEventModalProps): React.ReactElement {
   const updateEvent = useUpdateEvent(event.id)
+  const requestThumbnailUpload = useRequestEventThumbnailUpload(event.id)
+  const confirmThumbnail = useConfirmEventThumbnail(event.id)
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null)
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = React.useState(false)
+  const [thumbnailError, setThumbnailError] = React.useState<string | null>(null)
+  const [thumbnailUrl, setThumbnailUrl] = React.useState<string | undefined>(
+    event.thumbnail_url
+  )
 
   const form = useForm<UpdateEventFormInput>({
     resolver: zodResolver(updateEventSchema),
@@ -59,8 +71,64 @@ export function EditEventModal({
         location_lat: event.location_lat,
         location_lng: event.location_lng,
       })
+      setThumbnailUrl(event.thumbnail_url)
+      setThumbnailError(null)
     }
-  }, [open, event?.id, event?.date, event?.description, event?.location_lat, event?.location_lng, form])
+  }, [
+    open,
+    event?.id,
+    event?.date,
+    event?.description,
+    event?.location_lat,
+    event?.location_lng,
+    event?.thumbnail_url,
+    form,
+  ])
+
+  const handleThumbnailButtonClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleThumbnailChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setThumbnailError(null)
+
+    if (!file.type.startsWith("image/")) {
+      setThumbnailError("Please select an image file.")
+      e.target.value = ""
+      return
+    }
+
+    setIsUploadingThumbnail(true)
+    try {
+      const { key, upload_url } = await requestThumbnailUpload.mutateAsync()
+      const res = await fetch(upload_url, {
+        method: "PUT",
+        body: file,
+        headers: {
+          "Content-Type": file.type || "application/octet-stream",
+        },
+      })
+
+      if (!res.ok) {
+        throw new Error("Failed to upload image. Please try again.")
+      }
+
+      const updatedEvent = await confirmThumbnail.mutateAsync({ key })
+      setThumbnailUrl(updatedEvent.thumbnail_url)
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to upload thumbnail."
+      setThumbnailError(message)
+    } finally {
+      setIsUploadingThumbnail(false)
+      e.target.value = ""
+    }
+  }
 
   const onSubmit = (values: UpdateEventFormInput) => {
     const body = {
@@ -140,6 +208,49 @@ export function EditEventModal({
                 </FormItem>
               )}
             />
+            <div className="space-y-2">
+              <FormLabel>Thumbnail</FormLabel>
+              <div className="flex items-center gap-4">
+                {thumbnailUrl && (
+                  <img
+                    src={thumbnailUrl}
+                    alt={event.name ? `${event.name} thumbnail` : "Event thumbnail"}
+                    className="h-16 w-16 rounded-md border bg-muted object-cover"
+                  />
+                )}
+                <div className="flex flex-col gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleThumbnailChange}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleThumbnailButtonClick}
+                    disabled={
+                      isUploadingThumbnail ||
+                      requestThumbnailUpload.isPending ||
+                      confirmThumbnail.isPending
+                    }
+                  >
+                    {isUploadingThumbnail ||
+                    requestThumbnailUpload.isPending ||
+                    confirmThumbnail.isPending
+                      ? "Uploading…"
+                      : thumbnailUrl
+                        ? "Change thumbnail"
+                        : "Upload thumbnail"}
+                  </Button>
+                  {thumbnailError && (
+                    <p className="text-xs text-destructive">{thumbnailError}</p>
+                  )}
+                </div>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}

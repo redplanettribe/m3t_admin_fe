@@ -9,6 +9,7 @@ export interface Event {
   description?: string
   location_lat?: number
   location_lng?: number
+  thumbnail_url?: string
 }
 
 export interface UpdateEventRequest {
@@ -16,6 +17,15 @@ export interface UpdateEventRequest {
   description?: string
   location_lat?: number
   location_lng?: number
+}
+
+export interface RequestThumbnailUploadResult {
+  key: string
+  upload_url: string
+}
+
+export interface ConfirmThumbnailRequest {
+  key: string
 }
 
 export interface Room {

@@ -1163,7 +1163,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns a paginated list of user registrations for the event (registration + user info). Each item includes checked_in indicating whether the user has checked in to the event. Only the event owner or team members can list. Use page and page_size query params. Optional search filters by attendee name or email (case-insensitive). Requires authentication.",
+                "description": "Returns a paginated list of user registrations for the event (registration + user info). Each item includes checked_in and may include tier (assigned event tier) when present. Only the event owner or team members can list. Use page and page_size query params. Optional search filters by attendee name or email (case-insensitive). Requires authentication.",
                 "produces": [
                     "application/json"
                 ],
@@ -1877,6 +1877,172 @@
                     },
                     "404": {
                         "description": "error.code: not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/events/{eventID}/sessions/{sessionID}/bookings": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes all session bookings for users who have not checked in to the session. Caller must be the event owner or a team member. Frees capacity for others to book or check in. Returns the number of bookings released.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Release unchecked-in session bookings (owner or team member)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Session ID (UUID)",
+                        "name": "sessionID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Number of bookings released",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.ReleaseSessionBookingsSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: bad_request",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: forbidden (not owner or team member)",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/events/{eventID}/sessions/{sessionID}/check-ins": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Records check-in of an attendee to a specific session. Caller must be the event owner or a team member. User must be registered for the event. If the user has no booking and the session has capacity, they are auto-booked then checked in. If the session is full and the user has no booking, returns 409. Idempotent: returns 201 when a new check-in is created, 200 when already checked in.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Check in an attendee to a session (owner or team member)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Session ID (UUID)",
+                        "name": "sessionID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Attendee user ID to check in",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.CheckInAttendeeToSessionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Already checked in",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.CheckInAttendeeToSessionSuccessResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Check-in created (user auto-booked if needed)",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.CheckInAttendeeToSessionSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: bad_request",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: forbidden (not owner/team or user not registered)",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "error.code: conflict (session full)",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3123,6 +3289,146 @@
                 }
             }
         },
+        "/events/{eventID}/thumbnail": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Confirms the uploaded event thumbnail by storing the object key on the event and returning the updated event. Requires Bearer token. Only the event owner or team members can call this.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Confirm uploaded event thumbnail",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Uploaded thumbnail object key",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.ConfirmThumbnailRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data contains the updated event",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.UpdateEventSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: bad_request",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: forbidden (not owner or team member)",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/events/{eventID}/thumbnail/upload-url": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a presigned URL and object key that the client can use to upload an event thumbnail directly to storage. Requires Bearer token. Only the event owner or team members can call this.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Get presigned upload URL for event thumbnail",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data contains upload_url and key",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.RequestThumbnailUploadResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: bad_request",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: forbidden (not owner or team member)",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/events/{eventID}/tiers": {
             "get": {
                 "security": [
@@ -3840,6 +4146,25 @@
                 }
             }
         },
+        "controllers.CheckInAttendeeToSessionRequest": {
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.CheckInAttendeeToSessionSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/domain.SessionCheckIn"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
         "controllers.CheckInToEventSuccessResponse": {
             "type": "object",
             "properties": {
@@ -3852,6 +4177,14 @@
             }
         },
         "controllers.ConfirmAvatarRequest": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.ConfirmThumbnailRequest": {
             "type": "object",
             "properties": {
                 "key": {
@@ -4041,10 +4374,6 @@
         "controllers.EventRegistrationItem": {
             "type": "object",
             "properties": {
-                "tier": {
-                    "description": "Event tier assigned to the attendee, if any",
-                    "$ref": "#/definitions/domain.EventTier"
-                },
                 "checked_in": {
                     "type": "boolean"
                 },
@@ -4066,10 +4395,27 @@
                 "registration_id": {
                     "type": "string"
                 },
+                "tier": {
+                    "$ref": "#/definitions/controllers.EventRegistrationTierInfo"
+                },
                 "updated_at": {
                     "type": "string"
                 },
                 "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.EventRegistrationTierInfo": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 }
             }
@@ -4390,6 +4736,25 @@
                 }
             }
         },
+        "controllers.ReleaseSessionBookingsResponse": {
+            "type": "object",
+            "properties": {
+                "released": {
+                    "type": "integer"
+                }
+            }
+        },
+        "controllers.ReleaseSessionBookingsSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/controllers.ReleaseSessionBookingsResponse"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
         "controllers.RemoveEventTeamMemberResponse": {
             "type": "object",
             "properties": {
@@ -4424,6 +4789,17 @@
             "type": "object",
             "properties": {
                 "email": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.RequestThumbnailUploadResponse": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "upload_url": {
                     "type": "string"
                 }
             }
@@ -4682,6 +5058,9 @@
                 "owner_id": {
                     "type": "string"
                 },
+                "thumbnail_url": {
+                    "type": "string"
+                },
                 "updated_at": {
                     "type": "string"
                 }
@@ -4904,6 +5283,26 @@
         "domain.SessionBooking": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "session_id": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.SessionCheckIn": {
+            "type": "object",
+            "properties": {
+                "checked_in_by": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
