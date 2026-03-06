@@ -55,7 +55,8 @@ export function EditEventModal({
   const form = useForm<UpdateEventFormInput>({
     resolver: zodResolver(updateEventSchema),
     defaultValues: {
-      date: "",
+      start_date: "",
+      duration_days: undefined,
       description: "",
       location_lat: undefined,
       location_lng: undefined,
@@ -64,9 +65,9 @@ export function EditEventModal({
 
   React.useEffect(() => {
     if (open && event) {
-      const dateOnly = event.date?.slice(0, 10) ?? ""
       form.reset({
-        date: dateOnly,
+        start_date: event.start_date ?? "",
+        duration_days: event.duration_days,
         description: event.description ?? "",
         location_lat: event.location_lat,
         location_lng: event.location_lng,
@@ -77,7 +78,8 @@ export function EditEventModal({
   }, [
     open,
     event?.id,
-    event?.date,
+    event?.start_date,
+    event?.duration_days,
     event?.description,
     event?.location_lat,
     event?.location_lng,
@@ -132,8 +134,11 @@ export function EditEventModal({
 
   const onSubmit = (values: UpdateEventFormInput) => {
     const body = {
-      ...(values.date !== undefined && values.date !== "" && {
-        date: `${values.date}T12:00:00Z`,
+      ...(values.start_date !== undefined && values.start_date !== "" && {
+        start_date: values.start_date,
+      }),
+      ...(typeof values.duration_days === "number" && {
+        duration_days: values.duration_days,
       }),
       ...(values.description !== undefined && values.description !== "" && {
         description: values.description,
@@ -156,7 +161,7 @@ export function EditEventModal({
         <DialogHeader>
           <DialogTitle>Edit event details</DialogTitle>
           <DialogDescription>
-            Update date, description, and location. Event name and code cannot be changed here.
+            Update start date, duration, description, and location. Event name and code cannot be changed here.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -175,16 +180,39 @@ export function EditEventModal({
             )}
             <FormField
               control={form.control}
-              name="date"
+              name="start_date"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Date</FormLabel>
+                  <FormLabel>Start Date</FormLabel>
                   <FormControl>
                     <Input
                       type="date"
                       autoComplete="off"
                       {...field}
                       value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="duration_days"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Duration (days)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={1}
+                      placeholder="e.g. 1"
+                      {...field}
+                      value={field.value ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        field.onChange(v === "" ? "" : Number(v))
+                      }}
                     />
                   </FormControl>
                   <FormMessage />

@@ -4271,7 +4271,11 @@
                     "type": "string"
                 },
                 "end_time": {
+                    "description": "HH:MM or HH:MM:SS",
                     "type": "string"
+                },
+                "event_day": {
+                    "type": "integer"
                 },
                 "room_id": {
                     "type": "string"
@@ -4283,6 +4287,7 @@
                     }
                 },
                 "start_time": {
+                    "description": "HH:MM or HH:MM:SS",
                     "type": "string"
                 },
                 "tags": {
@@ -4851,17 +4856,21 @@
         "controllers.UpdateEventRequest": {
             "type": "object",
             "properties": {
-                "date": {
-                    "type": "string"
-                },
                 "description": {
                     "type": "string"
+                },
+                "duration_days": {
+                    "type": "integer"
                 },
                 "location_lat": {
                     "type": "number"
                 },
                 "location_lng": {
                     "type": "number"
+                },
+                "start_date": {
+                    "description": "YYYY-MM-DD",
+                    "type": "string"
                 }
             }
         },
@@ -4976,6 +4985,9 @@
                 "end_time": {
                     "type": "string"
                 },
+                "event_day": {
+                    "type": "integer"
+                },
                 "room_id": {
                     "type": "string"
                 },
@@ -5034,11 +5046,11 @@
                 "created_at": {
                     "type": "string"
                 },
-                "date": {
-                    "type": "string"
-                },
                 "description": {
                     "type": "string"
+                },
+                "duration_days": {
+                    "type": "integer"
                 },
                 "event_code": {
                     "type": "string"
@@ -5056,6 +5068,9 @@
                     "type": "string"
                 },
                 "owner_id": {
+                    "type": "string"
+                },
+                "start_date": {
                     "type": "string"
                 },
                 "thumbnail_url": {
@@ -5242,7 +5257,10 @@
                     "type": "string"
                 },
                 "end_time": {
-                    "type": "string"
+                    "$ref": "#/definitions/domain.TimeOfDay"
+                },
+                "event_day": {
+                    "type": "integer"
                 },
                 "id": {
                     "type": "string"
@@ -5263,7 +5281,7 @@
                     }
                 },
                 "start_time": {
-                    "type": "string"
+                    "$ref": "#/definitions/domain.TimeOfDay"
                 },
                 "tags": {
                     "description": "Tags are the tags associated with this session. Each tag includes both its ID and name.",
@@ -5368,6 +5386,9 @@
                     "type": "string"
                 }
             }
+        },
+        "domain.TimeOfDay": {
+            "type": "object"
         },
         "domain.User": {
             "type": "object",

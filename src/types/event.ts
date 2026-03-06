@@ -5,7 +5,8 @@ export interface Event {
   owner_id?: string
   created_at?: string
   updated_at?: string
-  date?: string
+  start_date?: string
+  duration_days?: number
   description?: string
   location_lat?: number
   location_lng?: number
@@ -13,7 +14,8 @@ export interface Event {
 }
 
 export interface UpdateEventRequest {
-  date?: string
+  start_date?: string
+  duration_days?: number
   description?: string
   location_lat?: number
   location_lng?: number
@@ -66,16 +68,15 @@ export interface CreateRoomRequest {
   not_bookable?: boolean
 }
 
-/** Session with start/end for schedule placement. API may use starts_at/ends_at/room_id or camelCase. Tags from API are objects with id and name. */
+/** Session with event_day and HH:mm times. Times are relative to event.start_date + (event_day - 1) days. */
 export interface Session {
   id: string
   room_id: string
-  starts_at: string
-  ends_at: string
+  event_day: number
+  start_time: string
+  end_time: string
   title?: string
   description?: string
-  speaker?: string
-  speakers?: string[]
   speaker_ids?: string[]
   tags?: EventTag[]
 }
@@ -83,6 +84,7 @@ export interface Session {
 /** Request body for PATCH /events/{eventID}/sessions/{sessionID} */
 export interface UpdateSessionScheduleRequest {
   room_id?: string
+  event_day?: number
   start_time?: string
   end_time?: string
 }
@@ -90,6 +92,7 @@ export interface UpdateSessionScheduleRequest {
 /** Request body for POST /events/{eventID}/sessions */
 export interface CreateSessionRequest {
   room_id: string
+  event_day: number
   start_time: string
   end_time: string
   title?: string
@@ -104,26 +107,15 @@ export interface UpdateSessionContentRequest {
   description?: string
 }
 
-/** Raw session from API (may be camelCase or different field names). Tags may be string[] or EventTag[]. */
+/** Raw session from API. Tags may be string[] or EventTag[]. */
 export type SessionInput = Session | {
   id: string
   room_id?: string
-  roomId?: string
-  room?: { id: string }
-  starts_at?: string
-  startsAt?: string
+  event_day?: number
   start_time?: string
-  startTime?: string
-  start?: string
-  ends_at?: string
-  endsAt?: string
   end_time?: string
-  endTime?: string
-  end?: string
   title?: string
   description?: string
-  speaker?: string
-  speakers?: string[]
   speaker_ids?: string[]
   tags?: string[] | EventTag[]
 }

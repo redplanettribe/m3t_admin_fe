@@ -291,11 +291,13 @@ export function useCreateSession(eventId: string | null) {
       return apiClient.post<{
         id: string
         room_id: string
+        event_day: number
         start_time: string
         end_time: string
         title?: string
         description?: string
         tags?: EventTag[]
+        speaker_ids?: string[]
       }>(`/events/${eventId}/sessions`, body)
     },
     onSuccess: (created, _variables) => {
@@ -321,24 +323,28 @@ export function useCreateSession(eventId: string | null) {
   })
 }
 
-/** API returns start_time/end_time and tags as Tag[]; we normalize to starts_at/ends_at and EventTag[] for cache. */
+/** API returns event_day, start_time (HH:mm), end_time (HH:mm) and tags; we normalize to Session for cache. */
 function sessionFromApiResponse(data: {
   id: string
   room_id: string
+  event_day?: number
   start_time: string
   end_time: string
   title?: string
   description?: string
   tags?: EventTag[] | string[]
+  speaker_ids?: string[]
 }): Session {
   return {
     id: data.id,
     room_id: data.room_id,
-    starts_at: data.start_time,
-    ends_at: data.end_time,
+    event_day: data.event_day ?? 1,
+    start_time: data.start_time,
+    end_time: data.end_time,
     title: data.title,
     description: data.description,
     tags: normalizeTags(data.tags),
+    speaker_ids: data.speaker_ids,
   }
 }
 
@@ -348,7 +354,7 @@ export function useUpdateSessionContent(eventId: string | null, sessionId: strin
     mutationFn: (body: UpdateSessionContentRequest) => {
       if (!eventId) throw new Error("No event selected")
       if (!sessionId) throw new Error("No session selected")
-      return apiClient.patch<{ id: string; room_id: string; start_time: string; end_time: string; title?: string; description?: string; tags?: EventTag[] }>(
+      return apiClient.patch<{ id: string; room_id: string; event_day?: number; start_time: string; end_time: string; title?: string; description?: string; tags?: EventTag[] }>(
         `/events/${eventId}/sessions/${sessionId}/content`,
         body
       )
@@ -424,7 +430,7 @@ export function useUpdateSessionSchedule(eventId: string | null) {
       ...body
     }: { sessionId: string } & UpdateSessionScheduleRequest) => {
       if (!eventId) throw new Error("No event selected")
-      return apiClient.patch<{ id: string; room_id: string; start_time: string; end_time: string; title?: string; description?: string; tags?: EventTag[] }>(
+      return apiClient.patch<{ id: string; room_id: string; event_day?: number; start_time: string; end_time: string; title?: string; description?: string; tags?: EventTag[] }>(
         `/events/${eventId}/sessions/${sessionId}`,
         body
       )

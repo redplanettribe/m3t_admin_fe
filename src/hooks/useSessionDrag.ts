@@ -13,9 +13,8 @@ export interface UseSessionDragParams {
   roomColumnWidth: number
   pixelsPerMinute: number
   rangeStartMinutes: number
-  scheduleDayStartMs: number
   updateSession: UseMutationResult<
-    { id: string; room_id: string; start_time: string; end_time: string; title?: string; description?: string; tags?: EventTag[] },
+    { id: string; room_id: string; event_day?: number; start_time: string; end_time: string; title?: string; description?: string; tags?: EventTag[] },
     Error,
     { sessionId: string } & UpdateSessionScheduleRequest,
     unknown
@@ -35,8 +34,15 @@ function snapToGrid(pixels: number, pixelsPerMinute: number): number {
   return Math.round(pixels / snapPx) * snapPx
 }
 
-function minutesToIso(dayStartMs: number, minutes: number): string {
-  return new Date(dayStartMs + minutes * 60 * 1000).toISOString()
+function hhmmToMinutes(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number)
+  return h * 60 + (m ?? 0)
+}
+
+function minutesToHHMM(minutes: number): string {
+  const h = Math.floor(minutes / 60)
+  const m = Math.round(minutes % 60)
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`
 }
 
 export function useSessionDrag({
@@ -44,7 +50,6 @@ export function useSessionDrag({
   roomColumnWidth,
   pixelsPerMinute,
   rangeStartMinutes,
-  scheduleDayStartMs,
   updateSession,
 }: UseSessionDragParams) {
   const [preview, setPreview] = useState<SessionPreviewState | null>(null)
@@ -110,26 +115,26 @@ export function useSessionDrag({
       const payload: UpdateSessionScheduleRequest = {}
       if (targetRoom.id !== session.room_id) payload.room_id = targetRoom.id
       if (deltaMinutes !== 0) {
-        payload.start_time = minutesToIso(scheduleDayStartMs, newStartMinutes)
-        payload.end_time = minutesToIso(scheduleDayStartMs, newEndMinutes)
+        payload.start_time = minutesToHHMM(newStartMinutes)
+        payload.end_time = minutesToHHMM(newEndMinutes)
       }
       commitUpdate(session.id, payload)
     } else if (mode === "resize-top") {
       const newStartMinutes = originStartMinutes + deltaMinutes
       const clampedStart = Math.max(0, Math.min(newStartMinutes, originEndMinutes - MIN_DURATION_MINUTES))
       const payload: UpdateSessionScheduleRequest = {
-        start_time: minutesToIso(scheduleDayStartMs, clampedStart),
+        start_time: minutesToHHMM(clampedStart),
       }
       commitUpdate(session.id, payload)
     } else if (mode === "resize-bottom") {
       const newEndMinutes = originEndMinutes + deltaMinutes
       const clampedEnd = Math.max(originStartMinutes + MIN_DURATION_MINUTES, Math.min(newEndMinutes, 24 * 60))
       const payload: UpdateSessionScheduleRequest = {
-        end_time: minutesToIso(scheduleDayStartMs, clampedEnd),
+        end_time: minutesToHHMM(clampedEnd),
       }
       commitUpdate(session.id, payload)
     }
-  }, [rooms, roomColumnWidth, pixelsPerMinute, scheduleDayStartMs, commitUpdate])
+  }, [rooms, roomColumnWidth, pixelsPerMinute, commitUpdate])
 
   const onPointerMove = useCallback(
     (e: PointerEvent) => {
@@ -189,10 +194,8 @@ export function useSessionDrag({
     ) => {
       if (rooms.length === 0) return
       e.preventDefault()
-      const startMs = new Date(session.starts_at).getTime()
-      const endMs = new Date(session.ends_at).getTime()
-      const originStartMinutes = (startMs - scheduleDayStartMs) / (60 * 1000)
-      const originEndMinutes = (endMs - scheduleDayStartMs) / (60 * 1000)
+      const originStartMinutes = hhmmToMinutes(session.start_time)
+      const originEndMinutes = hhmmToMinutes(session.end_time)
       const originHeightPx = (originEndMinutes - originStartMinutes) * pixelsPerMinute
 
       state.current = {
@@ -217,7 +220,7 @@ export function useSessionDrag({
       window.addEventListener("pointercancel", up)
       ;(e.target as HTMLElement).setPointerCapture?.(e.pointerId)
     },
-    [rooms.length, scheduleDayStartMs, pixelsPerMinute, onPointerMove, onPointerUp]
+    [rooms.length, pixelsPerMinute, onPointerMove, onPointerUp]
   )
 
   return { preview, handlePointerDown, activeSessionId: preview?.sessionId ?? null }

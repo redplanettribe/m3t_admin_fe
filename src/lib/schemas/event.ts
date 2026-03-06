@@ -7,7 +7,11 @@ export const createEventSchema = z.object({
 export type CreateEventFormValues = z.infer<typeof createEventSchema>
 
 export const updateEventSchema = z.object({
-  date: z.string().optional(),
+  start_date: z.string().optional(),
+  duration_days: z
+    .union([z.number().int().positive(), z.literal("")])
+    .optional()
+    .transform((v) => (v === "" ? undefined : v)),
   description: z.string().optional(),
   location_lat: z
     .union([z.number(), z.literal("")])

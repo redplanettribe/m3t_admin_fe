@@ -57,9 +57,21 @@ export function HomePage(): React.ReactElement {
                   {event.event_code}
                 </code>
               </p>
-              {event.date && (
+              {event.start_date && (
                 <p className="text-muted-foreground text-sm mt-1">
-                  Date: {event.date.slice(0, 10)}
+                  {event.duration_days != null && event.duration_days > 1 ? (() => {
+                    const start = new Date(event.start_date + "T00:00:00Z")
+                    const end = new Date(start)
+                    end.setUTCDate(end.getUTCDate() + (event.duration_days - 1))
+                    const endStr = end.toISOString().slice(0, 10)
+                    return (
+                      <>
+                        Date: {event.start_date} to {endStr} ({event.duration_days} days)
+                      </>
+                    )
+                  })() : (
+                    <>Date: {event.start_date}</>
+                  )}
                 </p>
               )}
               {event.description && (

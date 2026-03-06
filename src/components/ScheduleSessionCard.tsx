@@ -11,6 +11,12 @@ const TAGS_WRAPPER_MAX_LINES = 2
 const LINE_HEIGHT_PX = 18
 const RESIZE_HANDLE_HEIGHT_PX = 6
 
+/** Convert "HH:mm" to minutes since midnight. */
+function hhmmToMinutes(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number)
+  return h * 60 + (m ?? 0)
+}
+
 /** Tags with max 2 lines; ellipsis pill appears inline when content overflows. Always shows at least one tag. */
 function SessionTags({ tags }: { tags: EventTag[] }) {
   const wrapperRef = React.useRef<HTMLDivElement>(null)
@@ -80,21 +86,9 @@ export function ScheduleSessionCard({
   previewTransform,
   onPointerDown,
 }: ScheduleSessionCardProps): React.ReactElement {
-  const startTime = new Date(session.starts_at).toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-  const endTime = new Date(session.ends_at).toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-  const durationMin = Math.round(
-    (new Date(session.ends_at).getTime() - new Date(session.starts_at).getTime()) /
-      60000
-  )
-  const speakerLabel =
-    session.speaker ??
-    (session.speakers?.length ? session.speakers.join(", ") : null)
+  const startTime = session.start_time
+  const endTime = session.end_time
+  const durationMin = hhmmToMinutes(session.end_time) - hhmmToMinutes(session.start_time)
 
   const style: React.CSSProperties = {
     top,
@@ -174,11 +168,6 @@ export function ScheduleSessionCard({
           {startTime} – {endTime}
           {durationMin > 0 && ` (${durationMin} min)`}
         </div>
-        {speakerLabel && (
-          <div className="text-[10px] text-muted-foreground truncate">
-            {speakerLabel}
-          </div>
-        )}
         {session.description && (
           <div className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">
             {session.description}

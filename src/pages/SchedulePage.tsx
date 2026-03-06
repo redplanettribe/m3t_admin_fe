@@ -22,6 +22,7 @@ import { SessionizeImportModal } from "@/components/SessionizeImportModal"
 import { ScheduleSessionCard } from "@/components/ScheduleSessionCard"
 import { TagInput } from "@/components/TagInput"
 import { AddRoomModal } from "@/components/AddRoomModal"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 const PIXELS_PER_MINUTE = 3
 const TIME_LABEL_INTERVAL_MINUTES = 30
@@ -32,19 +33,17 @@ const SCROLL_RIGHT_PADDING_PX = 24
 const DEFAULT_SESSION_DURATION_MINUTES = 30
 const ADD_ROOM_COLUMN_WIDTH = 120
 
-/** Format a Date as "HH:mm" for use with <input type="time"> */
-function toTimeValue(date: Date): string {
-  const h = date.getHours()
-  const m = date.getMinutes()
-  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`
+/** Convert "HH:mm" to minutes since midnight. */
+function hhmmToMinutes(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number)
+  return h * 60 + (m ?? 0)
 }
 
-/** Parse "HH:mm" and return a Date on the given day (start of day in ms) */
-function timeValueToDate(timeValue: string, dayStartMs: number): Date {
-  const [h, m] = timeValue.split(":").map(Number)
-  const d = new Date(dayStartMs)
-  d.setHours(h, m ?? 0, 0, 0)
-  return d
+/** Convert minutes since midnight to "HH:mm". */
+function minutesToHHMM(minutes: number): string {
+  const h = Math.floor(minutes / 60)
+  const m = Math.round(minutes % 60)
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`
 }
 
 /** Derive flat rooms and sessions from GET /events/{eventID} response (event + rooms with nested sessions). */
@@ -56,25 +55,11 @@ function getRoomsAndSessions(schedule: EventSchedule): { rooms: Room[]; rawSessi
 
 function normalizeSession(s: SessionInput): Session | null {
   const raw = s as Record<string, unknown>
-  const roomId =
-    s.room_id ??
-    (s as { roomId?: string }).roomId ??
-    (typeof raw.room === "object" && raw.room != null && "id" in raw.room
-      ? (raw.room as { id: string }).id
-      : undefined)
-  const startsAt =
-    s.starts_at ??
-    (s as { startsAt?: string }).startsAt ??
-    (s as { start_time?: string }).start_time ??
-    (s as { startTime?: string }).startTime ??
-    (s as { start?: string }).start
-  const endsAt =
-    s.ends_at ??
-    (s as { endsAt?: string }).endsAt ??
-    (s as { end_time?: string }).end_time ??
-    (s as { endTime?: string }).endTime ??
-    (s as { end?: string }).end
-  if (!roomId || !startsAt || !endsAt) return null
+  const roomId = s.room_id
+  const eventDay = (s as { event_day?: number }).event_day ?? 1
+  const startTime = (s as { start_time?: string }).start_time
+  const endTime = (s as { end_time?: string }).end_time
+  if (!roomId || startTime == null || endTime == null) return null
   const tagsRaw = s.tags ?? (raw.tags as string[] | EventTag[] | undefined)
   const tags: EventTag[] | undefined = Array.isArray(tagsRaw)
     ? tagsRaw.every((t) => typeof t === "string")
@@ -84,39 +69,29 @@ function normalizeSession(s: SessionInput): Session | null {
   return {
     id: String(s.id),
     room_id: String(roomId),
-    starts_at: String(startsAt),
-    ends_at: String(endsAt),
+    event_day: eventDay,
+    start_time: String(startTime),
+    end_time: String(endTime),
     title: s.title,
     description: s.description,
-    speaker: s.speaker,
-    speakers: s.speakers,
+    speaker_ids: (s as { speaker_ids?: string[] }).speaker_ids,
     tags,
   }
 }
 
+/** Compute time range (minutes since midnight) from sessions' HH:mm times. */
 function getTimeRangeMinutes(sessions: Session[]): {
   startMinutes: number
   endMinutes: number
-  scheduleDayStart: number
 } {
   if (sessions.length === 0) {
-    return {
-      startMinutes: 9 * 60,
-      endMinutes: 17 * 60,
-      scheduleDayStart: new Date().setHours(0, 0, 0, 0),
-    }
+    return { startMinutes: 9 * 60, endMinutes: 17 * 60 }
   }
-  const firstStart = new Date(sessions[0].starts_at)
-  const scheduleDayStart = new Date(firstStart)
-  scheduleDayStart.setHours(0, 0, 0, 0)
-  const scheduleDayStartMs = scheduleDayStart.getTime()
   let minStart = Infinity
   let maxEnd = -Infinity
   for (const s of sessions) {
-    const startMs = new Date(s.starts_at).getTime()
-    const endMs = new Date(s.ends_at).getTime()
-    const startMinutes = (startMs - scheduleDayStartMs) / (60 * 1000)
-    const endMinutes = (endMs - scheduleDayStartMs) / (60 * 1000)
+    const startMinutes = hhmmToMinutes(s.start_time)
+    const endMinutes = hhmmToMinutes(s.end_time)
     minStart = Math.min(minStart, startMinutes)
     maxEnd = Math.max(maxEnd, endMinutes)
   }
@@ -124,8 +99,25 @@ function getTimeRangeMinutes(sessions: Session[]): {
   return {
     startMinutes: Math.max(0, Math.floor(minStart / 60) * 60 - padding),
     endMinutes: Math.min(24 * 60, Math.ceil(maxEnd / 60) * 60 + padding),
-    scheduleDayStart: scheduleDayStartMs,
   }
+}
+
+/** Event day for multiday selector: dateStr is YYYY-MM-DD, startMs is midnight UTC. Returns [] if startDate is invalid. */
+function getEventDays(startDate: string, durationDays: number): { dateStr: string; startMs: number; label: string }[] {
+  const trimmed = typeof startDate === "string" ? startDate.trim() : ""
+  if (!trimmed) return []
+  const start = new Date(trimmed + "T00:00:00Z")
+  if (Number.isNaN(start.getTime())) return []
+  const days: { dateStr: string; startMs: number; label: string }[] = []
+  for (let i = 0; i < Math.max(1, durationDays); i++) {
+    const d = new Date(start)
+    d.setUTCDate(d.getUTCDate() + i)
+    const dateStr = d.toISOString().slice(0, 10)
+    const startMs = d.getTime()
+    const label = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
+    days.push({ dateStr, startMs, label })
+  }
+  return days
 }
 
 export function SchedulePage(): React.ReactElement {
@@ -143,8 +135,9 @@ export function SchedulePage(): React.ReactElement {
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null)
   const [createSessionDraft, setCreateSessionDraft] = useState<{
     roomId: string
-    startsAt: Date
-    endsAt: Date
+    eventDay: number
+    startTime: string
+    endTime: string
   } | null>(null)
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [hoverPreview, setHoverPreview] = useState<{
@@ -154,9 +147,21 @@ export function SchedulePage(): React.ReactElement {
   } | null>(null)
   const [addRoomOpen, setAddRoomOpen] = useState(false)
   const [addRoomHovered, setAddRoomHovered] = useState(false)
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0)
 
   const { rooms: roomsFromSchedule, rawSessions: rawSessionsFromSchedule } =
     schedule != null ? getRoomsAndSessions(schedule) : { rooms: [] as Room[], rawSessions: [] as unknown[] }
+  const event = schedule?.event
+  const eventDays =
+    event?.start_date && String(event.start_date).trim()
+      ? getEventDays(String(event.start_date).trim(), event.duration_days ?? 1)
+      : []
+  React.useEffect(() => {
+    if (eventDays.length > 0 && selectedDayIndex >= eventDays.length) {
+      setSelectedDayIndex(Math.max(0, eventDays.length - 1))
+    }
+  }, [eventDays.length, selectedDayIndex])
+
   const roomsList = roomsFromSchedule
     .slice()
     .sort((a, b) => {
@@ -173,29 +178,24 @@ export function SchedulePage(): React.ReactElement {
       if (aCapacity === bCapacity) return 0
       return bCapacity - aCapacity
     })
-  const sessions = rawSessionsFromSchedule
+  const selectedEventDay = eventDays.length > 0 ? selectedDayIndex + 1 : 1
+  const allSessions = rawSessionsFromSchedule
     .map((s) => normalizeSession(s as SessionInput))
     .filter((s): s is Session => s !== null)
-  const {
-    startMinutes: rangeStart,
-    endMinutes: rangeEnd,
-    scheduleDayStart,
-  } = getTimeRangeMinutes(sessions)
+  const sessionsForDay =
+    eventDays.length > 0
+      ? allSessions.filter((s) => s.event_day === selectedEventDay)
+      : allSessions
+  const { startMinutes: rangeStart, endMinutes: rangeEnd } =
+    getTimeRangeMinutes(sessionsForDay)
 
   const { preview, handlePointerDown, activeSessionId } = useSessionDrag({
     rooms: roomsList,
     roomColumnWidth: ROOM_COLUMN_WIDTH,
     pixelsPerMinute: PIXELS_PER_MINUTE,
     rangeStartMinutes: rangeStart,
-    scheduleDayStartMs: scheduleDayStart,
     updateSession: updateSessionSchedule.mutateAsync,
   })
-
-  const formatTime = (date: Date) =>
-    date.toLocaleTimeString(undefined, {
-      hour: "2-digit",
-      minute: "2-digit",
-    })
 
   function snapMinutesFromEvent(
     e: React.MouseEvent<HTMLDivElement>
@@ -214,15 +214,11 @@ export function SchedulePage(): React.ReactElement {
     if (target.closest("[data-session-card]")) return
 
     const snappedMinutes = snapMinutesFromEvent(e)
-    const startsAt = new Date(scheduleDayStart + snappedMinutes * 60_000)
-    const endsAt = new Date(
-      startsAt.getTime() + DEFAULT_SESSION_DURATION_MINUTES * 60_000
-    )
-
     setCreateSessionDraft({
       roomId: String(room.id),
-      startsAt,
-      endsAt,
+      eventDay: selectedEventDay,
+      startTime: minutesToHHMM(snappedMinutes),
+      endTime: minutesToHHMM(snappedMinutes + DEFAULT_SESSION_DURATION_MINUTES),
     })
   }
 
@@ -242,14 +238,7 @@ export function SchedulePage(): React.ReactElement {
 
     const snappedMinutes = snapMinutesFromEvent(e)
     const topPx = (snappedMinutes - rangeStart) * PIXELS_PER_MINUTE
-    const endMinutes = snappedMinutes + DEFAULT_SESSION_DURATION_MINUTES
-
-    const fmt = (mins: number) => {
-      const h = Math.floor(mins / 60)
-      const m = mins % 60
-      return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`
-    }
-    const timeLabel = `${fmt(snappedMinutes)} – ${fmt(endMinutes)}`
+    const timeLabel = `${minutesToHHMM(snappedMinutes)} – ${minutesToHHMM(snappedMinutes + DEFAULT_SESSION_DURATION_MINUTES)}`
 
     setHoverPreview((prev) => {
       if (
@@ -289,7 +278,6 @@ export function SchedulePage(): React.ReactElement {
     )
   }
 
-  const event = schedule!.event
   const totalMinutes = Math.max(0, rangeEnd - rangeStart)
   const bodyHeight = Math.max(
     MIN_BODY_HEIGHT_PX,
@@ -308,15 +296,13 @@ export function SchedulePage(): React.ReactElement {
   }
 
   const sessionsByRoom = roomsList.map((room) =>
-    sessions
+    sessionsForDay
       .filter((s) => String(s.room_id) === String(room.id))
       .map((s) => {
-        const startMs = new Date(s.starts_at).getTime()
-        const endMs = new Date(s.ends_at).getTime()
-        const startMinutes = (startMs - scheduleDayStart) / (60 * 1000)
-        const durationMinutes = (endMs - startMs) / (60 * 1000)
+        const startMinutes = hhmmToMinutes(s.start_time)
+        const endMinutes = hhmmToMinutes(s.end_time)
         const top = (startMinutes - rangeStart) * PIXELS_PER_MINUTE
-        const height = durationMinutes * PIXELS_PER_MINUTE
+        const height = (endMinutes - startMinutes) * PIXELS_PER_MINUTE
         return { session: s, top, height }
       })
   )
@@ -325,7 +311,22 @@ export function SchedulePage(): React.ReactElement {
     <div className="space-y-6 min-w-0 w-full">
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">Schedule</h2>
-        <p className="text-muted-foreground">{event.name}</p>
+        <p className="text-muted-foreground">{event?.name}</p>
+        {eventDays.length > 0 && (
+          <Tabs
+            value={String(selectedDayIndex)}
+            onValueChange={(v) => setSelectedDayIndex(Number(v))}
+            className="mt-3"
+          >
+            <TabsList>
+              {eventDays.map((day, i) => (
+                <TabsTrigger key={day.dateStr} value={String(i)}>
+                  {day.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        )}
       </div>
 
       <Button onClick={() => setSessionizeOpen(true)}>Update from Sessionize</Button>
@@ -534,7 +535,7 @@ export function SchedulePage(): React.ReactElement {
         </div>
       )}
 
-      {roomsList.length > 0 && sessions.length === 0 && (
+      {roomsList.length > 0 && sessionsForDay.length === 0 && (
         <p className="text-muted-foreground text-sm">No sessions scheduled.</p>
       )}
 
@@ -564,9 +565,7 @@ export function SchedulePage(): React.ReactElement {
                       (r) => String(r.id) === createSessionDraft.roomId
                     )
                     const roomLabel = room?.name ?? room?.id ?? createSessionDraft.roomId
-                    return `${roomLabel} · ${formatTime(
-                      createSessionDraft.startsAt
-                    )} – ${formatTime(createSessionDraft.endsAt)}`
+                    return `${roomLabel} · Day ${createSessionDraft.eventDay} · ${createSessionDraft.startTime} – ${createSessionDraft.endTime}`
                   })()}
                 </>
               )}
@@ -585,8 +584,9 @@ export function SchedulePage(): React.ReactElement {
               createSession.mutate(
                 {
                   room_id: createSessionDraft.roomId,
-                  start_time: createSessionDraft.startsAt.toISOString(),
-                  end_time: createSessionDraft.endsAt.toISOString(),
+                  event_day: createSessionDraft.eventDay,
+                  start_time: createSessionDraft.startTime,
+                  end_time: createSessionDraft.endTime,
                   title: title || undefined,
                   description: description || undefined,
                   tags: selectedTags.length > 0 ? selectedTags : undefined,
@@ -605,30 +605,22 @@ export function SchedulePage(): React.ReactElement {
                 <span className="font-medium">Start time</span>
                 <Input
                   type="time"
-                  value={
-                    createSessionDraft
-                      ? toTimeValue(createSessionDraft.startsAt)
-                      : ""
-                  }
+                  value={createSessionDraft?.startTime ?? ""}
                   onChange={(e) => {
                     if (!createSessionDraft) return
                     const value = e.target.value
-                    const newStartsAt = timeValueToDate(
-                      value,
-                      scheduleDayStart
-                    )
-                    const endsAtMs = createSessionDraft.endsAt.getTime()
-                    let newEndsAt = createSessionDraft.endsAt
-                    if (newStartsAt.getTime() >= endsAtMs) {
-                      newEndsAt = new Date(
-                        newStartsAt.getTime() +
-                          DEFAULT_SESSION_DURATION_MINUTES * 60_000
+                    const endMins = hhmmToMinutes(createSessionDraft.endTime)
+                    const startMins = hhmmToMinutes(value)
+                    let newEndTime = createSessionDraft.endTime
+                    if (startMins >= endMins) {
+                      newEndTime = minutesToHHMM(
+                        startMins + DEFAULT_SESSION_DURATION_MINUTES
                       )
                     }
                     setCreateSessionDraft({
                       ...createSessionDraft,
-                      startsAt: newStartsAt,
-                      endsAt: newEndsAt,
+                      startTime: value,
+                      endTime: newEndTime,
                     })
                   }}
                 />
@@ -637,30 +629,22 @@ export function SchedulePage(): React.ReactElement {
                 <span className="font-medium">End time</span>
                 <Input
                   type="time"
-                  value={
-                    createSessionDraft
-                      ? toTimeValue(createSessionDraft.endsAt)
-                      : ""
-                  }
+                  value={createSessionDraft?.endTime ?? ""}
                   onChange={(e) => {
                     if (!createSessionDraft) return
                     const value = e.target.value
-                    const newEndsAt = timeValueToDate(
-                      value,
-                      scheduleDayStart
-                    )
-                    const startsAtMs = createSessionDraft.startsAt.getTime()
-                    let newStartsAt = createSessionDraft.startsAt
-                    if (newEndsAt.getTime() <= startsAtMs) {
-                      newStartsAt = new Date(
-                        newEndsAt.getTime() -
-                          DEFAULT_SESSION_DURATION_MINUTES * 60_000
+                    const startMins = hhmmToMinutes(createSessionDraft.startTime)
+                    const endMins = hhmmToMinutes(value)
+                    let newStartTime = createSessionDraft.startTime
+                    if (endMins <= startMins) {
+                      newStartTime = minutesToHHMM(
+                        endMins - DEFAULT_SESSION_DURATION_MINUTES
                       )
                     }
                     setCreateSessionDraft({
                       ...createSessionDraft,
-                      startsAt: newStartsAt,
-                      endsAt: newEndsAt,
+                      startTime: newStartTime,
+                      endTime: value,
                     })
                   }}
                 />

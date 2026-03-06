@@ -47,25 +47,11 @@ import { cn } from "@/lib/utils"
 
 function normalizeSession(s: SessionInput): Session | null {
   const raw = s as Record<string, unknown>
-  const roomId =
-    s.room_id ??
-    (s as { roomId?: string }).roomId ??
-    (typeof raw.room === "object" && raw.room != null && "id" in raw.room
-      ? (raw.room as { id: string }).id
-      : undefined)
-  const startsAt =
-    s.starts_at ??
-    (s as { startsAt?: string }).startsAt ??
-    (s as { start_time?: string }).start_time ??
-    (s as { startTime?: string }).startTime ??
-    (s as { start?: string }).start
-  const endsAt =
-    s.ends_at ??
-    (s as { endsAt?: string }).endsAt ??
-    (s as { end_time?: string }).end_time ??
-    (s as { endTime?: string }).endTime ??
-    (s as { end?: string }).end
-  if (!roomId || !startsAt || !endsAt) return null
+  const roomId = s.room_id
+  const eventDay = (s as { event_day?: number }).event_day ?? 1
+  const startTime = (s as { start_time?: string }).start_time
+  const endTime = (s as { end_time?: string }).end_time
+  if (!roomId || startTime == null || endTime == null) return null
   const tagsRaw = s.tags ?? (raw.tags as string[] | EventTag[] | undefined)
   const tags: EventTag[] | undefined = Array.isArray(tagsRaw)
     ? tagsRaw.every((t) => typeof t === "string")
@@ -75,12 +61,12 @@ function normalizeSession(s: SessionInput): Session | null {
   return {
     id: String(s.id),
     room_id: String(roomId),
-    starts_at: String(startsAt),
-    ends_at: String(endsAt),
+    event_day: eventDay,
+    start_time: String(startTime),
+    end_time: String(endTime),
     title: s.title,
     description: s.description,
-    speaker: s.speaker,
-    speakers: s.speakers,
+    speaker_ids: (s as { speaker_ids?: string[] }).speaker_ids,
     tags,
   }
 }
@@ -277,17 +263,20 @@ export function SessionDetailPage(): React.ReactElement {
     )
   }
 
-  const startTime = new Date(session.starts_at).toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  })
-  const endTime = new Date(session.ends_at).toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-  const durationMin = Math.round(
-    (new Date(session.ends_at).getTime() - new Date(session.starts_at).getTime()) / 60000
-  )
+  const sessionDateLabel =
+    event?.start_date && session.event_day
+      ? (() => {
+          const start = new Date(event.start_date.trim() + "T00:00:00Z")
+          const d = new Date(start)
+          d.setUTCDate(d.getUTCDate() + (session.event_day - 1))
+          return d.toLocaleDateString(undefined, { dateStyle: "medium" })
+        })()
+      : null
+  const durationMin = (() => {
+    const [sh, sm] = session.start_time.split(":").map(Number)
+    const [eh, em] = session.end_time.split(":").map(Number)
+    return (eh * 60 + (em ?? 0)) - (sh * 60 + (sm ?? 0))
+  })()
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -315,7 +304,8 @@ export function SessionDetailPage(): React.ReactElement {
             <div>
               <dt className="font-medium text-muted-foreground">Time</dt>
               <dd className="mt-0.5">
-                {startTime} – {endTime}
+                {sessionDateLabel ? `${sessionDateLabel} · ` : ""}
+                {session.start_time} – {session.end_time}
                 {durationMin > 0 && ` (${durationMin} min)`}
               </dd>
             </div>
@@ -614,11 +604,24 @@ export function SessionDetailPage(): React.ReactElement {
           </CardHeader>
           <CardContent className="space-y-4">
             <dl className="grid gap-3 text-sm">
-              {event.date && (
+              {event.start_date && (
                 <div>
                   <dt className="font-medium text-muted-foreground">Date</dt>
                   <dd className="mt-0.5">
-                    {new Date(event.date).toLocaleDateString(undefined, { dateStyle: "medium" })}
+                    {event.duration_days != null && event.duration_days > 1 ? (() => {
+                      const start = new Date(event.start_date + "T00:00:00Z")
+                      const end = new Date(start)
+                      end.setUTCDate(end.getUTCDate() + (event.duration_days - 1))
+                      return (
+                        <>
+                          {start.toLocaleDateString(undefined, { dateStyle: "medium" })} –{" "}
+                          {end.toLocaleDateString(undefined, { dateStyle: "medium" })}{" "}
+                          ({event.duration_days} days)
+                        </>
+                      )
+                    })() : (
+                      new Date(event.start_date + "T00:00:00Z").toLocaleDateString(undefined, { dateStyle: "medium" })
+                    )}
                   </dd>
                 </div>
               )}
