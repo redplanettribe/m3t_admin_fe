@@ -31,6 +31,16 @@ import {
 import type { Event } from "@/types/event"
 import { cn } from "@/lib/utils"
 
+/** Normalize API date to YYYY-MM-DD for <input type="date">. */
+function toDateOnly(value: string | undefined): string {
+  if (value == null || value === "") return ""
+  const trimmed = String(value).trim()
+  if (trimmed.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+    return trimmed.slice(0, 10)
+  }
+  return trimmed
+}
+
 type EditEventModalProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -66,7 +76,7 @@ export function EditEventModal({
   React.useEffect(() => {
     if (open && event) {
       form.reset({
-        start_date: event.start_date ?? "",
+        start_date: toDateOnly(event.start_date),
         duration_days: event.duration_days,
         description: event.description ?? "",
         location_lat: event.location_lat,

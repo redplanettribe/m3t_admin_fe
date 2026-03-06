@@ -263,15 +263,19 @@ export function SessionDetailPage(): React.ReactElement {
     )
   }
 
-  const sessionDateLabel =
-    event?.start_date && session.event_day
-      ? (() => {
-          const start = new Date(event.start_date.trim() + "T00:00:00Z")
-          const d = new Date(start)
-          d.setUTCDate(d.getUTCDate() + (session.event_day - 1))
-          return d.toLocaleDateString(undefined, { dateStyle: "medium" })
-        })()
-      : null
+  // Session date = event start date + (event_day - 1) days; session time = start_time (HH:mm) – end_time
+  const sessionDateLabel = (() => {
+    const startDate = event?.start_date?.trim()
+    if (!startDate || session.event_day == null) return null
+    const eventStart = new Date(startDate + "T00:00:00Z")
+    if (Number.isNaN(eventStart.getTime())) return null
+    const sessionDay = new Date(eventStart)
+    sessionDay.setUTCDate(sessionDay.getUTCDate() + (session.event_day - 1))
+    const sessionDayStr = sessionDay.toISOString().slice(0, 10)
+    const displayDate = new Date(sessionDayStr + "T12:00:00Z")
+    return displayDate.toLocaleDateString(undefined, { dateStyle: "medium" })
+  })()
+
   const durationMin = (() => {
     const [sh, sm] = session.start_time.split(":").map(Number)
     const [eh, em] = session.end_time.split(":").map(Number)
@@ -608,20 +612,25 @@ export function SessionDetailPage(): React.ReactElement {
                 <div>
                   <dt className="font-medium text-muted-foreground">Date</dt>
                   <dd className="mt-0.5">
-                    {event.duration_days != null && event.duration_days > 1 ? (() => {
-                      const start = new Date(event.start_date + "T00:00:00Z")
-                      const end = new Date(start)
-                      end.setUTCDate(end.getUTCDate() + (event.duration_days - 1))
-                      return (
-                        <>
-                          {start.toLocaleDateString(undefined, { dateStyle: "medium" })} –{" "}
-                          {end.toLocaleDateString(undefined, { dateStyle: "medium" })}{" "}
-                          ({event.duration_days} days)
-                        </>
-                      )
-                    })() : (
-                      new Date(event.start_date + "T00:00:00Z").toLocaleDateString(undefined, { dateStyle: "medium" })
-                    )}
+                    {(() => {
+                      const dateOnly = String(event.start_date).trim().slice(0, 10)
+                      if (!dateOnly || dateOnly.length < 10) return event.start_date
+                      const start = new Date(dateOnly + "T12:00:00Z")
+                      if (Number.isNaN(start.getTime())) return event.start_date
+                      if (event.duration_days != null && event.duration_days > 1) {
+                        const end = new Date(start)
+                        end.setUTCDate(end.getUTCDate() + (event.duration_days - 1))
+                        if (Number.isNaN(end.getTime())) return event.start_date
+                        return (
+                          <>
+                            {start.toLocaleDateString(undefined, { dateStyle: "medium" })} –{" "}
+                            {end.toLocaleDateString(undefined, { dateStyle: "medium" })}{" "}
+                            ({event.duration_days} days)
+                          </>
+                        )
+                      }
+                      return start.toLocaleDateString(undefined, { dateStyle: "medium" })
+                    })()}
                   </dd>
                 </div>
               )}

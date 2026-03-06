@@ -2,8 +2,24 @@ import { z } from "zod"
 
 export const createEventSchema = z.object({
   name: z.string().min(1, "Name is required"),
+  start_date: z.string().min(1, "Start date is required"),
+  duration_days: z
+    .union([z.number().int().positive(), z.literal("")])
+    .optional()
+    .transform((v) => (v === "" ? undefined : v))
+    .default(1),
+  description: z.string().optional(),
+  location_lat: z
+    .union([z.number(), z.literal("")])
+    .optional()
+    .transform((v) => (v === "" ? undefined : v)),
+  location_lng: z
+    .union([z.number(), z.literal("")])
+    .optional()
+    .transform((v) => (v === "" ? undefined : v)),
 })
 
+export type CreateEventFormInput = z.input<typeof createEventSchema>
 export type CreateEventFormValues = z.infer<typeof createEventSchema>
 
 export const updateEventSchema = z.object({

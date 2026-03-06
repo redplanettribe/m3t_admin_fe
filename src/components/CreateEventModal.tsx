@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input"
 import { useCreateEvent } from "@/hooks/useEvents"
 import {
   createEventSchema,
-  type CreateEventFormValues,
+  type CreateEventFormInput,
 } from "@/lib/schemas/event"
 import { cn } from "@/lib/utils"
 
@@ -37,22 +37,32 @@ export function CreateEventModal({
 }: CreateEventModalProps): React.ReactElement {
   const createEvent = useCreateEvent()
 
-  const form = useForm<CreateEventFormValues>({
+  const defaultValues: CreateEventFormInput = {
+    name: "",
+    start_date: "",
+    duration_days: 1,
+    description: "",
+    location_lat: undefined,
+    location_lng: undefined,
+  }
+
+  const form = useForm<CreateEventFormInput>({
     resolver: zodResolver(createEventSchema),
-    defaultValues: { name: "" },
+    defaultValues,
   })
 
   React.useEffect(() => {
     if (open) {
-      form.reset({ name: "" })
+      form.reset(defaultValues)
     }
   }, [open, form])
 
-  const onSubmit = (values: CreateEventFormValues) => {
-    createEvent.mutate(values, {
-        onSuccess: () => {
+  const onSubmit = (values: CreateEventFormInput) => {
+    const parsed = createEventSchema.parse(values)
+    createEvent.mutate(parsed, {
+      onSuccess: () => {
         onOpenChange(false)
-        form.reset({ name: "" })
+        form.reset(defaultValues)
       },
     })
   }
@@ -63,7 +73,7 @@ export function CreateEventModal({
         <DialogHeader>
           <DialogTitle>Create new event</DialogTitle>
           <DialogDescription>
-            Enter a name for the new event. You can change it later in settings.
+            Enter event details. Name and start date are required. Duration defaults to 1 day; description and location can be edited later.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -85,7 +95,9 @@ export function CreateEventModal({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Event name</FormLabel>
+                  <FormLabel>
+                    Event name <span className="text-destructive" aria-hidden>*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input
                       placeholder="e.g. My Conference 2025"
@@ -97,6 +109,115 @@ export function CreateEventModal({
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="start_date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Start date <span className="text-destructive" aria-hidden>*</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      autoComplete="off"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="duration_days"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Duration (days)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={1}
+                      placeholder="e.g. 1"
+                      {...field}
+                      value={field.value ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        field.onChange(v === "" ? "" : Number(v))
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description (optional)</FormLabel>
+                  <FormControl>
+                    <textarea
+                      className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      placeholder="Event description"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="location_lat"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Latitude (optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="any"
+                        placeholder="e.g. 52.52"
+                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          field.onChange(v === "" ? undefined : Number(v))
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="location_lng"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Longitude (optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="any"
+                        placeholder="e.g. 13.405"
+                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          field.onChange(v === "" ? undefined : Number(v))
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <DialogFooter>
               <Button
                 type="button"

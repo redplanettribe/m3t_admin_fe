@@ -593,7 +593,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new conference event. Only name is accepted in the body; id, event_code and timestamps are server-generated. The authenticated user becomes the event owner.",
+                "description": "Create a new conference event. Name and start_date (YYYY-MM-DD) are required; duration_days defaults to 1 if omitted; description, location_lat, location_lng are optional. Id, event_code and timestamps are server-generated. The authenticated user becomes the event owner.",
                 "consumes": [
                     "application/json"
                 ],
@@ -606,7 +606,7 @@
                 "summary": "Create a new event",
                 "parameters": [
                     {
-                        "description": "Event data (name only)",
+                        "description": "Event data: name and start_date required; duration_days optional (defaults to 1); description and location optional",
                         "name": "event",
                         "in": "body",
                         "required": true,
@@ -4195,7 +4195,23 @@
         "controllers.CreateEventRequest": {
             "type": "object",
             "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "duration_days": {
+                    "type": "integer"
+                },
+                "location_lat": {
+                    "type": "number"
+                },
+                "location_lng": {
+                    "type": "number"
+                },
                 "name": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "description": "YYYY-MM-DD",
                     "type": "string"
                 }
             }
@@ -5257,7 +5273,8 @@
                     "type": "string"
                 },
                 "end_time": {
-                    "$ref": "#/definitions/domain.TimeOfDay"
+                    "type": "string",
+                    "example": "10:00"
                 },
                 "event_day": {
                     "type": "integer"
@@ -5281,7 +5298,8 @@
                     }
                 },
                 "start_time": {
-                    "$ref": "#/definitions/domain.TimeOfDay"
+                    "type": "string",
+                    "example": "09:00"
                 },
                 "tags": {
                     "description": "Tags are the tags associated with this session. Each tag includes both its ID and name.",
@@ -5386,9 +5404,6 @@
                     "type": "string"
                 }
             }
-        },
-        "domain.TimeOfDay": {
-            "type": "object"
         },
         "domain.User": {
             "type": "object",

@@ -120,6 +120,25 @@ function getEventDays(startDate: string, durationDays: number): { dateStr: strin
   return days
 }
 
+/** Build day selector options: use real dates when start_date is set, otherwise "Day 1", "Day 2", ... Always returns at least one day. */
+function getScheduleDayOptions(
+  event: { start_date?: string; duration_days?: number } | undefined,
+  maxSessionDay: number
+): { label: string; dayIndex: number }[] {
+  const duration = event?.duration_days ?? Math.max(1, maxSessionDay)
+  const startDate = event?.start_date?.trim()
+  if (startDate) {
+    const withDates = getEventDays(startDate, duration)
+    if (withDates.length > 0) {
+      return withDates.map((d, i) => ({ label: d.label, dayIndex: i }))
+    }
+  }
+  return Array.from({ length: Math.max(1, duration) }, (_, i) => ({
+    label: `Day ${i + 1}`,
+    dayIndex: i,
+  }))
+}
+
 export function SchedulePage(): React.ReactElement {
   const activeEventId = useEventStore((s) => s.activeEventId)
   const savedSessionizeId = useEventStore((s) =>
@@ -152,15 +171,18 @@ export function SchedulePage(): React.ReactElement {
   const { rooms: roomsFromSchedule, rawSessions: rawSessionsFromSchedule } =
     schedule != null ? getRoomsAndSessions(schedule) : { rooms: [] as Room[], rawSessions: [] as unknown[] }
   const event = schedule?.event
-  const eventDays =
-    event?.start_date && String(event.start_date).trim()
-      ? getEventDays(String(event.start_date).trim(), event.duration_days ?? 1)
-      : []
+  const allSessions = rawSessionsFromSchedule
+    .map((s) => normalizeSession(s as SessionInput))
+    .filter((s): s is Session => s !== null)
+  const maxSessionDay = allSessions.length > 0
+    ? Math.max(...allSessions.map((s) => s.event_day))
+    : 1
+  const scheduleDayOptions = getScheduleDayOptions(event, maxSessionDay)
   React.useEffect(() => {
-    if (eventDays.length > 0 && selectedDayIndex >= eventDays.length) {
-      setSelectedDayIndex(Math.max(0, eventDays.length - 1))
+    if (scheduleDayOptions.length > 0 && selectedDayIndex >= scheduleDayOptions.length) {
+      setSelectedDayIndex(Math.max(0, scheduleDayOptions.length - 1))
     }
-  }, [eventDays.length, selectedDayIndex])
+  }, [scheduleDayOptions.length, selectedDayIndex])
 
   const roomsList = roomsFromSchedule
     .slice()
@@ -178,14 +200,8 @@ export function SchedulePage(): React.ReactElement {
       if (aCapacity === bCapacity) return 0
       return bCapacity - aCapacity
     })
-  const selectedEventDay = eventDays.length > 0 ? selectedDayIndex + 1 : 1
-  const allSessions = rawSessionsFromSchedule
-    .map((s) => normalizeSession(s as SessionInput))
-    .filter((s): s is Session => s !== null)
-  const sessionsForDay =
-    eventDays.length > 0
-      ? allSessions.filter((s) => s.event_day === selectedEventDay)
-      : allSessions
+  const selectedEventDay = selectedDayIndex + 1
+  const sessionsForDay = allSessions.filter((s) => s.event_day === selectedEventDay)
   const { startMinutes: rangeStart, endMinutes: rangeEnd } =
     getTimeRangeMinutes(sessionsForDay)
 
@@ -309,27 +325,31 @@ export function SchedulePage(): React.ReactElement {
 
   return (
     <div className="space-y-6 min-w-0 w-full">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Schedule</h2>
-        <p className="text-muted-foreground">{event?.name}</p>
-        {eventDays.length > 0 && (
-          <Tabs
-            value={String(selectedDayIndex)}
-            onValueChange={(v) => setSelectedDayIndex(Number(v))}
-            className="mt-3"
-          >
-            <TabsList>
-              {eventDays.map((day, i) => (
-                <TabsTrigger key={day.dateStr} value={String(i)}>
-                  {day.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        )}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">Schedule</h2>
+          <p className="text-muted-foreground">{event?.name}</p>
+          {scheduleDayOptions.length > 1 && (
+            <Tabs
+              value={String(selectedDayIndex)}
+              onValueChange={(v) => setSelectedDayIndex(Number(v))}
+              className="mt-3"
+            >
+              <TabsList>
+                {scheduleDayOptions.map((day) => (
+                  <TabsTrigger key={day.dayIndex} value={String(day.dayIndex)}>
+                    {day.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          )}
+        </div>
+        <Button onClick={() => setSessionizeOpen(true)} className="shrink-0">
+          Update from Sessionize
+        </Button>
       </div>
 
-      <Button onClick={() => setSessionizeOpen(true)}>Update from Sessionize</Button>
       <SessionizeImportModal
         eventId={activeEventId}
         open={sessionizeOpen}

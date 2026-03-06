@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
 import { useEventStore } from "@/store/eventStore"
+import type { CreateEventFormValues } from "@/lib/schemas/event"
 import type {
   Event,
   ConfirmThumbnailRequest,
@@ -468,7 +469,7 @@ export function useUpdateSessionSchedule(eventId: string | null) {
 export function useCreateEvent() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (body: { name: string }) =>
+    mutationFn: (body: CreateEventFormValues) =>
       apiClient.post<Event>("/events", body),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.events.list })

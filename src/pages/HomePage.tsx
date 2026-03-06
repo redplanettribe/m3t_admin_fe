@@ -61,6 +61,9 @@ export function HomePage(): React.ReactElement {
                 <p className="text-muted-foreground text-sm mt-1">
                   {event.duration_days != null && event.duration_days > 1 ? (() => {
                     const start = new Date(event.start_date + "T00:00:00Z")
+                    if (Number.isNaN(start.getTime())) {
+                      return <>Date: {event.start_date}</>
+                    }
                     const end = new Date(start)
                     end.setUTCDate(end.getUTCDate() + (event.duration_days - 1))
                     const endStr = end.toISOString().slice(0, 10)
