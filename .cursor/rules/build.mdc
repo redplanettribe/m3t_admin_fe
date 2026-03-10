@@ -1,0 +1,9 @@
+---
+description: "Build on every change"
+globs: ["src/**/*.tsx", "src/**/*.css"]
+alwaysApply: true
+---
+
+# Build
+
+- On every change please build using the command `npm run build`

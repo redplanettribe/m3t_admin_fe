@@ -13,6 +13,7 @@ import type {
   Room,
   RoomWithSessions,
   Session,
+  Speaker,
   SendEventInvitationsResult,
   ListEventInvitationsResult,
   ListEventRegistrationsResult,
@@ -34,6 +35,18 @@ function normalizeTags(tags: EventTag[] | string[] | undefined): EventTag[] | un
     return (tags as string[]).map((name) => ({ id: "", name }))
   }
   return tags as EventTag[]
+}
+
+type ApiSessionResponse = {
+  id: string
+  room_id: string
+  event_day?: number
+  start_time: string
+  end_time: string
+  title?: string
+  description?: string
+  tags?: EventTag[]
+  speakers?: Speaker[]
 }
 
 export function useEventsMe() {
@@ -289,17 +302,7 @@ export function useCreateSession(eventId: string | null) {
   return useMutation({
     mutationFn: (body: CreateSessionRequest) => {
       if (!eventId) throw new Error("No event selected")
-      return apiClient.post<{
-        id: string
-        room_id: string
-        event_day: number
-        start_time: string
-        end_time: string
-        title?: string
-        description?: string
-        tags?: EventTag[]
-        speaker_ids?: string[]
-      }>(`/events/${eventId}/sessions`, body)
+      return apiClient.post<ApiSessionResponse>(`/events/${eventId}/sessions`, body)
     },
     onSuccess: (created, _variables) => {
       if (!eventId) return
@@ -325,17 +328,7 @@ export function useCreateSession(eventId: string | null) {
 }
 
 /** API returns event_day, start_time (HH:mm), end_time (HH:mm) and tags; we normalize to Session for cache. */
-function sessionFromApiResponse(data: {
-  id: string
-  room_id: string
-  event_day?: number
-  start_time: string
-  end_time: string
-  title?: string
-  description?: string
-  tags?: EventTag[] | string[]
-  speaker_ids?: string[]
-}): Session {
+function sessionFromApiResponse(data: ApiSessionResponse): Session {
   return {
     id: data.id,
     room_id: data.room_id,
@@ -345,7 +338,7 @@ function sessionFromApiResponse(data: {
     title: data.title,
     description: data.description,
     tags: normalizeTags(data.tags),
-    speaker_ids: data.speaker_ids,
+    speakers: data.speakers,
   }
 }
 
@@ -355,7 +348,7 @@ export function useUpdateSessionContent(eventId: string | null, sessionId: strin
     mutationFn: (body: UpdateSessionContentRequest) => {
       if (!eventId) throw new Error("No event selected")
       if (!sessionId) throw new Error("No session selected")
-      return apiClient.patch<{ id: string; room_id: string; event_day?: number; start_time: string; end_time: string; title?: string; description?: string; tags?: EventTag[] }>(
+      return apiClient.patch<ApiSessionResponse>(
         `/events/${eventId}/sessions/${sessionId}/content`,
         body
       )
@@ -431,7 +424,7 @@ export function useUpdateSessionSchedule(eventId: string | null) {
       ...body
     }: { sessionId: string } & UpdateSessionScheduleRequest) => {
       if (!eventId) throw new Error("No event selected")
-      return apiClient.patch<{ id: string; room_id: string; event_day?: number; start_time: string; end_time: string; title?: string; description?: string; tags?: EventTag[] }>(
+      return apiClient.patch<ApiSessionResponse>(
         `/events/${eventId}/sessions/${sessionId}`,
         body
       )

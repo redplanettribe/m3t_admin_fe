@@ -650,14 +650,14 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns events where the authenticated user is the owner. Requires Bearer token.",
+                "description": "Returns events where the authenticated user is the owner or a team member (managed events). Requires Bearer token.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "events"
                 ],
-                "summary": "List events owned by the current user",
+                "summary": "List events managed by the current user",
                 "responses": {
                     "200": {
                         "description": "data is an array of events",
@@ -5291,10 +5291,10 @@
                 "source_session_id": {
                     "type": "string"
                 },
-                "speaker_ids": {
+                "speakers": {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "$ref": "#/definitions/domain.Speaker"
                     }
                 },
                 "start_time": {

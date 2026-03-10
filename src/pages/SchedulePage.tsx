@@ -14,7 +14,7 @@ import {
 import { useEventSchedule, useToggleRoomNotBookable, useUpdateSessionSchedule, useDeleteSession, useCreateSession, useEventTags } from "@/hooks/useEvents"
 import { useSessionDrag } from "@/hooks/useSessionDrag"
 import { useEventStore } from "@/store/eventStore"
-import type { EventSchedule, EventTag, Room, Session, SessionInput } from "@/types/event"
+import type { EventSchedule, EventTag, Room, Session, SessionInput, Speaker } from "@/types/event"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -74,7 +74,8 @@ function normalizeSession(s: SessionInput): Session | null {
     end_time: String(endTime),
     title: s.title,
     description: s.description,
-    speaker_ids: (s as { speaker_ids?: string[] }).speaker_ids,
+    speakers: (raw.speakers as Speaker[] | undefined) ??
+      (raw.speakers === null ? undefined : undefined),
     tags,
   }
 }

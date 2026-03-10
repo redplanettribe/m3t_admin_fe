@@ -77,8 +77,9 @@ export interface Session {
   end_time: string
   title?: string
   description?: string
-  speaker_ids?: string[]
   tags?: EventTag[]
+  /** Fully populated speakers for this session, as returned by the API. */
+  speakers?: Speaker[]
 }
 
 /** Request body for PATCH /events/{eventID}/sessions/{sessionID} */
@@ -108,17 +109,21 @@ export interface UpdateSessionContentRequest {
 }
 
 /** Raw session from API. Tags may be string[] or EventTag[]. */
-export type SessionInput = Session | {
-  id: string
-  room_id?: string
-  event_day?: number
-  start_time?: string
-  end_time?: string
-  title?: string
-  description?: string
-  speaker_ids?: string[]
-  tags?: string[] | EventTag[]
-}
+export type SessionInput =
+  | Session
+  | {
+    id: string
+    room_id?: string
+    event_day?: number
+    start_time?: string
+    end_time?: string
+    title?: string
+    description?: string
+    /** Flexible tags shape from older responses: either names or full EventTag objects. */
+    tags?: string[] | EventTag[]
+    /** Embedded speakers for this session, matching the backend Session model. */
+    speakers?: Speaker[]
+  }
 
 /** Response from GET /events/{eventID}: event plus rooms each with nested sessions. */
 export interface EventSchedule {

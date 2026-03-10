@@ -42,7 +42,7 @@ import {
 } from "@/hooks/useEvents"
 import { useAddSessionSpeaker, useRemoveSessionSpeaker, useSessionSpeakers, useSpeakers } from "@/hooks/useSpeakers"
 import { useEventStore } from "@/store/eventStore"
-import type {  EventTag, Room, Session, SessionInput, Speaker } from "@/types/event"
+import type { EventTag, Room, Session, SessionInput, Speaker } from "@/types/event"
 import { cn } from "@/lib/utils"
 
 function normalizeSession(s: SessionInput): Session | null {
@@ -66,7 +66,8 @@ function normalizeSession(s: SessionInput): Session | null {
     end_time: String(endTime),
     title: s.title,
     description: s.description,
-    speaker_ids: (s as { speaker_ids?: string[] }).speaker_ids,
+    speakers: (raw.speakers as Speaker[] | undefined) ??
+      (raw.speakers === null ? undefined : undefined),
     tags,
   }
 }
