@@ -54,6 +54,7 @@ export const createSpeakerSchema = z
     last_name: z.string().optional(),
     bio: z.string().optional(),
     tag_line: z.string().optional(),
+    phone_number: z.string().optional(),
     profile_picture: z.string().optional(),
     is_top_speaker: z.boolean().optional(),
   })

@@ -20,9 +20,23 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { useEventStore } from "@/store/eventStore"
-import { useRoom, useUpdateRoom } from "@/hooks/useEvents"
+import {
+  useAddRoomTier,
+  useEventTiers,
+  useRemoveRoomTier,
+  useRoom,
+  useRoomTiers,
+  useUpdateRoom,
+} from "@/hooks/useEvents"
 import { roomUpdateSchema, type RoomUpdateFormValues } from "@/lib/schemas/room"
 import { cn } from "@/lib/utils"
 
@@ -38,7 +52,12 @@ export function RoomDetailPage(): React.ReactElement {
     refetch,
   } = useRoom(activeEventId, roomId)
   const updateRoom = useUpdateRoom(activeEventId)
+  const eventTiers = useEventTiers(activeEventId)
+  const roomTiers = useRoomTiers(activeEventId, roomId)
+  const addRoomTier = useAddRoomTier(activeEventId, roomId)
+  const removeRoomTier = useRemoveRoomTier(activeEventId, roomId)
   const [showSuccess, setShowSuccess] = React.useState(false)
+  const [selectedTierId, setSelectedTierId] = React.useState("")
   const successTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
   React.useEffect(() => {
@@ -161,8 +180,25 @@ export function RoomDetailPage(): React.ReactElement {
     )
   }
 
+  const assignedTierIds = new Set((roomTiers.data ?? []).map((tier) => tier.id))
+  const availableTiers = (eventTiers.data ?? []).filter(
+    (tier) => !assignedTierIds.has(tier.id)
+  )
+
+  const handleAddTier = () => {
+    if (!selectedTierId || assignedTierIds.has(selectedTierId)) return
+    addRoomTier.mutate(
+      { tier_id: selectedTierId },
+      {
+        onSuccess: () => {
+          setSelectedTierId("")
+        },
+      }
+    )
+  }
+
   return (
-    <div className="space-y-6 max-w-xl">
+    <div className="space-y-6 max-w-3xl">
       <div className="flex items-center justify-between gap-2">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">
@@ -322,6 +358,166 @@ export function RoomDetailPage(): React.ReactElement {
               </div>
             </form>
           </Form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Allowed tiers</CardTitle>
+          <CardDescription>
+            Control which event tiers can book and check in for this room.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Select
+              value={selectedTierId}
+              onValueChange={setSelectedTierId}
+              disabled={eventTiers.isLoading || addRoomTier.isPending}
+            >
+              <SelectTrigger className="w-full sm:max-w-xs">
+                <SelectValue placeholder="Select tier to allow" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableTiers.map((tier) => (
+                  <SelectItem key={tier.id} value={tier.id}>
+                    <span className="inline-flex items-center gap-2">
+                      {tier.color && (
+                        <span
+                          className="inline-block h-3.5 w-4 rounded border border-border shrink-0"
+                          style={{ backgroundColor: tier.color }}
+                          aria-hidden
+                        />
+                      )}
+                      {tier.name || tier.id}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              onClick={handleAddTier}
+              disabled={
+                !selectedTierId ||
+                addRoomTier.isPending ||
+                eventTiers.isLoading ||
+                availableTiers.length === 0
+              }
+            >
+              {addRoomTier.isPending ? "Adding…" : "Allow tier"}
+            </Button>
+          </div>
+
+          {addRoomTier.isError && (
+            <p
+              className={cn(
+                "rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              )}
+              role="alert"
+            >
+              {addRoomTier.error instanceof Error
+                ? addRoomTier.error.message
+                : "Failed to allow tier"}
+            </p>
+          )}
+
+          {removeRoomTier.isError && (
+            <p
+              className={cn(
+                "rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              )}
+              role="alert"
+            >
+              {removeRoomTier.error instanceof Error
+                ? removeRoomTier.error.message
+                : "Failed to remove tier"}
+            </p>
+          )}
+
+          {eventTiers.isLoading || roomTiers.isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading tiers…</p>
+          ) : eventTiers.isError ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+              <p className="text-sm text-destructive">Failed to load event tiers.</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => eventTiers.refetch()}
+              >
+                Retry
+              </Button>
+            </div>
+          ) : roomTiers.isError ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+              <p className="text-sm text-destructive">
+                Failed to load allowed tiers for this room.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => roomTiers.refetch()}
+              >
+                Retry
+              </Button>
+            </div>
+          ) : (roomTiers.data ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No tiers are allowed for this room yet.
+            </p>
+          ) : (
+            <div className="rounded-md border">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="h-10 px-4 text-left font-medium">Tier</th>
+                    <th className="h-10 px-4 text-left font-medium">Color</th>
+                    <th className="h-10 px-4 text-right font-medium">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(roomTiers.data ?? []).map((tier) => (
+                    <tr key={tier.id} className="border-b last:border-0">
+                      <td className="px-4 py-3 font-medium">{tier.name || tier.id}</td>
+                      <td className="px-4 py-3">
+                        {tier.color ? (
+                          <span
+                            className="inline-block h-5 w-8 rounded border border-border"
+                            style={{ backgroundColor: tier.color }}
+                            title={tier.color}
+                            aria-hidden
+                          />
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={
+                            removeRoomTier.isPending &&
+                            removeRoomTier.variables?.tierId === tier.id
+                          }
+                          onClick={() => removeRoomTier.mutate({ tierId: tier.id })}
+                        >
+                          {removeRoomTier.isPending &&
+                          removeRoomTier.variables?.tierId === tier.id
+                            ? "Removing…"
+                            : "Remove"}
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

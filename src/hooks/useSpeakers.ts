@@ -5,6 +5,7 @@ import type {
   CreateSpeakerRequest,
   GetEventSpeakerResponse,
   Speaker,
+  UpdateSpeakerRequest,
 } from "@/types/event"
 
 export function useSpeakers(eventId: string | null) {
@@ -57,6 +58,9 @@ export function useRemoveSessionSpeaker(eventId: string | null, sessionId: strin
         queryKey: queryKeys.events.sessionSpeakers(eventId, sessionId),
       })
       queryClient.invalidateQueries({
+        queryKey: queryKeys.sessions.detail(sessionId),
+      })
+      queryClient.invalidateQueries({
         queryKey: queryKeys.events.detail(eventId),
       })
       // If speaker detail is cached, ensure its sessions list updates.
@@ -82,6 +86,9 @@ export function useAddSessionSpeaker(eventId: string | null, sessionId: string |
       if (!eventId || !sessionId) return
       queryClient.invalidateQueries({
         queryKey: queryKeys.events.sessionSpeakers(eventId, sessionId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.sessions.detail(sessionId),
       })
       queryClient.invalidateQueries({
         queryKey: queryKeys.events.detail(eventId),
@@ -134,6 +141,29 @@ export function useDeleteSpeaker(eventId: string | null) {
           queryKey: queryKeys.events.detail(eventId),
         })
       }
+    },
+  })
+}
+
+export function useUpdateSpeaker(eventId: string | null, speakerId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: UpdateSpeakerRequest) => {
+      if (!eventId) throw new Error("No event selected")
+      if (!speakerId) throw new Error("No speaker selected")
+      return apiClient.patch<Speaker>(`/events/${eventId}/speakers/${speakerId}`, body)
+    },
+    onSuccess: () => {
+      if (!eventId || !speakerId) return
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.events.speaker(eventId, speakerId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.events.speakers(eventId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.events.detail(eventId),
+      })
     },
   })
 }

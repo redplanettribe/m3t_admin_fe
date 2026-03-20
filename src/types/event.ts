@@ -68,6 +68,17 @@ export interface CreateRoomRequest {
   not_bookable?: boolean
 }
 
+/** Lifecycle status from domain.SessionStatus (API). */
+export const SESSION_STATUSES = [
+  "Scheduled",
+  "Live",
+  "Completed",
+  "Draft",
+  "Canceled",
+] as const
+
+export type SessionStatus = (typeof SESSION_STATUSES)[number]
+
 /** Session with event_day and HH:mm times. Times are relative to event.start_date + (event_day - 1) days. */
 export interface Session {
   id: string
@@ -77,6 +88,8 @@ export interface Session {
   end_time: string
   title?: string
   description?: string
+  /** Lifecycle status when returned by the API. */
+  status?: SessionStatus
   tags?: EventTag[]
   /** Fully populated speakers for this session, as returned by the API. */
   speakers?: Speaker[]
@@ -108,6 +121,11 @@ export interface UpdateSessionContentRequest {
   description?: string
 }
 
+/** Request body for PATCH /events/{eventID}/sessions/{sessionID}/status */
+export interface UpdateSessionStatusRequest {
+  status: SessionStatus
+}
+
 /** Raw session from API. Tags may be string[] or EventTag[]. */
 export type SessionInput =
   | Session
@@ -119,6 +137,7 @@ export type SessionInput =
     end_time?: string
     title?: string
     description?: string
+    status?: SessionStatus
     /** Flexible tags shape from older responses: either names or full EventTag objects. */
     tags?: string[] | EventTag[]
     /** Embedded speakers for this session, matching the backend Session model. */
@@ -156,6 +175,16 @@ export interface CreateEventTierRequest {
 export interface UpdateEventTierRequest {
   name?: string
   color?: string
+}
+
+/** Request body for POST /events/{eventID}/rooms/{roomID}/tiers */
+export interface AddRoomTierRequest {
+  tier_id: string
+}
+
+/** Request body for POST /events/{eventID}/sessions/{sessionID}/tiers */
+export interface AddSessionTierRequest {
+  tier_id: string
 }
 
 /** Response from POST /events/{eventID}/tiers/{tierID}/assignments */
@@ -236,6 +265,7 @@ export interface Speaker {
   last_name?: string
   bio?: string
   tag_line?: string
+  phone_number?: string
   profile_picture?: string
   is_top_speaker?: boolean
   sessionize_speaker_id?: string
@@ -249,6 +279,18 @@ export interface CreateSpeakerRequest {
   last_name?: string
   bio?: string
   tag_line?: string
+  phone_number?: string
+  profile_picture?: string
+  is_top_speaker?: boolean
+}
+
+/** Request body for PATCH /events/{eventID}/speakers/{speakerID} */
+export interface UpdateSpeakerRequest {
+  first_name?: string
+  last_name?: string
+  bio?: string
+  tag_line?: string
+  phone_number?: string
   profile_picture?: string
   is_top_speaker?: boolean
 }

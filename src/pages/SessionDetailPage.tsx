@@ -39,38 +39,23 @@ import {
   useAddSessionTag,
   useRemoveSessionTag,
   useUpdateSessionContent,
+  useUpdateSessionStatus,
+  useAddSessionTier,
+  useEventTiers,
+  useRemoveSessionTier,
+  useSessionById,
+  useSessionTiers,
 } from "@/hooks/useEvents"
 import { useAddSessionSpeaker, useRemoveSessionSpeaker, useSessionSpeakers, useSpeakers } from "@/hooks/useSpeakers"
 import { useEventStore } from "@/store/eventStore"
-import type { EventTag, Room, Session, SessionInput, Speaker } from "@/types/event"
+import {
+  SESSION_STATUSES,
+  type Room,
+  type Session,
+  type SessionStatus,
+  type Speaker,
+} from "@/types/event"
 import { cn } from "@/lib/utils"
-
-function normalizeSession(s: SessionInput): Session | null {
-  const raw = s as Record<string, unknown>
-  const roomId = s.room_id
-  const eventDay = (s as { event_day?: number }).event_day ?? 1
-  const startTime = (s as { start_time?: string }).start_time
-  const endTime = (s as { end_time?: string }).end_time
-  if (!roomId || startTime == null || endTime == null) return null
-  const tagsRaw = s.tags ?? (raw.tags as string[] | EventTag[] | undefined)
-  const tags: EventTag[] | undefined = Array.isArray(tagsRaw)
-    ? tagsRaw.every((t) => typeof t === "string")
-      ? (tagsRaw as string[]).map((name) => ({ id: "", name }))
-      : (tagsRaw as EventTag[])
-    : undefined
-  return {
-    id: String(s.id),
-    room_id: String(roomId),
-    event_day: eventDay,
-    start_time: String(startTime),
-    end_time: String(endTime),
-    title: s.title,
-    description: s.description,
-    speakers: (raw.speakers as Speaker[] | undefined) ??
-      (raw.speakers === null ? undefined : undefined),
-    tags,
-  }
-}
 
 function speakerDisplayName(s: Speaker): string {
   return [s.first_name, s.last_name].filter(Boolean).join(" ").trim() || "—"
@@ -162,10 +147,20 @@ export function SessionDetailPage(): React.ReactElement {
     sessionId: string
   }>()
 
-  const { data: schedule, isLoading, isError } = useEventSchedule(eventId)
+  const {
+    data: schedule,
+    isLoading: isScheduleLoading,
+    isError: isScheduleError,
+  } = useEventSchedule(eventId)
+  const {
+    data: session,
+    isLoading: isSessionLoading,
+    isError: isSessionError,
+  } = useSessionById(sessionId)
   const { data: eventTags = [] } = useEventTags(eventId)
   const setActiveEventId = useEventStore((s) => s.setActiveEventId)
   const updateContent = useUpdateSessionContent(eventId, sessionId)
+  const updateStatus = useUpdateSessionStatus(eventId, sessionId)
   const addTag = useAddSessionTag(eventId, sessionId)
   const removeTag = useRemoveSessionTag(eventId, sessionId)
   const {
@@ -180,10 +175,17 @@ export function SessionDetailPage(): React.ReactElement {
   } = useSpeakers(eventId)
   const removeSpeaker = useRemoveSessionSpeaker(eventId, sessionId)
   const addSpeaker = useAddSessionSpeaker(eventId, sessionId)
+  const eventTiers = useEventTiers(eventId)
+  const sessionTiers = useSessionTiers(eventId, sessionId)
+  const addSessionTier = useAddSessionTier(eventId, sessionId)
+  const removeSessionTier = useRemoveSessionTier(eventId, sessionId)
+  const [selectedTierId, setSelectedTierId] = React.useState("")
 
   const [isEditingContent, setIsEditingContent] = React.useState(false)
   const [editTitle, setEditTitle] = React.useState("")
   const [editDescription, setEditDescription] = React.useState("")
+  const [isEditingStatus, setIsEditingStatus] = React.useState(false)
+  const [editStatus, setEditStatus] = React.useState<SessionStatus>("Scheduled")
 
   React.useEffect(() => {
     if (eventId) setActiveEventId(eventId)
@@ -210,56 +212,91 @@ export function SessionDetailPage(): React.ReactElement {
     )
   }, [editTitle, editDescription, updateContent])
 
+  const startEditingStatus = React.useCallback((s: Session) => {
+    setEditStatus(s.status ?? "Scheduled")
+    setIsEditingStatus(true)
+  }, [])
+
+  const cancelEditingStatus = React.useCallback(() => {
+    setIsEditingStatus(false)
+  }, [])
+
+  const saveStatus = React.useCallback(() => {
+    updateStatus.mutate(
+      { status: editStatus },
+      {
+        onSuccess: () => {
+          setIsEditingStatus(false)
+        },
+      }
+    )
+  }, [editStatus, updateStatus])
+
   const event = schedule?.event
   const rooms: Room[] = schedule != null ? schedule.rooms.map((rw) => rw.room) : []
-  const rawSessions = schedule != null ? schedule.rooms.flatMap((rw) => rw.sessions) : []
-  const sessions = rawSessions
-    .map((s) => normalizeSession(s as SessionInput))
-    .filter((s): s is Session => s !== null)
-  const session = sessions.find((s) => s.id === sessionId) ?? null
   const room = session ? rooms?.find((r) => r.id === session.room_id) : null
 
   if (!eventId || !sessionId) {
     return (
-      <div className="space-y-4">
+      <div className="mx-auto w-full max-w-2xl space-y-4 text-center">
         <h2 className="text-2xl font-semibold tracking-tight">Session</h2>
         <p className="text-muted-foreground">Invalid link.</p>
-        <Button asChild variant="outline">
-          <Link to="/schedule">Back to schedule</Link>
-        </Button>
+        <div className="flex justify-center">
+          <Button asChild variant="outline">
+            <Link to="/schedule">Back to schedule</Link>
+          </Button>
+        </div>
       </div>
     )
   }
 
-  if (isLoading) {
+  if (isSessionLoading || isScheduleLoading) {
     return (
-      <div className="space-y-4">
+      <div className="mx-auto w-full max-w-2xl space-y-4 text-center">
         <h2 className="text-2xl font-semibold tracking-tight">Session</h2>
         <p className="text-muted-foreground">Loading…</p>
       </div>
     )
   }
 
-  if (isError || !schedule) {
+  if (isSessionError) {
     return (
-      <div className="space-y-4">
+      <div className="mx-auto w-full max-w-2xl space-y-4 text-center">
         <h2 className="text-2xl font-semibold tracking-tight">Session</h2>
         <p className="text-muted-foreground text-destructive">Failed to load session.</p>
-        <Button asChild variant="outline">
-          <Link to="/schedule">Back to schedule</Link>
-        </Button>
+        <div className="flex justify-center">
+          <Button asChild variant="outline">
+            <Link to="/schedule">Back to schedule</Link>
+          </Button>
+        </div>
       </div>
     )
   }
 
   if (!session) {
     return (
-      <div className="space-y-4">
+      <div className="mx-auto w-full max-w-2xl space-y-4 text-center">
         <h2 className="text-2xl font-semibold tracking-tight">Session</h2>
         <p className="text-muted-foreground">Session not found.</p>
-        <Button asChild variant="outline">
-          <Link to="/schedule">Back to schedule</Link>
-        </Button>
+        <div className="flex justify-center">
+          <Button asChild variant="outline">
+            <Link to="/schedule">Back to schedule</Link>
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (isScheduleError || !schedule) {
+    return (
+      <div className="mx-auto w-full max-w-2xl space-y-4 text-center">
+        <h2 className="text-2xl font-semibold tracking-tight">Session</h2>
+        <p className="text-muted-foreground text-destructive">Failed to load event.</p>
+        <div className="flex justify-center">
+          <Button asChild variant="outline">
+            <Link to="/schedule">Back to schedule</Link>
+          </Button>
+        </div>
       </div>
     )
   }
@@ -283,10 +320,29 @@ export function SessionDetailPage(): React.ReactElement {
     return (eh * 60 + (em ?? 0)) - (sh * 60 + (sm ?? 0))
   })()
 
+  const assignedSessionTierIds = new Set(
+    (sessionTiers.data ?? []).map((tier) => tier.id)
+  )
+  const availableSessionTiers = (eventTiers.data ?? []).filter(
+    (tier) => !assignedSessionTierIds.has(tier.id)
+  )
+
+  const handleAddSessionTier = () => {
+    if (!selectedTierId || assignedSessionTierIds.has(selectedTierId)) return
+    addSessionTier.mutate(
+      { tier_id: selectedTierId },
+      {
+        onSuccess: () => {
+          setSelectedTierId("")
+        },
+      }
+    )
+  }
+
   return (
-    <div className="space-y-6 max-w-2xl">
-      <div className="flex items-center justify-between gap-2">
-        <div>
+    <div className="mx-auto w-full max-w-2xl space-y-6">
+      <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 text-center sm:text-left">
           <h2 className="text-2xl font-semibold tracking-tight">
             {session.title ?? `Session ${session.id}`}
           </h2>
@@ -294,7 +350,7 @@ export function SessionDetailPage(): React.ReactElement {
             {event?.name} · {room?.name ?? session.room_id}
           </p>
         </div>
-        <Button asChild variant="outline" size="sm">
+        <Button asChild variant="outline" size="sm" className="shrink-0">
           <Link to="/schedule">Back to schedule</Link>
         </Button>
       </div>
@@ -317,6 +373,72 @@ export function SessionDetailPage(): React.ReactElement {
             <div>
               <dt className="font-medium text-muted-foreground">Room</dt>
               <dd className="mt-0.5">{room?.name ?? session.room_id}</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-muted-foreground">Status</dt>
+              <dd className="mt-1 space-y-2">
+                <p className="text-xs text-muted-foreground md:max-w-md">
+                  Event managers can set lifecycle status. Only one{" "}
+                  <span className="font-medium text-foreground">Live</span> session is
+                  allowed per room.
+                </p>
+                {isEditingStatus ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Select
+                      value={editStatus}
+                      onValueChange={(v) => setEditStatus(v as SessionStatus)}
+                      disabled={updateStatus.isPending}
+                    >
+                      <SelectTrigger className="w-[180px]" size="sm">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SESSION_STATUSES.map((st) => (
+                          <SelectItem key={st} value={st}>
+                            {st}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={saveStatus}
+                      disabled={updateStatus.isPending}
+                    >
+                      {updateStatus.isPending ? "Saving…" : "Save"}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={cancelEditingStatus}
+                      disabled={updateStatus.isPending}
+                    >
+                      Cancel
+                    </Button>
+                    {updateStatus.isError ? (
+                      <span className="text-xs text-destructive">
+                        {updateStatus.error instanceof Error
+                          ? updateStatus.error.message
+                          : "Failed to update status"}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm">{session.status ?? "—"}</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => startEditingStatus(session)}
+                    >
+                      Change status
+                    </Button>
+                  </div>
+                )}
+              </dd>
             </div>
             <div>
               <dt className="font-medium text-muted-foreground">Speakers</dt>
@@ -523,6 +645,166 @@ export function SessionDetailPage(): React.ReactElement {
       </Card>
 
       <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Allowed tiers</CardTitle>
+          <CardDescription>
+            Control which event tiers can book and check in for this session.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Select
+              value={selectedTierId}
+              onValueChange={setSelectedTierId}
+              disabled={eventTiers.isLoading || addSessionTier.isPending}
+            >
+              <SelectTrigger className="w-full sm:max-w-xs">
+                <SelectValue placeholder="Select tier to allow" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableSessionTiers.map((tier) => (
+                  <SelectItem key={tier.id} value={tier.id}>
+                    <span className="inline-flex items-center gap-2">
+                      {tier.color && (
+                        <span
+                          className="inline-block h-3.5 w-4 rounded border border-border shrink-0"
+                          style={{ backgroundColor: tier.color }}
+                          aria-hidden
+                        />
+                      )}
+                      {tier.name || tier.id}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              onClick={handleAddSessionTier}
+              disabled={
+                !selectedTierId ||
+                addSessionTier.isPending ||
+                eventTiers.isLoading ||
+                availableSessionTiers.length === 0
+              }
+            >
+              {addSessionTier.isPending ? "Adding…" : "Allow tier"}
+            </Button>
+          </div>
+
+          {addSessionTier.isError && (
+            <p
+              className={cn(
+                "rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              )}
+              role="alert"
+            >
+              {addSessionTier.error instanceof Error
+                ? addSessionTier.error.message
+                : "Failed to allow tier"}
+            </p>
+          )}
+
+          {removeSessionTier.isError && (
+            <p
+              className={cn(
+                "rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              )}
+              role="alert"
+            >
+              {removeSessionTier.error instanceof Error
+                ? removeSessionTier.error.message
+                : "Failed to remove tier"}
+            </p>
+          )}
+
+          {eventTiers.isLoading || sessionTiers.isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading tiers…</p>
+          ) : eventTiers.isError ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+              <p className="text-sm text-destructive">Failed to load event tiers.</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => eventTiers.refetch()}
+              >
+                Retry
+              </Button>
+            </div>
+          ) : sessionTiers.isError ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+              <p className="text-sm text-destructive">
+                Failed to load allowed tiers for this session.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => sessionTiers.refetch()}
+              >
+                Retry
+              </Button>
+            </div>
+          ) : (sessionTiers.data ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No tiers are allowed for this session yet.
+            </p>
+          ) : (
+            <div className="rounded-md border">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="h-10 px-4 text-left font-medium">Tier</th>
+                    <th className="h-10 px-4 text-left font-medium">Color</th>
+                    <th className="h-10 px-4 text-right font-medium">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(sessionTiers.data ?? []).map((tier) => (
+                    <tr key={tier.id} className="border-b last:border-0">
+                      <td className="px-4 py-3 font-medium">{tier.name || tier.id}</td>
+                      <td className="px-4 py-3">
+                        {tier.color ? (
+                          <span
+                            className="inline-block h-5 w-8 rounded border border-border"
+                            style={{ backgroundColor: tier.color }}
+                            title={tier.color}
+                            aria-hidden
+                          />
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={
+                            removeSessionTier.isPending &&
+                            removeSessionTier.variables?.tierId === tier.id
+                          }
+                          onClick={() => removeSessionTier.mutate({ tierId: tier.id })}
+                        >
+                          {removeSessionTier.isPending &&
+                          removeSessionTier.variables?.tierId === tier.id
+                            ? "Removing…"
+                            : "Remove"}
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 gap-2">
           <div>
             <CardTitle className="text-base">Session content</CardTitle>
@@ -600,59 +882,6 @@ export function SessionDetailPage(): React.ReactElement {
           )}
         </CardContent>
       </Card>
-
-      {event && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Event</CardTitle>
-            <CardDescription>{event.name}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <dl className="grid gap-3 text-sm">
-              {event.start_date && (
-                <div>
-                  <dt className="font-medium text-muted-foreground">Date</dt>
-                  <dd className="mt-0.5">
-                    {(() => {
-                      const dateOnly = String(event.start_date).trim().slice(0, 10)
-                      if (!dateOnly || dateOnly.length < 10) return event.start_date
-                      const start = new Date(dateOnly + "T12:00:00Z")
-                      if (Number.isNaN(start.getTime())) return event.start_date
-                      if (event.duration_days != null && event.duration_days > 1) {
-                        const end = new Date(start)
-                        end.setUTCDate(end.getUTCDate() + (event.duration_days - 1))
-                        if (Number.isNaN(end.getTime())) return event.start_date
-                        return (
-                          <>
-                            {start.toLocaleDateString(undefined, { dateStyle: "medium" })} –{" "}
-                            {end.toLocaleDateString(undefined, { dateStyle: "medium" })}{" "}
-                            ({event.duration_days} days)
-                          </>
-                        )
-                      }
-                      return start.toLocaleDateString(undefined, { dateStyle: "medium" })
-                    })()}
-                  </dd>
-                </div>
-              )}
-              {event.description && (
-                <div>
-                  <dt className="font-medium text-muted-foreground">Description</dt>
-                  <dd className="mt-0.5 whitespace-pre-wrap">{event.description}</dd>
-                </div>
-              )}
-              {(event.location_lat != null || event.location_lng != null) && (
-                <div>
-                  <dt className="font-medium text-muted-foreground">Location</dt>
-                  <dd className="mt-0.5">
-                    {event.location_lat}, {event.location_lng}
-                  </dd>
-                </div>
-              )}
-            </dl>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }

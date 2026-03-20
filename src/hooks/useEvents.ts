@@ -21,10 +21,13 @@ import type {
   UpdateEventRequest,
   UpdateSessionScheduleRequest,
   UpdateSessionContentRequest,
+  UpdateSessionStatusRequest,
   CreateSessionRequest,
   CreateRoomRequest,
   CreateEventTierRequest,
   UpdateEventTierRequest,
+  AddRoomTierRequest,
+  AddSessionTierRequest,
   AssignTierUsersResult,
 } from "@/types/event"
 
@@ -45,6 +48,7 @@ type ApiSessionResponse = {
   end_time: string
   title?: string
   description?: string
+  status?: Session["status"]
   tags?: EventTag[]
   speakers?: Speaker[]
 }
@@ -222,6 +226,117 @@ export function useRoom(eventId: string | null, roomId: string | null) {
   })
 }
 
+export function useRoomTiers(eventId: string | null, roomId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.events.roomTiers(eventId ?? "", roomId ?? ""),
+    queryFn: () => {
+      if (!eventId) throw new Error("No event selected")
+      if (!roomId) throw new Error("No room selected")
+      return apiClient.get<EventTier[]>(`/events/${eventId}/rooms/${roomId}/tiers`)
+    },
+    enabled: !!eventId && !!roomId,
+  })
+}
+
+export function useAddRoomTier(eventId: string | null, roomId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: AddRoomTierRequest) => {
+      if (!eventId) throw new Error("No event selected")
+      if (!roomId) throw new Error("No room selected")
+      return apiClient.post<undefined>(`/events/${eventId}/rooms/${roomId}/tiers`, body)
+    },
+    onSuccess: () => {
+      if (!eventId || !roomId) return
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.events.roomTiers(eventId, roomId),
+      })
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.tiers(eventId) })
+    },
+  })
+}
+
+export function useRemoveRoomTier(eventId: string | null, roomId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ tierId }: { tierId: string }) => {
+      if (!eventId) throw new Error("No event selected")
+      if (!roomId) throw new Error("No room selected")
+      return apiClient.delete<undefined>(
+        `/events/${eventId}/rooms/${roomId}/tiers/${tierId}`
+      )
+    },
+    onSuccess: () => {
+      if (!eventId || !roomId) return
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.events.roomTiers(eventId, roomId),
+      })
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.tiers(eventId) })
+    },
+  })
+}
+
+export function useSessionTiers(eventId: string | null, sessionId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.events.sessionTiers(eventId ?? "", sessionId ?? ""),
+    queryFn: () => {
+      if (!eventId) throw new Error("No event selected")
+      if (!sessionId) throw new Error("No session selected")
+      return apiClient.get<EventTier[]>(
+        `/events/${eventId}/sessions/${sessionId}/tiers`
+      )
+    },
+    enabled: !!eventId && !!sessionId,
+  })
+}
+
+export function useAddSessionTier(
+  eventId: string | null,
+  sessionId: string | null
+) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: AddSessionTierRequest) => {
+      if (!eventId) throw new Error("No event selected")
+      if (!sessionId) throw new Error("No session selected")
+      return apiClient.post<undefined>(
+        `/events/${eventId}/sessions/${sessionId}/tiers`,
+        body
+      )
+    },
+    onSuccess: () => {
+      if (!eventId || !sessionId) return
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.events.sessionTiers(eventId, sessionId),
+      })
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.tiers(eventId) })
+    },
+  })
+}
+
+export function useRemoveSessionTier(
+  eventId: string | null,
+  sessionId: string | null
+) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ tierId }: { tierId: string }) => {
+      if (!eventId) throw new Error("No event selected")
+      if (!sessionId) throw new Error("No session selected")
+      return apiClient.delete<undefined>(
+        `/events/${eventId}/sessions/${sessionId}/tiers/${tierId}`
+      )
+    },
+    onSuccess: () => {
+      if (!eventId || !sessionId) return
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.events.sessionTiers(eventId, sessionId),
+      })
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.tiers(eventId) })
+    },
+  })
+}
+
 export function useDeleteRoom(eventId: string | null) {
   const queryClient = useQueryClient()
   return useMutation({
@@ -248,8 +363,11 @@ export function useDeleteSession(eventId: string | null) {
         `/events/${eventId}/sessions/${sessionId}`
       )
     },
-    onSuccess: (_data, _variables) => {
+    onSuccess: (_data, variables) => {
       if (!eventId) return
+      queryClient.removeQueries({
+        queryKey: queryKeys.sessions.detail(variables.sessionId),
+      })
       queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
     },
   })
@@ -306,6 +424,10 @@ export function useCreateSession(eventId: string | null) {
     },
     onSuccess: (created, _variables) => {
       if (!eventId) return
+      queryClient.setQueryData(
+        queryKeys.sessions.detail(String(created.id)),
+        sessionFromApiResponse(created)
+      )
       const key = queryKeys.events.detail(eventId)
       queryClient.setQueryData<EventSchedule>(key, (prev) => {
         if (!prev?.rooms) {
@@ -337,9 +459,22 @@ function sessionFromApiResponse(data: ApiSessionResponse): Session {
     end_time: data.end_time,
     title: data.title,
     description: data.description,
+    status: data.status,
     tags: normalizeTags(data.tags),
     speakers: data.speakers,
   }
+}
+
+export function useSessionById(sessionId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.sessions.detail(sessionId ?? ""),
+    queryFn: async () => {
+      if (!sessionId) throw new Error("No session selected")
+      const data = await apiClient.get<ApiSessionResponse>(`/sessions/${sessionId}`)
+      return sessionFromApiResponse(data)
+    },
+    enabled: !!sessionId,
+  })
 }
 
 export function useUpdateSessionContent(eventId: string | null, sessionId: string | null) {
@@ -368,6 +503,53 @@ export function useUpdateSessionContent(eventId: string | null, sessionId: strin
         }))
         return { ...prev, rooms }
       })
+      if (sessionId) {
+        queryClient.setQueryData(
+          queryKeys.sessions.detail(sessionId),
+          sessionFromApiResponse(updated)
+        )
+      }
+    },
+    onError: () => {
+      if (eventId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+      }
+    },
+  })
+}
+
+export function useUpdateSessionStatus(eventId: string | null, sessionId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: UpdateSessionStatusRequest) => {
+      if (!eventId) throw new Error("No event selected")
+      if (!sessionId) throw new Error("No session selected")
+      return apiClient.patch<ApiSessionResponse>(
+        `/events/${eventId}/sessions/${sessionId}/status`,
+        body
+      )
+    },
+    onSuccess: (updated, _variables) => {
+      if (!eventId) return
+      const key = queryKeys.events.detail(eventId)
+      queryClient.setQueryData<EventSchedule>(key, (prev) => {
+        if (!prev?.rooms) {
+          queryClient.invalidateQueries({ queryKey: key })
+          return prev
+        }
+        const session = sessionFromApiResponse(updated)
+        const rooms: RoomWithSessions[] = prev.rooms.map((rw) => ({
+          ...rw,
+          sessions: rw.sessions.map((s) => (String(s.id) === updated.id ? session : s)),
+        }))
+        return { ...prev, rooms }
+      })
+      if (sessionId) {
+        queryClient.setQueryData(
+          queryKeys.sessions.detail(sessionId),
+          sessionFromApiResponse(updated)
+        )
+      }
     },
     onError: () => {
       if (eventId) {
@@ -393,6 +575,11 @@ export function useAddSessionTag(eventId: string | null, sessionId: string | nul
       if (eventId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
       }
+      if (sessionId) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.sessions.detail(sessionId),
+        })
+      }
     },
   })
 }
@@ -411,6 +598,11 @@ export function useRemoveSessionTag(eventId: string | null, sessionId: string | 
     onSuccess: () => {
       if (eventId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+      }
+      if (sessionId) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.sessions.detail(sessionId),
+        })
       }
     },
   })
@@ -450,6 +642,10 @@ export function useUpdateSessionSchedule(eventId: string | null) {
         })
         return { ...prev, rooms }
       })
+      queryClient.setQueryData(
+        queryKeys.sessions.detail(variables.sessionId),
+        sessionFromApiResponse(updated)
+      )
     },
     onError: () => {
       if (eventId) {
