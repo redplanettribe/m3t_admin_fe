@@ -77,6 +77,11 @@ export function HomePage(): React.ReactElement {
                   )}
                 </p>
               )}
+              {event.time_zone && (
+                <p className="text-muted-foreground text-sm mt-1">
+                  Time zone: {event.time_zone}
+                </p>
+              )}
               {event.description && (
                 <p className="text-muted-foreground text-sm mt-2 max-w-2xl">
                   {event.description}

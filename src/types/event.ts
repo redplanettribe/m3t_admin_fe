@@ -7,6 +7,8 @@ export interface Event {
   updated_at?: string
   start_date?: string
   duration_days?: number
+  /** Fixed UTC offset like "+02:00" or "-05:00". */
+  time_zone?: string
   description?: string
   location_lat?: number
   location_lng?: number
@@ -14,6 +16,8 @@ export interface Event {
 }
 
 export interface UpdateEventRequest {
+  /** Fixed UTC offset like "+02:00" or "-05:00". */
+  time_zone: string
   start_date?: string
   duration_days?: number
   description?: string

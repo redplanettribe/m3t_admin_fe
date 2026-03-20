@@ -26,6 +26,18 @@ import {
 } from "@/lib/schemas/event"
 import { cn } from "@/lib/utils"
 
+function getLocalUtcOffsetTimeZone(): string {
+  // JS getTimezoneOffset() is minutes *behind* UTC (e.g. UTC+2 -> -120).
+  const offsetMinutes = -new Date().getTimezoneOffset()
+  const sign = offsetMinutes >= 0 ? "+" : "-"
+  const abs = Math.abs(offsetMinutes)
+  const hours = Math.floor(abs / 60)
+  const minutes = abs % 60
+  return `${sign}${hours.toString().padStart(2, "0")}:${minutes
+    .toString()
+    .padStart(2, "0")}`
+}
+
 type CreateEventModalProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -40,6 +52,7 @@ export function CreateEventModal({
   const defaultValues: CreateEventFormInput = {
     name: "",
     start_date: "",
+    time_zone: getLocalUtcOffsetTimeZone(),
     duration_days: 1,
     description: "",
     location_lat: undefined,
@@ -121,6 +134,26 @@ export function CreateEventModal({
                     <Input
                       type="date"
                       autoComplete="off"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="time_zone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Time zone <span className="text-destructive" aria-hidden>*</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      autoComplete="off"
+                      placeholder='e.g. "+02:00"'
                       {...field}
                       value={field.value ?? ""}
                     />

@@ -2192,7 +2192,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Records check-in of an attendee to a specific session. Caller must be the event owner or a team member. User must be registered for the event. If the user has no booking and the session has capacity, they are auto-booked then checked in. If the session is full and the user has no booking, returns 409. Idempotent: returns 201 when a new check-in is created, 200 when already checked in.",
+                "description": "Records check-in of an attendee to a specific session. Caller must be the event owner or a team member. User must be registered for the event. Session must be Live. If the user has no booking and the session has capacity, they are auto-booked then checked in. If the session is not Live or is full and the user has no booking, returns 409. Idempotent: returns 201 when a new check-in is created, 200 when already checked in.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2266,7 +2266,7 @@
                         }
                     },
                     "409": {
-                        "description": "error.code: conflict (session full)",
+                        "description": "error.code: conflict (session is not Live, or session full)",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4905,6 +4905,9 @@
                 "start_date": {
                     "description": "YYYY-MM-DD",
                     "type": "string"
+                },
+                "time_zone": {
+                    "type": "string"
                 }
             }
         },
@@ -5621,6 +5624,9 @@
                 "start_date": {
                     "description": "YYYY-MM-DD",
                     "type": "string"
+                },
+                "time_zone": {
+                    "type": "string"
                 }
             }
         },
@@ -5880,6 +5886,10 @@
                     "type": "string"
                 },
                 "thumbnail_url": {
+                    "type": "string"
+                },
+                "time_zone": {
+                    "description": "TimeZone is stored as a fixed UTC offset like \"+02:00\" or \"-05:00\".\nSession/talk times imported from external sources are converted into this zone.",
                     "type": "string"
                 },
                 "updated_at": {
@@ -6144,7 +6154,16 @@
                 "created_at": {
                     "type": "string"
                 },
+                "email": {
+                    "type": "string"
+                },
                 "id": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 },
                 "session_id": {

@@ -31,6 +31,18 @@ import {
 import type { Event } from "@/types/event"
 import { cn } from "@/lib/utils"
 
+function getLocalUtcOffsetTimeZone(): string {
+  // JS getTimezoneOffset() is minutes *behind* UTC (e.g. UTC+2 -> -120).
+  const offsetMinutes = -new Date().getTimezoneOffset()
+  const sign = offsetMinutes >= 0 ? "+" : "-"
+  const abs = Math.abs(offsetMinutes)
+  const hours = Math.floor(abs / 60)
+  const minutes = abs % 60
+  return `${sign}${hours.toString().padStart(2, "0")}:${minutes
+    .toString()
+    .padStart(2, "0")}`
+}
+
 /** Normalize API date to YYYY-MM-DD for <input type="date">. */
 function toDateOnly(value: string | undefined): string {
   if (value == null || value === "") return ""
@@ -70,6 +82,7 @@ export function EditEventModal({
       description: "",
       location_lat: undefined,
       location_lng: undefined,
+      time_zone: event.time_zone ?? getLocalUtcOffsetTimeZone(),
     },
   })
 
@@ -81,6 +94,7 @@ export function EditEventModal({
         description: event.description ?? "",
         location_lat: event.location_lat,
         location_lng: event.location_lng,
+        time_zone: event.time_zone ?? getLocalUtcOffsetTimeZone(),
       })
       setThumbnailUrl(event.thumbnail_url)
       setThumbnailError(null)
@@ -93,6 +107,7 @@ export function EditEventModal({
     event?.description,
     event?.location_lat,
     event?.location_lng,
+    event?.time_zone,
     event?.thumbnail_url,
     form,
   ])
@@ -144,6 +159,7 @@ export function EditEventModal({
 
   const onSubmit = (values: UpdateEventFormInput) => {
     const body = {
+      time_zone: values.time_zone,
       ...(values.start_date !== undefined && values.start_date !== "" && {
         start_date: values.start_date,
       }),
@@ -198,6 +214,26 @@ export function EditEventModal({
                     <Input
                       type="date"
                       autoComplete="off"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="time_zone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Time zone <span className="text-destructive" aria-hidden>*</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      autoComplete="off"
+                      placeholder='e.g. "+02:00"'
                       {...field}
                       value={field.value ?? ""}
                     />

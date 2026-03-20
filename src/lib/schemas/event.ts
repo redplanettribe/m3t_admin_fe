@@ -1,8 +1,15 @@
 import { z } from "zod"
 
+/** Fixed UTC offset like "+02:00" or "-05:00" (no IANA tz database names). */
+const utcOffsetTimeZoneSchema = z
+  .string()
+  .trim()
+  .regex(/^[+-](?:[01]\d|2[0-3]):[0-5]\d$/, 'Time zone must look like "+02:00" or "-05:00"')
+
 export const createEventSchema = z.object({
   name: z.string().min(1, "Name is required"),
   start_date: z.string().min(1, "Start date is required"),
+  time_zone: utcOffsetTimeZoneSchema,
   duration_days: z
     .union([z.number().int().positive(), z.literal("")])
     .optional()
@@ -24,6 +31,7 @@ export type CreateEventFormValues = z.infer<typeof createEventSchema>
 
 export const updateEventSchema = z.object({
   start_date: z.string().optional(),
+  time_zone: utcOffsetTimeZoneSchema,
   duration_days: z
     .union([z.number().int().positive(), z.literal("")])
     .optional()
