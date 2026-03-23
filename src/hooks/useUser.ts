@@ -58,3 +58,15 @@ export function useUpdateUserAvatar() {
     },
   })
 }
+
+export function useDeleteUser() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => apiClient.delete<null>("users/me"),
+    onSuccess: () => {
+      // Ensure no stale user data remains after the account is deleted.
+      queryClient.clear()
+    },
+  })
+}

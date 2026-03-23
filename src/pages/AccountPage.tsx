@@ -7,6 +7,14 @@ import { LogOut, Upload } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
   Card,
   CardContent,
   CardDescription,
@@ -22,7 +30,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { useUpdateUser, useUpdateUserAvatar } from "@/hooks/useUser"
+import { useDeleteUser, useUpdateUser, useUpdateUserAvatar } from "@/hooks/useUser"
 import {
   updateProfileSchema,
   type UpdateProfileFormValues,
@@ -58,7 +66,13 @@ export function AccountPage(): React.ReactElement {
   const clearEventState = useEventStore((s) => s.clearAll)
   const updateUser = useUpdateUser()
   const updateAvatar = useUpdateUserAvatar()
+  const deleteUser = useDeleteUser()
   const fileInputRef = React.useRef<HTMLInputElement | null>(null)
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
+  const [confirmText, setConfirmText] = React.useState("")
+
+  const isDeleteConfirmed = confirmText.trim().toUpperCase() === "DELETE"
 
   const form = useForm<UpdateProfileFormValues>({
     resolver: zodResolver(updateProfileSchema),
@@ -105,6 +119,16 @@ export function AccountPage(): React.ReactElement {
     clearEventState()
     queryClient.clear()
     navigate("/login", { replace: true })
+  }
+
+  const handleDeleteConfirm = () => {
+    deleteUser.mutate(undefined, {
+      onSuccess: () => {
+        setDeleteDialogOpen(false)
+        setConfirmText("")
+        handleLogout()
+      },
+    })
   }
 
   return (
@@ -230,6 +254,92 @@ export function AccountPage(): React.ReactElement {
           </Form>
         </CardContent>
       </Card>
+
+      <section className="max-w-md space-y-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+        <h3 className="font-medium text-destructive">Danger zone</h3>
+        <p className="text-sm text-muted-foreground">
+          Deleting your account is irreversible. Your personal data will be
+          permanently removed.
+        </p>
+        <Button
+          type="button"
+          variant="destructive"
+          onClick={() => setDeleteDialogOpen(true)}
+          disabled={deleteUser.isPending}
+        >
+          Delete account
+        </Button>
+      </section>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          // Prevent closing while the destructive request is in-flight.
+          if (!open && deleteUser.isPending) return
+          if (!open) {
+            setConfirmText("")
+            deleteUser.reset()
+          }
+          setDeleteDialogOpen(open)
+        }}
+      >
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Delete account</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. Type <span className="font-medium">DELETE</span>{" "}
+              to confirm.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Type <span className="font-medium">DELETE</span> to enable the
+                delete action.
+              </p>
+              <Input
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                disabled={deleteUser.isPending}
+                placeholder="DELETE"
+              />
+            </div>
+
+            {deleteUser.isError && (
+              <p
+                className={cn(
+                  "rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                )}
+                role="alert"
+              >
+                {deleteUser.error instanceof Error
+                  ? deleteUser.error.message
+                  : "Failed to delete account"}
+              </p>
+            )}
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(false)}
+                disabled={deleteUser.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleDeleteConfirm}
+                disabled={!isDeleteConfirmed || deleteUser.isPending}
+              >
+                {deleteUser.isPending ? "Deleting…" : "Delete"}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
