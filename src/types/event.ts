@@ -197,6 +197,33 @@ export interface AssignTierUsersResult {
   failed: string[]
 }
 
+export interface EventDeliverable {
+  id: string
+  event_id: string
+  name: string
+  description: string
+  repeatable: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+export interface CreateEventDeliverableRequest {
+  name: string
+  description: string
+  repeatable: boolean
+}
+
+export interface UpdateEventDeliverableRequest {
+  name?: string
+  description?: string
+  repeatable?: boolean
+}
+
+export interface ListEventDeliverablesResult {
+  items: EventDeliverable[]
+  pagination: PaginationMeta
+}
+
 /** Response shape from GET /events/{eventID}/tags (apiClient returns .data as EventTag[]) */
 export interface ListEventTagsSuccessResponse {
   data: EventTag[]

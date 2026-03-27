@@ -112,3 +112,15 @@ export const assignTierEmailsSchema = z.object({
 })
 
 export type AssignTierEmailsFormValues = z.infer<typeof assignTierEmailsSchema>
+
+export const createDeliverableSchema = z.object({
+  name: z.string().trim().min(1, "Name is required"),
+  description: z.string().trim().min(1, "Description is required"),
+  repeatable: z.boolean(),
+})
+
+export type CreateDeliverableFormValues = z.infer<typeof createDeliverableSchema>
+
+export const editDeliverableSchema = createDeliverableSchema
+
+export type EditDeliverableFormValues = z.infer<typeof editDeliverableSchema>

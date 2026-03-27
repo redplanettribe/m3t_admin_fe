@@ -17,6 +17,7 @@ import { SessionDetailPage } from "@/pages/SessionDetailPage"
 import { SpeakerDetailPage } from "@/pages/SpeakerDetailPage"
 import { SpeakersPage } from "@/pages/SpeakersPage"
 import { TiersPage } from "@/pages/TiersPage"
+import { DeliverablesPage } from "@/pages/DeliverablesPage"
 
 const routes: RouteObject[] = [
   {
@@ -88,6 +89,10 @@ const routes: RouteObject[] = [
       {
         path: "tiers",
         element: <TiersPage />,
+      },
+      {
+        path: "deliverables",
+        element: <DeliverablesPage />,
       },
       {
         path: "settings",

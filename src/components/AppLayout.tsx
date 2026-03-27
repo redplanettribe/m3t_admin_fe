@@ -8,6 +8,7 @@ import {
   Layers,
   LayoutGrid,
   Mic2,
+  Package,
   Settings,
   UserPlus,
   Users,
@@ -101,6 +102,11 @@ const navMain: NavItem[] = [
     title: "Tiers",
     url: "/tiers",
     icon: Layers,
+  },
+  {
+    title: "Deliverables",
+    url: "/deliverables",
+    icon: Package,
   },
   {
     title: "Settings",
