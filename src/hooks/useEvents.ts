@@ -55,10 +55,10 @@ function invalidateEventSessionsScheduleQueries(
 
 type ApiSessionResponse = {
   id: string
-  room_id: string
+  room_id?: string
   event_day?: number
-  start_time: string
-  end_time: string
+  start_time?: string
+  end_time?: string
   title?: string
   description?: string
   status?: Session["status"]
@@ -450,7 +450,10 @@ export function useCreateSession(eventId: string | null) {
           return prev
         }
         const session = sessionFromApiResponse(created)
-        const roomIndex = prev.rooms.findIndex((rw) => rw.room.id === created.room_id)
+        const roomIndex =
+          created.room_id != null
+            ? prev.rooms.findIndex((rw) => rw.room.id === created.room_id)
+            : -1
         if (roomIndex < 0) {
           queryClient.invalidateQueries({ queryKey: key })
           return prev
@@ -465,12 +468,12 @@ export function useCreateSession(eventId: string | null) {
   })
 }
 
-/** API returns event_day, start_time (HH:mm), end_time (HH:mm) and tags; we normalize to Session for cache. */
+/** API returns optional schedule fields for drafts; we normalize to Session for cache. */
 function sessionFromApiResponse(data: ApiSessionResponse): Session {
   return {
     id: data.id,
     room_id: data.room_id,
-    event_day: data.event_day ?? 1,
+    event_day: data.event_day,
     start_time: data.start_time,
     end_time: data.end_time,
     title: data.title,

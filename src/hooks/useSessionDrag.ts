@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react"
-import type { EventTag, Session } from "@/types/event"
+import type { Session } from "@/types/event"
 import type { UseMutationResult } from "@tanstack/react-query"
 import type { UpdateSessionScheduleRequest } from "@/types/event"
 
@@ -14,7 +14,7 @@ export interface UseSessionDragParams {
   pixelsPerMinute: number
   rangeStartMinutes: number
   updateSession: UseMutationResult<
-    { id: string; room_id: string; event_day?: number; start_time: string; end_time: string; title?: string; description?: string; tags?: EventTag[] },
+    unknown,
     Error,
     { sessionId: string } & UpdateSessionScheduleRequest,
     unknown
@@ -193,6 +193,13 @@ export function useSessionDrag({
       roomIndex: number
     ) => {
       if (rooms.length === 0) return
+      if (
+        session.start_time == null ||
+        session.end_time == null ||
+        session.room_id == null
+      ) {
+        return
+      }
       e.preventDefault()
       const originStartMinutes = hhmmToMinutes(session.start_time)
       const originEndMinutes = hhmmToMinutes(session.end_time)

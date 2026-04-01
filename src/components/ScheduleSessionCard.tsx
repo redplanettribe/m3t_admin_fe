@@ -88,7 +88,10 @@ export function ScheduleSessionCard({
 }: ScheduleSessionCardProps): React.ReactElement {
   const startTime = session.start_time
   const endTime = session.end_time
-  const durationMin = hhmmToMinutes(session.end_time) - hhmmToMinutes(session.start_time)
+  const durationMin =
+    startTime != null && endTime != null
+      ? hhmmToMinutes(endTime) - hhmmToMinutes(startTime)
+      : 0
 
   const style: React.CSSProperties = {
     top,
@@ -165,8 +168,14 @@ export function ScheduleSessionCard({
           {session.title ?? `Session ${session.id}`}
         </div>
         <div className="text-[10px] text-muted-foreground tabular-nums shrink-0">
-          {startTime} – {endTime}
-          {durationMin > 0 && ` (${durationMin} min)`}
+          {startTime != null && endTime != null ? (
+            <>
+              {startTime} – {endTime}
+              {durationMin > 0 && ` (${durationMin} min)`}
+            </>
+          ) : (
+            "—"
+          )}
         </div>
         {session.description && (
           <div className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">

@@ -315,6 +315,7 @@ export function SessionDetailPage(): React.ReactElement {
   })()
 
   const durationMin = (() => {
+    if (session.start_time == null || session.end_time == null) return 0
     const [sh, sm] = session.start_time.split(":").map(Number)
     const [eh, em] = session.end_time.split(":").map(Number)
     return (eh * 60 + (em ?? 0)) - (sh * 60 + (sm ?? 0))
@@ -347,7 +348,10 @@ export function SessionDetailPage(): React.ReactElement {
             {session.title ?? `Session ${session.id}`}
           </h2>
           <p className="text-sm text-muted-foreground">
-            {event?.name} · {room?.name ?? session.room_id}
+            {event?.name}
+            {room?.name || session.room_id
+              ? ` · ${room?.name ?? session.room_id}`
+              : ""}
           </p>
         </div>
         <Button asChild variant="outline" size="sm" className="shrink-0">
@@ -365,14 +369,24 @@ export function SessionDetailPage(): React.ReactElement {
             <div>
               <dt className="font-medium text-muted-foreground">Time</dt>
               <dd className="mt-0.5">
-                {sessionDateLabel ? `${sessionDateLabel} · ` : ""}
-                {session.start_time} – {session.end_time}
-                {durationMin > 0 && ` (${durationMin} min)`}
+                {session.start_time != null && session.end_time != null ? (
+                  <>
+                    {sessionDateLabel ? `${sessionDateLabel} · ` : ""}
+                    {session.start_time} – {session.end_time}
+                    {durationMin > 0 && ` (${durationMin} min)`}
+                  </>
+                ) : (
+                  <span className="text-muted-foreground">Not scheduled</span>
+                )}
               </dd>
             </div>
             <div>
               <dt className="font-medium text-muted-foreground">Room</dt>
-              <dd className="mt-0.5">{room?.name ?? session.room_id}</dd>
+              <dd className="mt-0.5">
+                {room?.name ?? session.room_id ?? (
+                  <span className="text-muted-foreground">Not assigned</span>
+                )}
+              </dd>
             </div>
             <div>
               <dt className="font-medium text-muted-foreground">Status</dt>

@@ -14,7 +14,15 @@ import {
 import { useEventSchedule, useToggleRoomNotBookable, useUpdateSessionSchedule, useDeleteSession, useCreateSession, useEventTags } from "@/hooks/useEvents"
 import { useSessionDrag } from "@/hooks/useSessionDrag"
 import { useEventStore } from "@/store/eventStore"
-import type { EventSchedule, EventTag, Room, Session, SessionInput, Speaker } from "@/types/event"
+import type {
+  EventSchedule,
+  EventTag,
+  PlacedSession,
+  Room,
+  Session,
+  SessionInput,
+  Speaker,
+} from "@/types/event"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -53,7 +61,7 @@ function getRoomsAndSessions(schedule: EventSchedule): { rooms: Room[]; rawSessi
   return { rooms, rawSessions }
 }
 
-function normalizeSession(s: SessionInput): Session | null {
+function normalizeSession(s: SessionInput): PlacedSession | null {
   const raw = s as Record<string, unknown>
   const roomId = s.room_id
   const eventDay = (s as { event_day?: number }).event_day ?? 1
@@ -81,7 +89,7 @@ function normalizeSession(s: SessionInput): Session | null {
 }
 
 /** Compute time range (minutes since midnight) from sessions' HH:mm times. */
-function getTimeRangeMinutes(sessions: Session[]): {
+function getTimeRangeMinutes(sessions: PlacedSession[]): {
   startMinutes: number
   endMinutes: number
 } {
@@ -174,7 +182,7 @@ export function SchedulePage(): React.ReactElement {
   const event = schedule?.event
   const allSessions = rawSessionsFromSchedule
     .map((s) => normalizeSession(s as SessionInput))
-    .filter((s): s is Session => s !== null)
+    .filter((s): s is PlacedSession => s !== null)
   const maxSessionDay = allSessions.length > 0
     ? Math.max(...allSessions.map((s) => s.event_day))
     : 1

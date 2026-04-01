@@ -83,13 +83,16 @@ export const SESSION_STATUSES = [
 
 export type SessionStatus = (typeof SESSION_STATUSES)[number]
 
-/** Session with event_day and HH:mm times. Times are relative to event.start_date + (event_day - 1) days. */
+/**
+ * Session with optional schedule fields. Drafts may omit room, event_day, and times;
+ * scheduled sessions include them. Times are HH:mm, relative to event.start_date + (event_day - 1) days.
+ */
 export interface Session {
   id: string
-  room_id: string
-  event_day: number
-  start_time: string
-  end_time: string
+  room_id?: string
+  event_day?: number
+  start_time?: string
+  end_time?: string
   title?: string
   description?: string
   /** Lifecycle status when returned by the API. */
@@ -97,6 +100,14 @@ export interface Session {
   tags?: EventTag[]
   /** Fully populated speakers for this session, as returned by the API. */
   speakers?: Speaker[]
+}
+
+/** Session with a room and time slot (grid / schedule views). */
+export type PlacedSession = Session & {
+  room_id: string
+  event_day: number
+  start_time: string
+  end_time: string
 }
 
 /** Request body for PATCH /events/{eventID}/sessions/{sessionID} */
@@ -107,12 +118,12 @@ export interface UpdateSessionScheduleRequest {
   end_time?: string
 }
 
-/** Request body for POST /events/{eventID}/sessions */
+/** Request body for POST /events/{eventID}/sessions (all fields optional; omit schedule data for a draft). */
 export interface CreateSessionRequest {
-  room_id: string
-  event_day: number
-  start_time: string
-  end_time: string
+  room_id?: string
+  event_day?: number
+  start_time?: string
+  end_time?: string
   title?: string
   description?: string
   tags?: string[]
@@ -285,7 +296,7 @@ export interface ListEventRegistrationsResult {
 /** Unwrapped response from GET /events/{eventID}/sessions (paginated schedule list) */
 export interface ListEventSessionsScheduleResult {
   rooms: RoomWithSessions[]
-  unscheduled_sessions: Session[]
+  unscheduled_sessions: SessionInput[]
   pagination: PaginationMeta
 }
 

@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useEffect, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import {
   Dialog,
   DialogContent,
@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useEventSessionsSchedule, useDeleteSession } from "@/hooks/useEvents"
+import { useEventSessionsSchedule, useDeleteSession, useCreateSession } from "@/hooks/useEvents"
 import { useEventStore } from "@/store/eventStore"
 import type { RoomWithSessions, SessionInput } from "@/types/event"
 import { cn } from "@/lib/utils"
@@ -127,12 +127,17 @@ function SessionsTable(props: {
 const SEARCH_DEBOUNCE_MS = 400
 
 export function SessionsPage(): React.ReactElement {
+  const navigate = useNavigate()
   const activeEventId = useEventStore((s) => s.activeEventId)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [searchInput, setSearchInput] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const [sessionToDelete, setSessionToDelete] = useState<SessionInput | null>(null)
+  const [createDraftOpen, setCreateDraftOpen] = useState(false)
+  const [draftTitle, setDraftTitle] = useState("")
+  const [draftDescription, setDraftDescription] = useState("")
+  const [draftValidationError, setDraftValidationError] = useState<string | null>(null)
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -161,6 +166,7 @@ export function SessionsPage(): React.ReactElement {
     search: debouncedSearch,
   })
   const deleteSession = useDeleteSession(activeEventId)
+  const createDraftSession = useCreateSession(activeEventId)
 
   const deleteDialogOpen = sessionToDelete !== null
 
@@ -200,13 +206,57 @@ export function SessionsPage(): React.ReactElement {
       ? flattenSessionsFromSchedule(data.rooms ?? [], data.unscheduled_sessions ?? [])
       : []
 
+  const openCreateDraftModal = () => {
+    setDraftTitle("")
+    setDraftDescription("")
+    setDraftValidationError(null)
+    createDraftSession.reset()
+    setCreateDraftOpen(true)
+  }
+
+  const closeCreateDraftModal = () => {
+    if (!createDraftSession.isPending) {
+      setCreateDraftOpen(false)
+      createDraftSession.reset()
+      setDraftValidationError(null)
+    }
+  }
+
+  const handleCreateDraftSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!activeEventId) return
+    const title = draftTitle.trim()
+    const description = draftDescription.trim()
+    if (!title || !description) {
+      setDraftValidationError("Title and description are required.")
+      return
+    }
+    setDraftValidationError(null)
+    createDraftSession.mutate(
+      { title, description },
+      {
+        onSuccess: (created) => {
+          setCreateDraftOpen(false)
+          setDraftTitle("")
+          setDraftDescription("")
+          navigate(`/events/${activeEventId}/sessions/${created.id}`)
+        },
+      }
+    )
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Sessions</h2>
-        <p className="text-muted-foreground">
-          Search, paginate, and open or delete sessions for this event.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">Sessions</h2>
+          <p className="text-muted-foreground">
+            Search, paginate, and open or delete sessions for this event.
+          </p>
+        </div>
+        <Button type="button" className="shrink-0" onClick={openCreateDraftModal}>
+          New draft session
+        </Button>
       </div>
 
       <div className="max-w-md space-y-2">
@@ -307,6 +357,87 @@ export function SessionsPage(): React.ReactElement {
           )}
         </div>
       ) : null}
+
+      <Dialog
+        open={createDraftOpen}
+        onOpenChange={(open) => {
+          if (!open) closeCreateDraftModal()
+        }}
+      >
+        <DialogContent showCloseButton className="sm:max-w-md">
+          <form onSubmit={handleCreateDraftSubmit}>
+            <DialogHeader>
+              <DialogTitle>New draft session</DialogTitle>
+              <DialogDescription>
+                Add a title and description. You can assign room and time later on the schedule.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <label htmlFor="draft-session-title" className="text-sm font-medium">
+                  Title
+                </label>
+                <Input
+                  id="draft-session-title"
+                  value={draftTitle}
+                  onChange={(e) => {
+                    setDraftTitle(e.target.value)
+                    setDraftValidationError(null)
+                    if (createDraftSession.isError) createDraftSession.reset()
+                  }}
+                  placeholder="Session title"
+                  autoComplete="off"
+                  disabled={createDraftSession.isPending}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="draft-session-description" className="text-sm font-medium">
+                  Description
+                </label>
+                <textarea
+                  id="draft-session-description"
+                  value={draftDescription}
+                  onChange={(e) => {
+                    setDraftDescription(e.target.value)
+                    setDraftValidationError(null)
+                    if (createDraftSession.isError) createDraftSession.reset()
+                  }}
+                  placeholder="Session description"
+                  disabled={createDraftSession.isPending}
+                  rows={4}
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+              {(draftValidationError || createDraftSession.isError) && (
+                <p
+                  className={cn(
+                    "rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                  )}
+                  role="alert"
+                >
+                  {draftValidationError ??
+                    (createDraftSession.error instanceof Error
+                      ? createDraftSession.error.message
+                      : "Failed to create draft session")}
+                </p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeCreateDraftModal}
+                disabled={createDraftSession.isPending}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={createDraftSession.isPending}>
+                {createDraftSession.isPending ? "Creating…" : "Create draft"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={deleteDialogOpen} onOpenChange={(open) => !open && closeDeleteDialog()}>
         <DialogContent showCloseButton>
