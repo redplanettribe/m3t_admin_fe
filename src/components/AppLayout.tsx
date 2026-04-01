@@ -4,6 +4,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom"
 import {
   CalendarDays,
   ChevronRight,
+  Clapperboard,
   Home,
   Layers,
   LayoutGrid,
@@ -77,6 +78,11 @@ const navMain: NavItem[] = [
     title: "Schedule",
     url: "/schedule",
     icon: CalendarDays,
+  },
+  {
+    title: "Sessions",
+    url: "/sessions",
+    icon: Clapperboard,
   },
   {
     title: "Rooms",

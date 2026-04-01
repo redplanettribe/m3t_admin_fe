@@ -282,6 +282,13 @@ export interface ListEventRegistrationsResult {
   pagination: PaginationMeta
 }
 
+/** Unwrapped response from GET /events/{eventID}/sessions (paginated schedule list) */
+export interface ListEventSessionsScheduleResult {
+  rooms: RoomWithSessions[]
+  unscheduled_sessions: Session[]
+  pagination: PaginationMeta
+}
+
 /** Response from POST /events/{eventID}/invitations */
 export interface SendEventInvitationsResult {
   sent: number

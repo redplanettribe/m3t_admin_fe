@@ -9,6 +9,7 @@ import { EventNewPage } from "@/pages/EventNewPage"
 import { SettingsPage } from "@/pages/SettingsPage"
 import { LoginPage } from "@/pages/LoginPage"
 import { SchedulePage } from "@/pages/SchedulePage"
+import { SessionsPage } from "@/pages/SessionsPage"
 import { TeamMembersPage } from "@/pages/TeamMembersPage"
 import { AttendeesPage } from "@/pages/AttendeesPage"
 import { RoomsPage } from "@/pages/RoomsPage"
@@ -57,6 +58,10 @@ const routes: RouteObject[] = [
       {
         path: "schedule",
         element: <SchedulePage/>,
+      },
+      {
+        path: "sessions",
+        element: <SessionsPage />,
       },
       {
         path: "events/:eventId/sessions/:sessionId",

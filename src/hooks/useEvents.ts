@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query"
 import { apiClient } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
 import { useEventStore } from "@/store/eventStore"
@@ -17,6 +22,7 @@ import type {
   SendEventInvitationsResult,
   ListEventInvitationsResult,
   ListEventRegistrationsResult,
+  ListEventSessionsScheduleResult,
   UpdateRoomRequest,
   UpdateEventRequest,
   UpdateSessionScheduleRequest,
@@ -38,6 +44,13 @@ function normalizeTags(tags: EventTag[] | string[] | undefined): EventTag[] | un
     return (tags as string[]).map((name) => ({ id: "", name }))
   }
   return tags as EventTag[]
+}
+
+function invalidateEventSessionsScheduleQueries(
+  queryClient: QueryClient,
+  eventId: string
+) {
+  queryClient.invalidateQueries({ queryKey: ["events", eventId, "sessions-schedule"] })
 }
 
 type ApiSessionResponse = {
@@ -369,6 +382,7 @@ export function useDeleteSession(eventId: string | null) {
         queryKey: queryKeys.sessions.detail(variables.sessionId),
       })
       queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+      invalidateEventSessionsScheduleQueries(queryClient, eventId)
     },
   })
 }
@@ -410,6 +424,7 @@ export function useImportSessionize(eventId: string | null) {
     onSuccess: () => {
       if (eventId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+        invalidateEventSessionsScheduleQueries(queryClient, eventId)
       }
     },
   })
@@ -445,6 +460,7 @@ export function useCreateSession(eventId: string | null) {
         )
         return { ...prev, rooms }
       })
+      invalidateEventSessionsScheduleQueries(queryClient, eventId)
     },
   })
 }
@@ -509,10 +525,12 @@ export function useUpdateSessionContent(eventId: string | null, sessionId: strin
           sessionFromApiResponse(updated)
         )
       }
+      invalidateEventSessionsScheduleQueries(queryClient, eventId)
     },
     onError: () => {
       if (eventId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+        invalidateEventSessionsScheduleQueries(queryClient, eventId)
       }
     },
   })
@@ -550,10 +568,12 @@ export function useUpdateSessionStatus(eventId: string | null, sessionId: string
           sessionFromApiResponse(updated)
         )
       }
+      invalidateEventSessionsScheduleQueries(queryClient, eventId)
     },
     onError: () => {
       if (eventId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+        invalidateEventSessionsScheduleQueries(queryClient, eventId)
       }
     },
   })
@@ -574,6 +594,7 @@ export function useAddSessionTag(eventId: string | null, sessionId: string | nul
     onSuccess: () => {
       if (eventId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+        invalidateEventSessionsScheduleQueries(queryClient, eventId)
       }
       if (sessionId) {
         queryClient.invalidateQueries({
@@ -598,6 +619,7 @@ export function useRemoveSessionTag(eventId: string | null, sessionId: string | 
     onSuccess: () => {
       if (eventId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+        invalidateEventSessionsScheduleQueries(queryClient, eventId)
       }
       if (sessionId) {
         queryClient.invalidateQueries({
@@ -646,10 +668,12 @@ export function useUpdateSessionSchedule(eventId: string | null) {
         queryKeys.sessions.detail(variables.sessionId),
         sessionFromApiResponse(updated)
       )
+      invalidateEventSessionsScheduleQueries(queryClient, eventId)
     },
     onError: () => {
       if (eventId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+        invalidateEventSessionsScheduleQueries(queryClient, eventId)
       }
     },
   })
@@ -766,6 +790,12 @@ export interface UseEventRegistrationsParams {
   search?: string
 }
 
+export interface UseEventSessionsScheduleParams {
+  page: number
+  pageSize: number
+  search?: string
+}
+
 export function useEventInvitations(
   eventId: string | null,
   params: UseEventInvitationsParams
@@ -811,6 +841,36 @@ export function useEventRegistrations(
       )
     },
     enabled: !!eventId,
+  })
+}
+
+export function useEventSessionsSchedule(
+  eventId: string | null,
+  params: UseEventSessionsScheduleParams
+) {
+  const { page, pageSize, search = "" } = params
+  return useQuery({
+    queryKey: queryKeys.events.sessionsSchedule(eventId ?? "", page, pageSize, search),
+    queryFn: () => {
+      if (!eventId) throw new Error("No event selected")
+      const searchParams = new URLSearchParams({
+        page: String(page),
+        page_size: String(pageSize),
+      })
+      if (search.trim()) {
+        searchParams.set("search", search.trim())
+      }
+      return apiClient.get<ListEventSessionsScheduleResult>(
+        `/events/${eventId}/sessions?${searchParams.toString()}`
+      )
+    },
+    enabled: !!eventId,
+    placeholderData: (previousData, previousQuery) => {
+      if (!eventId || previousData == null) return undefined
+      const key = previousQuery?.queryKey
+      if (!Array.isArray(key) || key[1] !== eventId) return undefined
+      return previousData
+    },
   })
 }
 

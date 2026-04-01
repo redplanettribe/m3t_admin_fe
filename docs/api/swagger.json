@@ -136,6 +136,70 @@
                 }
             }
         },
+        "/attendee/events/{eventID}/credential": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the event name, attendee identity fields (name, last name, email), and the attendee's assigned tier (name and optional color) for the specified event. Caller must be registered for the event.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "attendee"
+                ],
+                "summary": "Get attendee event credential",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data contains the credential details",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.GetEventCredentialSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: bad_request",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: forbidden (not registered)",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/attendee/events/{eventID}/registrations": {
             "post": {
                 "security": [
@@ -1372,7 +1436,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Records that a manager gave a deliverable to an attendee. If already given, returns 409 unless the deliverable is repeatable and give_anyway is true.",
+                "description": "Records that a manager gave a deliverable to an attendee. The attendee must be registered and checked in to the event; if not, returns 422 (error.code: unprocessable_entity). If already given, returns 409 unless the deliverable is repeatable and give_anyway is true.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1428,7 +1492,7 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden",
+                        "description": "error.code: forbidden (caller is not an event manager)",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1441,6 +1505,12 @@
                     },
                     "409": {
                         "description": "error.code: conflict",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "error.code: unprocessable_entity (e.g. recipient not registered or not checked in)",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2397,6 +2467,86 @@
             }
         },
         "/events/{eventID}/sessions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns sessions for the event on the current page: scheduled sessions grouped by room (with full room details) and draft/unscheduled sessions. Only event owner or team members may call. Optional search matches title or description (case-insensitive). Use page and page_size query params.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "List event sessions grouped by room (paginated)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter sessions by title or description substring (case-insensitive)",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size (default 20, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data contains rooms, unscheduled sessions, and pagination",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.ListEventSessionsScheduleSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: bad_request",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -5746,6 +5896,12 @@
                     "items": {
                         "$ref": "#/definitions/domain.RoomWithSessions"
                     }
+                },
+                "unscheduled_sessions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Session"
+                    }
                 }
             }
         },
@@ -5754,6 +5910,17 @@
             "properties": {
                 "data": {
                     "$ref": "#/definitions/controllers.GetEventByIDResponse"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
+        "controllers.GetEventCredentialSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/domain.EventAttendeeCredential"
                 },
                 "error": {
                     "$ref": "#/definitions/helpers.APIError"
@@ -5950,6 +6117,37 @@
             "properties": {
                 "data": {
                     "$ref": "#/definitions/controllers.ListEventRegistrationsResponse"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
+        "controllers.ListEventSessionsScheduleResponse": {
+            "type": "object",
+            "properties": {
+                "pagination": {
+                    "$ref": "#/definitions/helpers.PaginationMeta"
+                },
+                "rooms": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.RoomWithSessions"
+                    }
+                },
+                "unscheduled_sessions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Session"
+                    }
+                }
+            }
+        },
+        "controllers.ListEventSessionsScheduleSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/controllers.ListEventSessionsScheduleResponse"
                 },
                 "error": {
                     "$ref": "#/definitions/helpers.APIError"
@@ -6576,6 +6774,37 @@
                 }
             }
         },
+        "domain.EventAttendeeCredential": {
+            "type": "object",
+            "properties": {
+                "attendee": {
+                    "$ref": "#/definitions/domain.EventAttendeeProfile"
+                },
+                "event_name": {
+                    "type": "string"
+                },
+                "tier": {
+                    "$ref": "#/definitions/domain.EventTierSummary"
+                }
+            }
+        },
+        "domain.EventAttendeeProfile": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "profile_picture_url": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.EventCheckIn": {
             "type": "object",
             "properties": {
@@ -6651,6 +6880,9 @@
                 },
                 "override_used": {
                     "type": "boolean"
+                },
+                "user": {
+                    "$ref": "#/definitions/domain.User"
                 },
                 "user_id": {
                     "type": "string"
@@ -6751,6 +6983,17 @@
                 }
             }
         },
+        "domain.EventTierSummary": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.Room": {
             "type": "object",
             "properties": {
@@ -6818,6 +7061,9 @@
                 },
                 "event_day": {
                     "type": "integer"
+                },
+                "event_id": {
+                    "type": "string"
                 },
                 "id": {
                     "type": "string"
