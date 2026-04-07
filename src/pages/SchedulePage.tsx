@@ -85,6 +85,8 @@ function normalizeSession(s: SessionInput): PlacedSession | null {
     end_time: String(endTime),
     title: s.title,
     description: s.description,
+    status: s.status,
+    all_attend: s.all_attend,
     speakers: (raw.speakers as Speaker[] | undefined) ??
       (raw.speakers === null ? undefined : undefined),
     tags,

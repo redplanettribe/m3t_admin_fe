@@ -97,6 +97,8 @@ export interface Session {
   description?: string
   /** Lifecycle status when returned by the API. */
   status?: SessionStatus
+  /** When true, this session should appear on all attendees' schedules. */
+  all_attend?: boolean
   tags?: EventTag[]
   /** Fully populated speakers for this session, as returned by the API. */
   speakers?: Speaker[]
@@ -153,6 +155,7 @@ export type SessionInput =
     title?: string
     description?: string
     status?: SessionStatus
+    all_attend?: boolean
     /** Flexible tags shape from older responses: either names or full EventTag objects. */
     tags?: string[] | EventTag[]
     /** Embedded speakers for this session, matching the backend Session model. */

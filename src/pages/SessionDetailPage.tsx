@@ -40,6 +40,7 @@ import {
   useRemoveSessionTag,
   useUpdateSessionContent,
   useUpdateSessionStatus,
+  useToggleSessionAllAttend,
   useAddSessionTier,
   useEventTiers,
   useRemoveSessionTier,
@@ -58,6 +59,7 @@ import {
 import { useReturnNavigation } from "@/hooks/useReturnNavigation"
 import { makeNavigateFrom } from "@/lib/returnNavigation"
 import { cn } from "@/lib/utils"
+import { Switch } from "@/components/ui/switch"
 
 function speakerDisplayName(s: Speaker): string {
   return [s.first_name, s.last_name].filter(Boolean).join(" ").trim() || "—"
@@ -166,6 +168,7 @@ export function SessionDetailPage(): React.ReactElement {
   const setActiveEventId = useEventStore((s) => s.setActiveEventId)
   const updateContent = useUpdateSessionContent(eventId, sessionId)
   const updateStatus = useUpdateSessionStatus(eventId, sessionId)
+  const toggleAllAttend = useToggleSessionAllAttend(eventId, sessionId)
   const addTag = useAddSessionTag(eventId, sessionId)
   const removeTag = useRemoveSessionTag(eventId, sessionId)
   const {
@@ -457,6 +460,38 @@ export function SessionDetailPage(): React.ReactElement {
                     </Button>
                   </div>
                 )}
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium text-muted-foreground">All attendees</dt>
+              <dd className="mt-1 space-y-2">
+                <p className="text-xs text-muted-foreground md:max-w-md">
+                  When enabled, this session appears on all registered attendees' schedules.
+                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={!!session.all_attend}
+                      onCheckedChange={() => toggleAllAttend.mutate()}
+                      disabled={toggleAllAttend.isPending}
+                      aria-label="Toggle all-attend session"
+                    />
+                    <span className="text-sm">
+                      {toggleAllAttend.isPending
+                        ? "Saving…"
+                        : session.all_attend
+                          ? "Enabled"
+                          : "Disabled"}
+                    </span>
+                  </div>
+                  {toggleAllAttend.isError ? (
+                    <span className="text-xs text-destructive">
+                      {toggleAllAttend.error instanceof Error
+                        ? toggleAllAttend.error.message
+                        : "Failed to update all-attend"}
+                    </span>
+                  ) : null}
+                </div>
               </dd>
             </div>
             <div>

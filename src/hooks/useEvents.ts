@@ -62,6 +62,7 @@ type ApiSessionResponse = {
   title?: string
   description?: string
   status?: Session["status"]
+  all_attend?: boolean
   tags?: EventTag[]
   speakers?: Speaker[]
 }
@@ -479,6 +480,7 @@ function sessionFromApiResponse(data: ApiSessionResponse): Session {
     title: data.title,
     description: data.description,
     status: data.status,
+    all_attend: data.all_attend,
     tags: normalizeTags(data.tags),
     speakers: data.speakers,
   }
@@ -551,6 +553,49 @@ export function useUpdateSessionStatus(eventId: string | null, sessionId: string
       )
     },
     onSuccess: (updated, _variables) => {
+      if (!eventId) return
+      const key = queryKeys.events.detail(eventId)
+      queryClient.setQueryData<EventSchedule>(key, (prev) => {
+        if (!prev?.rooms) {
+          queryClient.invalidateQueries({ queryKey: key })
+          return prev
+        }
+        const session = sessionFromApiResponse(updated)
+        const rooms: RoomWithSessions[] = prev.rooms.map((rw) => ({
+          ...rw,
+          sessions: rw.sessions.map((s) => (String(s.id) === updated.id ? session : s)),
+        }))
+        return { ...prev, rooms }
+      })
+      if (sessionId) {
+        queryClient.setQueryData(
+          queryKeys.sessions.detail(sessionId),
+          sessionFromApiResponse(updated)
+        )
+      }
+      invalidateEventSessionsScheduleQueries(queryClient, eventId)
+    },
+    onError: () => {
+      if (eventId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+        invalidateEventSessionsScheduleQueries(queryClient, eventId)
+      }
+    },
+  })
+}
+
+export function useToggleSessionAllAttend(eventId: string | null, sessionId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      if (!eventId) throw new Error("No event selected")
+      if (!sessionId) throw new Error("No session selected")
+      return apiClient.post<ApiSessionResponse>(
+        `/events/${eventId}/sessions/${sessionId}/all-attend/toggle`,
+        {}
+      )
+    },
+    onSuccess: (updated) => {
       if (!eventId) return
       const key = queryKeys.events.detail(eventId)
       queryClient.setQueryData<EventSchedule>(key, (prev) => {

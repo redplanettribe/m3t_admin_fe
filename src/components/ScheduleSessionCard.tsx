@@ -111,9 +111,11 @@ export function ScheduleSessionCard({
       data-session-card=""
       className={cn(
         "absolute left-1 right-1 rounded-md border shadow-sm overflow-hidden flex flex-col gap-0.5 select-none touch-none group",
-        roomNotBookable
-          ? "border-muted bg-muted/60 text-muted-foreground opacity-90"
-          : "border-primary/30 bg-primary/15",
+        session.all_attend
+          ? "border-amber-500/40 bg-amber-500/15"
+          : roomNotBookable
+            ? "border-muted bg-muted/60 text-muted-foreground opacity-90"
+            : "border-primary/30 bg-primary/15",
         isDraggingOrResizing && "shadow-md ring-2 ring-primary/40"
       )}
       style={style}

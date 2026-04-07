@@ -2622,6 +2622,88 @@
                 }
             }
         },
+        "/events/{eventID}/sessions/unscheduled": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns paginated sessions with no room assigned for the event. Same access as the full sessions schedule list: event owner or team members only. Optional search matches title or description (case-insensitive). Use page and page_size query params.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "List unscheduled (draft) sessions for an event",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by title or description substring (case-insensitive)",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size (default 20, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data contains unscheduled_sessions and pagination",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.ListEventUnscheduledSessionsSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: bad_request",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/events/{eventID}/sessions/{sessionID}": {
             "delete": {
                 "security": [
@@ -2755,6 +2837,77 @@
                     },
                     "403": {
                         "description": "error.code: forbidden (not owner)",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/events/{eventID}/sessions/{sessionID}/all-attend/toggle": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Toggles whether a session should appear on all attendees' schedules (registered attendees). Only event managers can toggle.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Toggle session all-attend flag",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Session ID (UUID)",
+                        "name": "sessionID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data contains the updated session",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.ToggleSessionAllAttendSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: bad_request",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: forbidden",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -6196,6 +6349,31 @@
                 }
             }
         },
+        "controllers.ListEventUnscheduledSessionsResponse": {
+            "type": "object",
+            "properties": {
+                "pagination": {
+                    "$ref": "#/definitions/helpers.PaginationMeta"
+                },
+                "unscheduled_sessions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Session"
+                    }
+                }
+            }
+        },
+        "controllers.ListEventUnscheduledSessionsSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/controllers.ListEventUnscheduledSessionsResponse"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
         "controllers.ListMyEventsSuccessResponse": {
             "type": "object",
             "properties": {
@@ -6458,6 +6636,17 @@
                 }
             }
         },
+        "controllers.ToggleSessionAllAttendSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/domain.Session"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
         "controllers.UpdateEventDeliverableRequest": {
             "type": "object",
             "properties": {
@@ -6616,16 +6805,16 @@
             "type": "object",
             "properties": {
                 "end_time": {
-                    "type": "string"
+                    "$ref": "#/definitions/controllers.optionalNullableString"
                 },
                 "event_day": {
-                    "type": "integer"
+                    "$ref": "#/definitions/controllers.optionalNullableInt"
                 },
                 "room_id": {
-                    "type": "string"
+                    "$ref": "#/definitions/controllers.optionalNullableString"
                 },
                 "start_time": {
-                    "type": "string"
+                    "$ref": "#/definitions/controllers.optionalNullableString"
                 }
             }
         },
@@ -6725,6 +6914,34 @@
                     "type": "string"
                 },
                 "email": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.optionalNullableInt": {
+            "type": "object",
+            "properties": {
+                "isNull": {
+                    "type": "boolean"
+                },
+                "isSet": {
+                    "type": "boolean"
+                },
+                "value": {
+                    "type": "integer"
+                }
+            }
+        },
+        "controllers.optionalNullableString": {
+            "type": "object",
+            "properties": {
+                "isNull": {
+                    "type": "boolean"
+                },
+                "isSet": {
+                    "type": "boolean"
+                },
+                "value": {
                     "type": "string"
                 }
             }
@@ -7049,6 +7266,9 @@
         "domain.Session": {
             "type": "object",
             "properties": {
+                "all_attend": {
+                    "type": "boolean"
+                },
                 "created_at": {
                     "type": "string"
                 },
