@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -25,6 +25,7 @@ import type {
 } from "@/types/event"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
+import { makeNavigateFrom } from "@/lib/returnNavigation"
 import { cn } from "@/lib/utils"
 import { SessionizeImportModal } from "@/components/SessionizeImportModal"
 import { ScheduleSessionCard } from "@/components/ScheduleSessionCard"
@@ -149,6 +150,8 @@ function getScheduleDayOptions(
 }
 
 export function SchedulePage(): React.ReactElement {
+  const location = useLocation()
+  const roomNavigateState = makeNavigateFrom(location)
   const activeEventId = useEventStore((s) => s.activeEventId)
   const savedSessionizeId = useEventStore((s) =>
     activeEventId ? s.sessionizeIdByEventId[activeEventId] ?? "" : ""
@@ -407,6 +410,7 @@ export function SchedulePage(): React.ReactElement {
                   >
                     <Link
                       to={`/rooms/${room.id}`}
+                      state={roomNavigateState}
                       className="truncate hover:underline"
                     >
                       {room.name ?? room.id}

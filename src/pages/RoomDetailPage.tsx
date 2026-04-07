@@ -38,9 +38,11 @@ import {
   useUpdateRoom,
 } from "@/hooks/useEvents"
 import { roomUpdateSchema, type RoomUpdateFormValues } from "@/lib/schemas/room"
+import { useReturnNavigation } from "@/hooks/useReturnNavigation"
 import { cn } from "@/lib/utils"
 
 export function RoomDetailPage(): React.ReactElement {
+  const { returnPath, returnLabel } = useReturnNavigation("/rooms")
   const { roomId = null } = useParams<{ roomId: string }>()
   const activeEventId = useEventStore((s) => s.activeEventId)
 
@@ -105,7 +107,7 @@ export function RoomDetailPage(): React.ReactElement {
           Select an event from the sidebar to view room details.
         </p>
         <Button asChild variant="outline">
-          <Link to="/rooms">Back to rooms</Link>
+          <Link to={returnPath}>{returnLabel}</Link>
         </Button>
       </div>
     )
@@ -117,7 +119,7 @@ export function RoomDetailPage(): React.ReactElement {
         <h2 className="text-2xl font-semibold tracking-tight">Room</h2>
         <p className="text-muted-foreground">No room selected.</p>
         <Button asChild variant="outline">
-          <Link to="/rooms">Back to rooms</Link>
+          <Link to={returnPath}>{returnLabel}</Link>
         </Button>
       </div>
     )
@@ -143,7 +145,7 @@ export function RoomDetailPage(): React.ReactElement {
           Retry
         </Button>
         <Button asChild variant="ghost">
-          <Link to="/rooms">Back to rooms</Link>
+          <Link to={returnPath}>{returnLabel}</Link>
         </Button>
       </div>
     )
@@ -155,7 +157,7 @@ export function RoomDetailPage(): React.ReactElement {
         <h2 className="text-2xl font-semibold tracking-tight">Room</h2>
         <p className="text-muted-foreground">Room not found.</p>
         <Button asChild variant="outline">
-          <Link to="/rooms">Back to rooms</Link>
+          <Link to={returnPath}>{returnLabel}</Link>
         </Button>
       </div>
     )
@@ -207,7 +209,7 @@ export function RoomDetailPage(): React.ReactElement {
           <p className="text-sm text-muted-foreground">ID: {room.id}</p>
         </div>
         <Button asChild variant="outline" size="sm">
-          <Link to="/rooms">Back to rooms</Link>
+          <Link to={returnPath}>{returnLabel}</Link>
         </Button>
       </div>
 

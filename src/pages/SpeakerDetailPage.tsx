@@ -1,7 +1,7 @@
 import * as React from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Link, useParams } from "react-router-dom"
+import { Link, useLocation, useParams } from "react-router-dom"
 import {
   Card,
   CardContent,
@@ -29,6 +29,8 @@ import {
 } from "@/lib/schemas/event"
 import { useEventStore } from "@/store/eventStore"
 import type { Speaker, UpdateSpeakerRequest } from "@/types/event"
+import { useReturnNavigation } from "@/hooks/useReturnNavigation"
+import { makeNavigateFrom } from "@/lib/returnNavigation"
 import { cn } from "@/lib/utils"
 
 function speakerDisplayName(s: Speaker): string {
@@ -73,6 +75,9 @@ function toUpdateSpeakerRequest(values: CreateSpeakerFormValues): UpdateSpeakerR
 }
 
 export function SpeakerDetailPage(): React.ReactElement {
+  const location = useLocation()
+  const sessionNavigateState = makeNavigateFrom(location)
+  const { returnPath, returnLabel } = useReturnNavigation("/speakers")
   const { eventId = null, speakerId = null } = useParams<{
     eventId: string
     speakerId: string
@@ -108,7 +113,7 @@ export function SpeakerDetailPage(): React.ReactElement {
         <h2 className="text-2xl font-semibold tracking-tight">Speaker</h2>
         <p className="text-muted-foreground">Invalid link.</p>
         <Button asChild variant="outline">
-          <Link to="/speakers">Back to speakers</Link>
+          <Link to={returnPath}>{returnLabel}</Link>
         </Button>
       </div>
     )
@@ -118,7 +123,7 @@ export function SpeakerDetailPage(): React.ReactElement {
     return (
       <div className="space-y-6">
         <Button asChild variant="outline" size="sm">
-          <Link to="/speakers">Back to speakers</Link>
+          <Link to={returnPath}>{returnLabel}</Link>
         </Button>
         <div className="space-y-4">
           <Skeleton className="h-24 w-24 rounded-full" />
@@ -134,7 +139,7 @@ export function SpeakerDetailPage(): React.ReactElement {
     return (
       <div className="space-y-4">
         <Button asChild variant="outline" size="sm">
-          <Link to="/speakers">Back to speakers</Link>
+          <Link to={returnPath}>{returnLabel}</Link>
         </Button>
         <h2 className="text-2xl font-semibold tracking-tight">Speaker</h2>
         <p className="text-muted-foreground text-destructive">
@@ -161,7 +166,7 @@ export function SpeakerDetailPage(): React.ReactElement {
     <div className="space-y-6 max-w-2xl">
       <div className="flex items-center justify-between gap-2">
         <Button asChild variant="outline" size="sm">
-          <Link to="/speakers">Back to speakers</Link>
+          <Link to={returnPath}>{returnLabel}</Link>
         </Button>
       </div>
 
@@ -352,6 +357,7 @@ export function SpeakerDetailPage(): React.ReactElement {
                   <li key={session.id}>
                     <Link
                       to={`/events/${eventId}/sessions/${session.id}`}
+                      state={sessionNavigateState}
                       className={cn(
                         "text-sm text-primary underline underline-offset-2 hover:no-underline"
                       )}

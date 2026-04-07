@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useEffect, useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,7 @@ import {
 import { useEventSessionsSchedule, useDeleteSession, useCreateSession } from "@/hooks/useEvents"
 import { useEventStore } from "@/store/eventStore"
 import type { RoomWithSessions, SessionInput } from "@/types/event"
+import { makeNavigateFrom, type AppNavigateState } from "@/lib/returnNavigation"
 import { cn } from "@/lib/utils"
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const
@@ -57,8 +58,9 @@ function SessionsTable(props: {
   rows: { session: SessionInput; roomLabel: string }[]
   activeEventId: string
   onDelete: (s: SessionInput) => void
+  sessionNavigateState: AppNavigateState
 }): React.ReactElement {
-  const { rows, activeEventId, onDelete } = props
+  const { rows, activeEventId, onDelete, sessionNavigateState } = props
   if (rows.length === 0) {
     return (
       <p className="text-sm text-muted-foreground px-4 py-8 text-center">
@@ -103,7 +105,12 @@ function SessionsTable(props: {
                 <td className="px-4 py-3 text-right whitespace-nowrap">
                   <div className="flex flex-wrap justify-end gap-2">
                     <Button variant="outline" size="sm" asChild>
-                      <Link to={`/events/${activeEventId}/sessions/${id}`}>View</Link>
+                      <Link
+                        to={`/events/${activeEventId}/sessions/${id}`}
+                        state={sessionNavigateState}
+                      >
+                        View
+                      </Link>
                     </Button>
                     <Button
                       type="button"
@@ -128,6 +135,8 @@ const SEARCH_DEBOUNCE_MS = 400
 
 export function SessionsPage(): React.ReactElement {
   const navigate = useNavigate()
+  const location = useLocation()
+  const sessionNavigateState = makeNavigateFrom(location)
   const activeEventId = useEventStore((s) => s.activeEventId)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
@@ -239,7 +248,9 @@ export function SessionsPage(): React.ReactElement {
           setCreateDraftOpen(false)
           setDraftTitle("")
           setDraftDescription("")
-          navigate(`/events/${activeEventId}/sessions/${created.id}`)
+          navigate(`/events/${activeEventId}/sessions/${created.id}`, {
+            state: makeNavigateFrom(location),
+          })
         },
       }
     )
@@ -321,6 +332,7 @@ export function SessionsPage(): React.ReactElement {
                 rows={sessionRows}
                 activeEventId={activeEventId}
                 onDelete={setSessionToDelete}
+                sessionNavigateState={sessionNavigateState}
               />
             </CardContent>
           </Card>

@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Link, useParams } from "react-router-dom"
+import { Link, useLocation, useParams } from "react-router-dom"
 import { ChevronsUpDown, X } from "lucide-react"
 import {
   Card,
@@ -55,6 +55,8 @@ import {
   type SessionStatus,
   type Speaker,
 } from "@/types/event"
+import { useReturnNavigation } from "@/hooks/useReturnNavigation"
+import { makeNavigateFrom } from "@/lib/returnNavigation"
 import { cn } from "@/lib/utils"
 
 function speakerDisplayName(s: Speaker): string {
@@ -142,6 +144,9 @@ function AddSpeakerCombobox({
 }
 
 export function SessionDetailPage(): React.ReactElement {
+  const location = useLocation()
+  const { returnPath, returnLabel } = useReturnNavigation("/schedule")
+  const speakerNavigateState = makeNavigateFrom(location)
   const { eventId = null, sessionId = null } = useParams<{
     eventId: string
     sessionId: string
@@ -243,7 +248,7 @@ export function SessionDetailPage(): React.ReactElement {
         <p className="text-muted-foreground">Invalid link.</p>
         <div className="flex justify-center">
           <Button asChild variant="outline">
-            <Link to="/schedule">Back to schedule</Link>
+            <Link to={returnPath}>{returnLabel}</Link>
           </Button>
         </div>
       </div>
@@ -266,7 +271,7 @@ export function SessionDetailPage(): React.ReactElement {
         <p className="text-muted-foreground text-destructive">Failed to load session.</p>
         <div className="flex justify-center">
           <Button asChild variant="outline">
-            <Link to="/schedule">Back to schedule</Link>
+            <Link to={returnPath}>{returnLabel}</Link>
           </Button>
         </div>
       </div>
@@ -280,7 +285,7 @@ export function SessionDetailPage(): React.ReactElement {
         <p className="text-muted-foreground">Session not found.</p>
         <div className="flex justify-center">
           <Button asChild variant="outline">
-            <Link to="/schedule">Back to schedule</Link>
+            <Link to={returnPath}>{returnLabel}</Link>
           </Button>
         </div>
       </div>
@@ -294,7 +299,7 @@ export function SessionDetailPage(): React.ReactElement {
         <p className="text-muted-foreground text-destructive">Failed to load event.</p>
         <div className="flex justify-center">
           <Button asChild variant="outline">
-            <Link to="/schedule">Back to schedule</Link>
+            <Link to={returnPath}>{returnLabel}</Link>
           </Button>
         </div>
       </div>
@@ -355,7 +360,7 @@ export function SessionDetailPage(): React.ReactElement {
           </p>
         </div>
         <Button asChild variant="outline" size="sm" className="shrink-0">
-          <Link to="/schedule">Back to schedule</Link>
+          <Link to={returnPath}>{returnLabel}</Link>
         </Button>
       </div>
 
@@ -494,6 +499,7 @@ export function SessionDetailPage(): React.ReactElement {
                               <div className="min-w-0">
                                 <Link
                                   to={`/events/${eventId}/speakers/${sp.id}`}
+                                  state={speakerNavigateState}
                                   className="text-sm text-primary underline underline-offset-2 hover:no-underline"
                                 >
                                   {name}

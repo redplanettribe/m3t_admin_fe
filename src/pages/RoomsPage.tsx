@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 import {
   Dialog,
   DialogContent,
@@ -20,10 +20,13 @@ import {
 import { useEventRooms, useDeleteRoom } from "@/hooks/useEvents"
 import { useEventStore } from "@/store/eventStore"
 import type { Room } from "@/types/event"
+import { makeNavigateFrom } from "@/lib/returnNavigation"
 import { cn } from "@/lib/utils"
 import { AddRoomModal } from "@/components/AddRoomModal"
 
 export function RoomsPage(): React.ReactElement {
+  const location = useLocation()
+  const roomNavigateState = makeNavigateFrom(location)
   const activeEventId = useEventStore((s) => s.activeEventId)
   const { data: rooms = [], isLoading, isError, refetch } = useEventRooms(activeEventId)
   const deleteRoom = useDeleteRoom(activeEventId)
@@ -112,6 +115,7 @@ export function RoomsPage(): React.ReactElement {
                   <div className="min-w-0 flex-1">
                     <Link
                       to={`/rooms/${room.id}`}
+                      state={roomNavigateState}
                       className="inline-flex min-w-0 flex-col text-left hover:underline"
                     >
                       <span className="font-medium truncate">

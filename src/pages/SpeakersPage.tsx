@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ import {
 } from "@/hooks/useSpeakers"
 import { useEventStore } from "@/store/eventStore"
 import type { Speaker } from "@/types/event"
+import { makeNavigateFrom } from "@/lib/returnNavigation"
 import { cn } from "@/lib/utils"
 import { Trash2, Eye } from "lucide-react"
 
@@ -40,6 +41,8 @@ function speakerInitials(s: Speaker): string {
 }
 
 export function SpeakersPage(): React.ReactElement {
+  const location = useLocation()
+  const speakerNavigateState = makeNavigateFrom(location)
   const activeEventId = useEventStore((s) => s.activeEventId)
   const { data: speakers = [], isLoading, isError, refetch } = useSpeakers(activeEventId)
   const deleteSpeaker = useDeleteSpeaker(activeEventId)
@@ -160,6 +163,7 @@ export function SpeakersPage(): React.ReactElement {
                         >
                           <Link
                             to={`/events/${activeEventId}/speakers/${speaker.id}`}
+                            state={speakerNavigateState}
                           >
                             <Eye className="size-4" />
                           </Link>

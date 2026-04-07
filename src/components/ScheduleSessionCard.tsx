@@ -1,5 +1,6 @@
 import * as React from "react"
-import { Link } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
+import { makeNavigateFrom } from "@/lib/returnNavigation"
 import { cn } from "@/lib/utils"
 import type { EventTag, Session } from "@/types/event"
 import { Button } from "@/components/ui/button"
@@ -86,6 +87,8 @@ export function ScheduleSessionCard({
   previewTransform,
   onPointerDown,
 }: ScheduleSessionCardProps): React.ReactElement {
+  const location = useLocation()
+  const sessionNavigateState = makeNavigateFrom(location)
   const startTime = session.start_time
   const endTime = session.end_time
   const durationMin =
@@ -128,7 +131,10 @@ export function ScheduleSessionCard({
             className="h-7 w-7 rounded shadow-sm"
             aria-label="View session details"
           >
-            <Link to={`/events/${eventId}/sessions/${session.id}`}>
+            <Link
+              to={`/events/${eventId}/sessions/${session.id}`}
+              state={sessionNavigateState}
+            >
               <ExternalLink className="h-3.5 w-3.5" />
             </Link>
           </Button>
