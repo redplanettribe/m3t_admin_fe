@@ -110,12 +110,12 @@ export type PlacedSession = Session & {
   end_time: string
 }
 
-/** Request body for PATCH /events/{eventID}/sessions/{sessionID} */
+/** Request body for PATCH /events/{eventID}/sessions/{sessionID}. Pass null to clear schedule fields (unschedule). */
 export interface UpdateSessionScheduleRequest {
-  room_id?: string
-  event_day?: number
-  start_time?: string
-  end_time?: string
+  room_id?: string | null
+  event_day?: number | null
+  start_time?: string | null
+  end_time?: string | null
 }
 
 /** Request body for POST /events/{eventID}/sessions (all fields optional; omit schedule data for a draft). */

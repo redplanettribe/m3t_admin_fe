@@ -11,8 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { useEventSchedule, useToggleRoomNotBookable, useUpdateSessionSchedule, useDeleteSession, useCreateSession, useEventTags } from "@/hooks/useEvents"
+import { useEventSchedule, useEventSessionsSchedule, useToggleRoomNotBookable, useUpdateSessionSchedule, useDeleteSession, useCreateSession, useEventTags } from "@/hooks/useEvents"
 import { useSessionDrag } from "@/hooks/useSessionDrag"
+import { useDraftPlacement } from "@/hooks/useDraftPlacement"
 import { useEventStore } from "@/store/eventStore"
 import type {
   EventSchedule,
@@ -23,6 +24,7 @@ import type {
   SessionInput,
   Speaker,
 } from "@/types/event"
+import { DraftSessionsPanel } from "@/components/DraftSessionsPanel"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
 import { makeNavigateFrom } from "@/lib/returnNavigation"
@@ -179,6 +181,12 @@ export function SchedulePage(): React.ReactElement {
   const [addRoomOpen, setAddRoomOpen] = useState(false)
   const [addRoomHovered, setAddRoomHovered] = useState(false)
   const [selectedDayIndex, setSelectedDayIndex] = useState(0)
+  const [draftPanelCollapsed, setDraftPanelCollapsed] = useState(false)
+  const gridBodyRef = React.useRef<HTMLDivElement>(null)
+
+  const { data: sessionsSchedule, isLoading: draftsLoading } =
+    useEventSessionsSchedule(activeEventId, { page: 1, pageSize: 200, search: "" })
+  const draftSessions: Session[] = (sessionsSchedule?.unscheduled_sessions as Session[] | undefined) ?? []
 
   const { rooms: roomsFromSchedule, rawSessions: rawSessionsFromSchedule } =
     schedule != null ? getRoomsAndSessions(schedule) : { rooms: [] as Room[], rawSessions: [] as unknown[] }
@@ -217,11 +225,40 @@ export function SchedulePage(): React.ReactElement {
   const { startMinutes: rangeStart, endMinutes: rangeEnd } =
     getTimeRangeMinutes(sessionsForDay)
 
-  const { preview, handlePointerDown, activeSessionId } = useSessionDrag({
+  const handleUnschedule = React.useCallback(
+    (session: Session) => {
+      updateSessionSchedule.mutateAsync({
+        sessionId: session.id,
+        room_id: null,
+        start_time: null,
+        end_time: null,
+        event_day: null,
+      }).catch(() => {})
+    },
+    [updateSessionSchedule],
+  )
+
+  const { preview, handlePointerDown, activeSessionId, isOverUnscheduleZone } = useSessionDrag({
     rooms: roomsList,
     roomColumnWidth: ROOM_COLUMN_WIDTH,
     pixelsPerMinute: PIXELS_PER_MINUTE,
     rangeStartMinutes: rangeStart,
+    updateSession: updateSessionSchedule.mutateAsync,
+    onUnschedule: handleUnschedule,
+  })
+
+  const {
+    handleDraftPointerDown,
+    placementPreview,
+    isDraggingDraft,
+  } = useDraftPlacement({
+    gridRef: gridBodyRef,
+    rooms: roomsList,
+    timeColumnWidth: TIME_COLUMN_WIDTH,
+    roomColumnWidth: ROOM_COLUMN_WIDTH,
+    pixelsPerMinute: PIXELS_PER_MINUTE,
+    rangeStartMinutes: rangeStart,
+    eventDay: selectedEventDay,
     updateSession: updateSessionSchedule.mutateAsync,
   })
 
@@ -254,7 +291,7 @@ export function SchedulePage(): React.ReactElement {
     e: React.MouseEvent<HTMLDivElement>,
     roomIndex: number
   ) {
-    if (activeSessionId) {
+    if (activeSessionId || isDraggingDraft) {
       if (hoverPreview) setHoverPreview(null)
       return
     }
@@ -372,12 +409,27 @@ export function SchedulePage(): React.ReactElement {
       {roomsList.length === 0 ? (
         <p className="text-muted-foreground">No rooms for this event.</p>
       ) : (
-        <div className="w-full min-w-0 max-w-full mr-6 overflow-hidden">
+        <div className="flex w-full min-w-0 max-w-full mr-6 overflow-hidden">
+          <DraftSessionsPanel
+            sessions={draftSessions}
+            isLoading={draftsLoading}
+            isOverUnscheduleZone={isOverUnscheduleZone}
+            onCreateDraft={(title) => {
+              if (!activeEventId) return
+              createSession.mutate({ title })
+            }}
+            isCreating={createSession.isPending}
+            onDraftPointerDown={handleDraftPointerDown}
+            collapsed={draftPanelCollapsed}
+            onCollapsedChange={setDraftPanelCollapsed}
+          />
+          <div className="flex-1 min-w-0 overflow-hidden">
           <div
-            className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden mx-auto"
+            className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden"
             style={{ width: scheduleWidth, maxWidth: "100%" }}
           >
             <div
+              data-schedule-scroll
               className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-12rem)] w-full min-w-0 max-w-full"
               style={{ scrollPaddingRight: SCROLL_RIGHT_PADDING_PX }}
             >
@@ -453,6 +505,7 @@ export function SchedulePage(): React.ReactElement {
               </div>
             </div>
             <div
+              ref={gridBodyRef}
               className="flex min-w-max relative flex-none"
               style={{
                 minHeight: bodyHeight + 24,
@@ -526,6 +579,19 @@ export function SchedulePage(): React.ReactElement {
                       </span>
                     </div>
                   )}
+                  {placementPreview?.roomIndex === roomIndex && (
+                    <div
+                      className="absolute left-1 right-1 rounded-md border-2 border-dashed border-primary/60 bg-primary/10 pointer-events-none flex items-center justify-center z-20"
+                      style={{
+                        top: placementPreview.topPx,
+                        height: placementPreview.heightPx,
+                      }}
+                    >
+                      <span className="text-xs font-medium text-primary/80 tabular-nums select-none">
+                        {placementPreview.timeLabel}
+                      </span>
+                    </div>
+                  )}
                   {sessionsByRoom[roomIndex].map(({ session, top, height }) => {
                     const roomNotBookable = Boolean(room.not_bookable)
                     const isActive = activeSessionId === session.id
@@ -564,6 +630,7 @@ export function SchedulePage(): React.ReactElement {
               />
             </div>
             </div>
+          </div>
           </div>
         </div>
       )}

@@ -19,6 +19,7 @@ export interface UseSessionDragParams {
     { sessionId: string } & UpdateSessionScheduleRequest,
     unknown
   >["mutateAsync"]
+  onUnschedule?: (session: Session) => void
 }
 
 export interface SessionPreviewState {
@@ -27,6 +28,8 @@ export interface SessionPreviewState {
   translateY: number
   /** Only set during resize; applied as height += heightDelta */
   heightDelta?: number
+  /** True when the session is dragged past the left edge of the grid (over the draft panel). */
+  isOverUnscheduleZone?: boolean
 }
 
 function snapToGrid(pixels: number, pixelsPerMinute: number): number {
@@ -51,6 +54,7 @@ export function useSessionDrag({
   pixelsPerMinute,
   rangeStartMinutes,
   updateSession,
+  onUnschedule,
 }: UseSessionDragParams) {
   const [preview, setPreview] = useState<SessionPreviewState | null>(null)
   const state = useRef<{
@@ -108,6 +112,10 @@ export function useSessionDrag({
 
     if (mode === "drag") {
       const roomDelta = Math.round(lastDeltaX / roomColumnWidth)
+      if (onUnschedule && originRoomIndex + roomDelta < 0) {
+        onUnschedule(session)
+        return
+      }
       const targetRoomIndex = Math.max(0, Math.min(originRoomIndex + roomDelta, roomCount - 1))
       const targetRoom = rooms[targetRoomIndex]
       const newStartMinutes = originStartMinutes + deltaMinutes
@@ -134,7 +142,7 @@ export function useSessionDrag({
       }
       commitUpdate(session.id, payload)
     }
-  }, [rooms, roomColumnWidth, pixelsPerMinute, commitUpdate])
+  }, [rooms, roomColumnWidth, pixelsPerMinute, commitUpdate, onUnschedule])
 
   const onPointerMove = useCallback(
     (e: PointerEvent) => {
@@ -151,10 +159,13 @@ export function useSessionDrag({
       const translateX = (targetRoomIndex - s.originRoomIndex) * roomColumnWidth
 
       if (s.mode === "drag") {
+        const rawRoomDelta = roomCount > 0 ? Math.round(deltaX / roomColumnWidth) : 0
+        const overUnschedule = onUnschedule != null && s.originRoomIndex + rawRoomDelta < 0
         setPreview({
           sessionId: s.session.id,
           translateX,
           translateY: snappedDeltaY,
+          isOverUnscheduleZone: overUnschedule || undefined,
         })
       } else if (s.mode === "resize-top") {
         const maxDelta = s.originHeightPx - MIN_DURATION_MINUTES * pixelsPerMinute
@@ -178,7 +189,7 @@ export function useSessionDrag({
         })
       }
     },
-    [rooms.length, roomColumnWidth, pixelsPerMinute, rangeStartMinutes]
+    [rooms.length, roomColumnWidth, pixelsPerMinute, rangeStartMinutes, onUnschedule]
   )
 
   const onPointerUp = useCallback(() => {
@@ -230,5 +241,10 @@ export function useSessionDrag({
     [rooms.length, pixelsPerMinute, onPointerMove, onPointerUp]
   )
 
-  return { preview, handlePointerDown, activeSessionId: preview?.sessionId ?? null }
+  return {
+    preview,
+    handlePointerDown,
+    activeSessionId: preview?.sessionId ?? null,
+    isOverUnscheduleZone: preview?.isOverUnscheduleZone ?? false,
+  }
 }
