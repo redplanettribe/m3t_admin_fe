@@ -74,8 +74,8 @@ export function AttendeesPage(): React.ReactElement {
   const sendInvitations = useSendEventInvitations(activeEventId)
   const checkInAttendee = useCheckInAttendee(activeEventId)
   const [lastResult, setLastResult] = React.useState<{
-    sent: number
-    failed: string[]
+    queued: number
+    rejected: string[]
   } | null>(null)
 
   const form = useForm<SendInvitationsFormValues>({
@@ -91,7 +91,10 @@ export function AttendeesPage(): React.ReactElement {
       {
         onSuccess: (data) => {
           if (data) {
-            setLastResult({ sent: data.sent, failed: data.failed ?? [] })
+            setLastResult({
+              queued: data.queued,
+              rejected: data.rejected ?? [],
+            })
             form.reset({ emails: "" })
           }
         },
@@ -180,24 +183,27 @@ export function AttendeesPage(): React.ReactElement {
                 </Button>
               </div>
             ) : (
-              <div className="rounded-md border">
-                <table className="w-full text-sm">
+              <div className="rounded-md border overflow-x-auto">
+                <table className="w-full text-sm min-w-[640px]">
                   <thead>
                     <tr className="border-b bg-muted/50">
                       <th className="h-10 px-4 text-left font-medium">Email</th>
-                      <th className="h-10 px-4 text-left font-medium">Sent at</th>
+                      <th className="h-10 px-4 text-left font-medium">Status</th>
+                      <th className="h-10 px-4 text-left font-medium">Enqueued at</th>
+                      <th className="h-10 px-4 text-left font-medium">Delivered at</th>
+                      <th className="h-10 px-4 text-left font-medium">Last error</th>
                     </tr>
                   </thead>
                   <tbody>
                     {inviteItems.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={2}
+                          colSpan={5}
                           className="px-4 py-8 text-center text-muted-foreground"
                         >
                           {invitesSearch.trim()
                             ? "No matching emails."
-                            : "No invitations sent yet."}
+                            : "No invitations yet."}
                         </td>
                       </tr>
                     ) : (
@@ -205,9 +211,23 @@ export function AttendeesPage(): React.ReactElement {
                         <tr key={inv.id} className="border-b last:border-0">
                           <td className="px-4 py-3">{inv.email ?? "—"}</td>
                           <td className="px-4 py-3 text-muted-foreground">
+                            {inv.status ?? "—"}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
                             {inv.sent_at
                               ? new Date(inv.sent_at).toLocaleString()
                               : "—"}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {inv.delivered_at
+                              ? new Date(inv.delivered_at).toLocaleString()
+                              : "—"}
+                          </td>
+                          <td
+                            className="px-4 py-3 text-muted-foreground max-w-[14rem] truncate"
+                            title={inv.last_error ?? undefined}
+                          >
+                            {inv.last_error ?? "—"}
                           </td>
                         </tr>
                       ))
@@ -266,7 +286,7 @@ export function AttendeesPage(): React.ReactElement {
                 >
                   {sendInvitations.error instanceof Error
                     ? sendInvitations.error.message
-                    : "Failed to send invitations"}
+                    : "Failed to queue invitations"}
                 </p>
               )}
 
@@ -274,32 +294,35 @@ export function AttendeesPage(): React.ReactElement {
                 <div
                   className={cn(
                     "rounded-md border px-3 py-2 text-sm",
-                    lastResult.failed.length > 0
+                    lastResult.rejected.length > 0
                       ? "border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-200"
                       : "border-green-500/30 bg-green-500/10 text-green-800 dark:text-green-200"
                   )}
                   role="status"
                 >
-                  {lastResult.sent > 0 && (
+                  {lastResult.queued > 0 && (
                     <p>
-                      {lastResult.sent} invitation{lastResult.sent !== 1 ? "s" : ""}{" "}
-                      sent.
+                      {lastResult.queued} invitation
+                      {lastResult.queued !== 1 ? "s" : ""} queued for delivery.
                     </p>
                   )}
-                  {lastResult.failed.length > 0 && (
+                  {lastResult.rejected.length > 0 && (
                     <>
                       <p className="font-medium mt-1">
-                        Some invitations could not be sent:
+                        Some addresses were not queued (duplicates or errors):
                       </p>
                       <ul className="list-disc list-inside mt-1 space-y-0.5">
-                        {lastResult.failed.map((email) => (
+                        {lastResult.rejected.map((email) => (
                           <li key={email}>{email}</li>
                         ))}
                       </ul>
                     </>
                   )}
-                  {lastResult.sent === 0 && lastResult.failed.length === 0 && (
-                    <p>No new invitations sent (e.g. all already invited).</p>
+                  {lastResult.queued === 0 && lastResult.rejected.length === 0 && (
+                    <p>
+                      No new invitations queued (for example, all addresses were already
+                      invited).
+                    </p>
                   )}
                 </div>
               )}
@@ -325,6 +348,7 @@ export function AttendeesPage(): React.ReactElement {
                     </FormControl>
                     <p className="text-sm text-muted-foreground">
                       Enter one or more email addresses, separated by commas or spaces.
+                      Invitations are queued for delivery; check the list above for status.
                     </p>
                     <FormMessage />
                   </FormItem>
@@ -332,7 +356,7 @@ export function AttendeesPage(): React.ReactElement {
               />
 
               <Button type="submit" disabled={isPending}>
-                {isPending ? "Sending…" : "Send invitations"}
+                {isPending ? "Queueing…" : "Send invitations"}
               </Button>
             </form>
           </Form>

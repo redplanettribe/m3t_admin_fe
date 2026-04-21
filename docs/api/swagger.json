@@ -104,7 +104,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -116,13 +116,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not registered for event)",
+                        "description": "error.code: not_registered_for_event",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -168,25 +168,25 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "error.code: unauthorized",
+                        "description": "error.code: unauthorized | invalid_or_expired_token",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not registered)",
+                        "description": "error.code: not_registered_for_event",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -238,19 +238,19 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "error.code: unauthorized",
+                        "description": "error.code: unauthorized | invalid_or_expired_token",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -271,7 +271,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns the event schedule (event plus bookable rooms with nested sessions) for the specified event. Only registered attendees or the event owner may access this. Only rooms with not_bookable=false are included.",
+                "description": "Returns the event schedule (event plus rooms that have relevant sessions) for the specified event. Only registered attendees may access this. A room appears when the attendee has a booking there or it has an all_attend session; all_attend sessions are included even in not_bookable rooms. Sessions shown are the attendee's bookings plus every all_attend session (visible statuses only).",
                 "produces": [
                     "application/json"
                 ],
@@ -290,13 +290,13 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "data contains event and rooms (bookable only) with nested sessions",
+                        "description": "data contains event and rooms with nested sessions (booked + all_attend, including all_attend in not_bookable rooms)",
                         "schema": {
                             "$ref": "#/definitions/controllers.GetEventScheduleSuccessResponse"
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -308,13 +308,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not registered or owner)",
+                        "description": "error.code: not_registered_for_event",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -360,7 +360,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -372,13 +372,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not registered or owner)",
+                        "description": "error.code: not_registered_for_event",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -443,7 +443,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request (e.g. session in non-bookable room)",
+                        "description": "error.code: missing_path_param | invalid_path_param | invalid_query_param | invalid_request_body | session_all_attend",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -455,19 +455,19 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not registered for event or tier not allowed)",
+                        "description": "error.code: not_registered_for_event | tier_not_allowed",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found | session_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "409": {
-                        "description": "error.code: conflict (session full or schedule conflict)",
+                        "description": "error.code: session_full | schedule_conflict",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -515,7 +515,7 @@
                         "description": "No Content - booking cancelled or already absent"
                     },
                     "400": {
-                        "description": "error.code: bad_request (invalid or missing eventID/sessionID)",
+                        "description": "error.code: missing_path_param | invalid_path_param | invalid_request_body | session_all_attend",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -527,13 +527,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not registered for event)",
+                        "description": "error.code: not_registered_for_event",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found (event or session not found)",
+                        "description": "error.code: event_not_found | session_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -590,19 +590,19 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "error.code: unauthorized",
+                        "description": "error.code: unauthorized | invalid_or_expired_token",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -648,7 +648,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: invalid_request_body | invalid_email",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -694,13 +694,13 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: invalid_request_body | invalid_email",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "401": {
-                        "description": "error.code: unauthorized",
+                        "description": "error.code: invalid_or_expired_login_code",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -751,7 +751,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -839,6 +839,12 @@
                             "$ref": "#/definitions/controllers.GetEventByIDSuccessResponse"
                         }
                     },
+                    "400": {
+                        "description": "error.code: missing_path_param",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
                     "401": {
                         "description": "error.code: unauthorized",
                         "schema": {
@@ -846,7 +852,7 @@
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -889,6 +895,12 @@
                             "$ref": "#/definitions/controllers.DeleteEventSuccessResponse"
                         }
                     },
+                    "400": {
+                        "description": "error.code: missing_path_param",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
                     "401": {
                         "description": "error.code: unauthorized",
                         "schema": {
@@ -896,13 +908,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -958,7 +970,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -970,13 +982,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1022,7 +1034,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1034,7 +1046,7 @@
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1098,7 +1110,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1110,13 +1122,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner or team member)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1174,7 +1186,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1186,13 +1198,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1248,7 +1260,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1260,13 +1272,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner or team member)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1316,7 +1328,7 @@
                         "description": "No Content"
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1328,13 +1340,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: deliverable_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1397,7 +1409,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1409,13 +1421,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: deliverable_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1480,7 +1492,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1492,25 +1504,25 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (caller is not an event manager)",
+                        "description": "error.code: not_event_team_member",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: deliverable_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "409": {
-                        "description": "error.code: conflict",
+                        "description": "error.code: deliverable_already_given",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "422": {
-                        "description": "error.code: unprocessable_entity (e.g. recipient not registered or not checked in)",
+                        "description": "error.code: unprocessable_entity",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1560,13 +1572,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
-                        "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "error.code: unauthorized",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1630,7 +1636,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1642,13 +1648,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1667,7 +1673,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Send invitation emails to register for the event. Body contains a string of emails separated by commas or spaces. Only the event owner can invite. Each invitation is persisted and emailed; duplicates for the same event are skipped. Returns count of sent and list of failed addresses.",
+                "description": "Enqueue invitation emails for asynchronous delivery. Body contains a string of emails separated by commas or spaces. Only the event owner can invite. Each invitation is persisted immediately; a background worker then sends via SES, retrying on transient errors and persisting the error on terminal failures so nothing is silently dropped. Returns the count of invitations queued and the list of emails rejected (duplicates for this event or storage errors). Observe final delivery status via GET /events/{eventID}/invitations.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1677,7 +1683,7 @@
                 "tags": [
                     "events"
                 ],
-                "summary": "Send event invitation emails",
+                "summary": "Enqueue event invitation emails",
                 "parameters": [
                     {
                         "type": "string",
@@ -1698,13 +1704,13 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "data contains sent count and failed list",
+                        "description": "data contains queued count and rejected list",
                         "schema": {
                             "$ref": "#/definitions/controllers.SendEventInvitationsSuccessResponse"
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request (empty or no valid emails)",
+                        "description": "error.code: missing_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1716,13 +1722,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1786,7 +1792,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1798,13 +1804,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner or team member)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1850,7 +1856,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1862,13 +1868,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1924,7 +1930,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1936,13 +1942,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -1995,7 +2001,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2007,13 +2013,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: room_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2064,7 +2070,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2076,13 +2082,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: room_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2145,7 +2151,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2157,13 +2163,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: room_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2215,6 +2221,12 @@
                             "$ref": "#/definitions/controllers.ToggleRoomNotBookableSuccessResponse"
                         }
                     },
+                    "400": {
+                        "description": "error.code: missing_path_param",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
                     "401": {
                         "description": "error.code: unauthorized",
                         "schema": {
@@ -2222,13 +2234,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: room_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2281,7 +2293,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2293,13 +2305,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: room_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2359,7 +2371,7 @@
                         "description": "No content"
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2371,13 +2383,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: tier_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2434,7 +2446,7 @@
                         "description": "No content"
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2446,13 +2458,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: tier_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2516,7 +2528,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2528,13 +2540,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2590,7 +2602,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2602,13 +2614,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: speaker_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2672,7 +2684,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2684,13 +2696,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2743,7 +2755,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2755,13 +2767,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: session_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2824,7 +2836,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2836,13 +2848,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: session_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2895,7 +2907,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2907,13 +2919,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: session_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2966,7 +2978,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -2978,13 +2990,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner or team member)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: session_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3055,7 +3067,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3067,19 +3079,19 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner/team, user not registered, or tier not allowed)",
+                        "description": "error.code: not_event_owner | tier_not_allowed",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: session_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "409": {
-                        "description": "error.code: conflict (session is not Live, or session full)",
+                        "description": "error.code: session_full | session_not_live",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3144,7 +3156,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3156,13 +3168,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: session_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3215,7 +3227,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3227,13 +3239,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: session_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3293,7 +3305,7 @@
                         "description": "No content"
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3305,13 +3317,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: speaker_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3368,7 +3380,7 @@
                         "description": "No content"
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3380,13 +3392,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: speaker_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3451,7 +3463,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3463,19 +3475,19 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: session_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "409": {
-                        "description": "error.code: conflict (room already has a live session)",
+                        "description": "error.code: live_session_conflict",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3537,7 +3549,7 @@
                         "description": "No content"
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3549,13 +3561,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: tag_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3612,7 +3624,7 @@
                         "description": "No content"
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3624,13 +3636,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: session_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3683,7 +3695,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3695,13 +3707,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: session_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3761,7 +3773,7 @@
                         "description": "No content"
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3773,13 +3785,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: tier_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3836,7 +3848,7 @@
                         "description": "No content"
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3848,13 +3860,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: tier_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3900,7 +3912,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3912,13 +3924,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3974,7 +3986,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3986,13 +3998,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4045,7 +4057,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4057,13 +4069,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: speaker_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4111,7 +4123,7 @@
                         "description": "No content"
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4123,13 +4135,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: speaker_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4192,7 +4204,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4204,13 +4216,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: speaker_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4256,7 +4268,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4268,13 +4280,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4330,7 +4342,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4342,13 +4354,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4398,7 +4410,7 @@
                         "description": "No content"
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4410,13 +4422,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: tag_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4479,7 +4491,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4491,19 +4503,19 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: tag_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "409": {
-                        "description": "error.code: conflict (duplicate name)",
+                        "description": "error.code: conflict",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4548,6 +4560,12 @@
                             "$ref": "#/definitions/controllers.ListEventTeamMembersSuccessResponse"
                         }
                     },
+                    "400": {
+                        "description": "error.code: missing_path_param",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
                     "401": {
                         "description": "error.code: unauthorized",
                         "schema": {
@@ -4555,13 +4573,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4617,7 +4635,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4629,19 +4647,19 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found (no user with that email)",
+                        "description": "error.code: user_not_found | event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "409": {
-                        "description": "error.code: conflict (already member or invalid)",
+                        "description": "error.code: already_team_member",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4693,6 +4711,12 @@
                             "$ref": "#/definitions/controllers.RemoveEventTeamMemberSuccessResponse"
                         }
                     },
+                    "400": {
+                        "description": "error.code: missing_path_param",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
                     "401": {
                         "description": "error.code: unauthorized",
                         "schema": {
@@ -4700,13 +4724,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: team_member_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4764,7 +4788,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4776,13 +4800,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner or team member)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4828,7 +4852,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4840,13 +4864,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner or team member)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4892,7 +4916,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4904,13 +4928,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4966,7 +4990,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -4978,19 +5002,19 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "409": {
-                        "description": "error.code: conflict (duplicate name)",
+                        "description": "error.code: conflict",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -5040,7 +5064,7 @@
                         "description": "No content"
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -5052,13 +5076,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: tier_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -5121,7 +5145,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -5133,19 +5157,19 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: tier_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "409": {
-                        "description": "error.code: conflict (duplicate name)",
+                        "description": "error.code: conflict",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -5210,7 +5234,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request (empty or no valid emails)",
+                        "description": "error.code: missing_path_param | invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -5222,13 +5246,13 @@
                         }
                     },
                     "403": {
-                        "description": "error.code: forbidden (not owner or team member)",
+                        "description": "error.code: not_event_owner",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: tier_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -5274,7 +5298,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -5286,7 +5310,7 @@
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: session_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -5329,7 +5353,7 @@
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: user_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -5370,13 +5394,13 @@
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: user_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "409": {
-                        "description": "error.code: conflict — owns an active event",
+                        "description": "error.code: account_has_active_owned_events",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -5425,7 +5449,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -5437,13 +5461,13 @@
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: user_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "409": {
-                        "description": "error.code: conflict",
+                        "description": "error.code: email_already_in_use",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -5494,7 +5518,7 @@
                         }
                     },
                     "400": {
-                        "description": "error.code: bad_request",
+                        "description": "error.code: invalid_request_body",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -5506,7 +5530,7 @@
                         }
                     },
                     "404": {
-                        "description": "error.code: not_found",
+                        "description": "error.code: user_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -6603,14 +6627,14 @@
         "controllers.SendEventInvitationsResponse": {
             "type": "object",
             "properties": {
-                "failed": {
+                "queued": {
+                    "type": "integer"
+                },
+                "rejected": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
-                },
-                "sent": {
-                    "type": "integer"
                 }
             }
         },
@@ -7109,6 +7133,12 @@
         "domain.EventInvitation": {
             "type": "object",
             "properties": {
+                "attempts": {
+                    "type": "integer"
+                },
+                "delivered_at": {
+                    "type": "string"
+                },
                 "email": {
                     "type": "string"
                 },
@@ -7118,7 +7148,17 @@
                 "id": {
                     "type": "string"
                 },
+                "last_attempt_at": {
+                    "type": "string"
+                },
+                "last_error": {
+                    "type": "string"
+                },
                 "sent_at": {
+                    "description": "enqueued-at timestamp",
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 }
             }
@@ -7477,6 +7517,9 @@
                 },
                 "message": {
                     "type": "string"
+                },
+                "show_to_user": {
+                    "type": "boolean"
                 }
             }
         },

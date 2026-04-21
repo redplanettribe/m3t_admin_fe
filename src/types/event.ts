@@ -257,7 +257,13 @@ export interface EventInvitation {
   id: string
   email?: string
   event_id: string
+  /** When the invitation was enqueued for delivery (persisted immediately). */
   sent_at?: string
+  attempts?: number
+  delivered_at?: string
+  last_attempt_at?: string
+  last_error?: string
+  status?: string
 }
 
 /** Single registration item from GET /events/{eventID}/registrations (registration + user info) */
@@ -305,8 +311,8 @@ export interface ListEventSessionsScheduleResult {
 
 /** Response from POST /events/{eventID}/invitations */
 export interface SendEventInvitationsResult {
-  sent: number
-  failed: string[]
+  queued: number
+  rejected: string[]
 }
 
 /** Speaker from GET /events/{eventID}/speakers or get-by-id */
