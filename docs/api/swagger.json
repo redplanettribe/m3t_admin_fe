@@ -1894,6 +1894,12 @@
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "Filter attendees by assigned event tier id (UUID)",
+                        "name": "tier_id",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "Page number (default 1)",
                         "name": "page",

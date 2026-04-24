@@ -836,6 +836,7 @@ export interface UseEventRegistrationsParams {
   page: number
   pageSize: number
   search?: string
+  tierId?: string
 }
 
 export interface UseEventSessionsScheduleParams {
@@ -872,9 +873,9 @@ export function useEventRegistrations(
   eventId: string | null,
   params: UseEventRegistrationsParams
 ) {
-  const { page, pageSize, search = "" } = params
+  const { page, pageSize, search = "", tierId } = params
   return useQuery({
-    queryKey: queryKeys.events.registrations(eventId ?? "", page, pageSize, search),
+    queryKey: queryKeys.events.registrations(eventId ?? "", page, pageSize, search, tierId),
     queryFn: () => {
       if (!eventId) throw new Error("No event selected")
       const searchParams = new URLSearchParams({
@@ -883,6 +884,9 @@ export function useEventRegistrations(
       })
       if (search.trim()) {
         searchParams.set("search", search.trim())
+      }
+      if (tierId && tierId.trim()) {
+        searchParams.set("tier_id", tierId.trim())
       }
       return apiClient.get<ListEventRegistrationsResult>(
         `/events/${eventId}/registrations?${searchParams.toString()}`

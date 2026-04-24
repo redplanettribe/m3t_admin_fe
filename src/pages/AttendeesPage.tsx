@@ -2,7 +2,6 @@ import * as React from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { queryKeys } from "@/lib/queryKeys"
 import {
   Form,
   FormControl,
@@ -50,12 +49,14 @@ function normalizeEmailsString(raw: string): string {
 
 export function AttendeesPage(): React.ReactElement {
   const activeEventId = useEventStore((s) => s.activeEventId)
+  const ALL_TIERS_VALUE = "__all__"
   const [invitesPage, setInvitesPage] = React.useState(1)
   const [invitesPageSize] = React.useState(20)
   const [invitesSearch, setInvitesSearch] = React.useState("")
   const [registrationsPage, setRegistrationsPage] = React.useState(1)
   const [registrationsPageSize] = React.useState(20)
   const [registrationsSearch, setRegistrationsSearch] = React.useState("")
+  const [registrationsTierId, setRegistrationsTierId] = React.useState<string>("")
 
   const queryClient = useQueryClient()
   const tiers = useEventTiers(activeEventId)
@@ -70,6 +71,7 @@ export function AttendeesPage(): React.ReactElement {
     page: registrationsPage,
     pageSize: registrationsPageSize,
     search: registrationsSearch,
+    tierId: registrationsTierId,
   })
   const sendInvitations = useSendEventInvitations(activeEventId)
   const checkInAttendee = useCheckInAttendee(activeEventId)
@@ -122,6 +124,11 @@ export function AttendeesPage(): React.ReactElement {
 
   const handleRegistrationsSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setRegistrationsSearch(e.target.value)
+    setRegistrationsPage(1)
+  }
+
+  const handleRegistrationsTierChange = (tierId: string) => {
+    setRegistrationsTierId(tierId === ALL_TIERS_VALUE ? "" : tierId)
     setRegistrationsPage(1)
   }
 
@@ -374,6 +381,31 @@ export function AttendeesPage(): React.ReactElement {
                 className="max-w-xs"
                 aria-label="Search registered attendees"
               />
+              <Select
+                value={registrationsTierId || ALL_TIERS_VALUE}
+                onValueChange={handleRegistrationsTierChange}
+              >
+                <SelectTrigger className="max-w-xs" aria-label="Filter registered by tier">
+                  <SelectValue placeholder="All tiers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_TIERS_VALUE}>All tiers</SelectItem>
+                  {(tiers.data ?? []).map((tier) => (
+                    <SelectItem key={tier.id} value={tier.id}>
+                      <span className="inline-flex items-center gap-1.5">
+                        {tier.color && (
+                          <span
+                            className="inline-block h-3.5 w-4 rounded border border-border shrink-0"
+                            style={{ backgroundColor: tier.color }}
+                            aria-hidden
+                          />
+                        )}
+                        {tier.name ?? tier.id}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {registrations.isLoading ? (
@@ -444,12 +476,7 @@ export function AttendeesPage(): React.ReactElement {
                                     onSuccess: () => {
                                       if (activeEventId) {
                                         queryClient.invalidateQueries({
-                                          queryKey: queryKeys.events.registrations(
-                                            activeEventId,
-                                            registrationsPage,
-                                            registrationsPageSize,
-                                            registrationsSearch
-                                          ),
+                                          queryKey: ["events", activeEventId, "registrations"],
                                         })
                                       }
                                     },
