@@ -2,6 +2,7 @@ import * as React from "react"
 import { useState } from "react"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
 import {
+  Activity,
   CalendarDays,
   ChevronRight,
   Clapperboard,
@@ -73,6 +74,11 @@ const navMain: NavItem[] = [
     title: "Home",
     url: "/",
     icon: Home,
+  },
+  {
+    title: "Live",
+    url: "/live",
+    icon: Activity,
   },
   {
     title: "Schedule",

@@ -19,6 +19,8 @@ import { SpeakerDetailPage } from "@/pages/SpeakerDetailPage"
 import { SpeakersPage } from "@/pages/SpeakersPage"
 import { TiersPage } from "@/pages/TiersPage"
 import { DeliverablesPage } from "@/pages/DeliverablesPage"
+import { LiveDashboardPage } from "@/pages/LiveDashboardPage"
+import { LiveRedirectPage } from "@/pages/LiveRedirectPage"
 
 const routes: RouteObject[] = [
   {
@@ -98,6 +100,14 @@ const routes: RouteObject[] = [
       {
         path: "deliverables",
         element: <DeliverablesPage />,
+      },
+      {
+        path: "live",
+        element: <LiveRedirectPage />,
+      },
+      {
+        path: "events/:eventId/live",
+        element: <LiveDashboardPage />,
       },
       {
         path: "settings",

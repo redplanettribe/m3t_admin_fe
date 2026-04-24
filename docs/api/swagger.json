@@ -1742,6 +1742,128 @@
                 }
             }
         },
+        "/events/{eventID}/live/status/stream": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "**Pre-stream errors** use the normal JSON envelope (401/403/404/500) before `Content-Type: text/event-stream` is set.\\n\\n**Auth:** `Authorization: Bearer` or `?ticket=` JWT from `POST /events/{eventID}/live/status/ticket`. When using `ticket`, its `event_id` claim must match `{eventID}` in the path or the server responds 403.\\n\\n**Stream body:** not `APIResponse`. Each frame is `event:` then `data:` (single JSON object) then blank line.\\n\\n**Event types:**\\n- `snapshot` — `data` is `EventStatusLiveSnapshot`: `event_check_in_count` (int), `sessions` (**live-only**; array of `{session_id, title, check_in_count, room: {name, capacity}}`), `deliverables` (array of `{deliverable_id, name, delivered_count}`).\\n- `error` — `data` is `{code, message}`; connection ends after this frame.\\n\\n**Heartbeats:** comment lines `: ping` every ~20s; ignore (no `event`/`data`).\\n\\n**First frame:** immediate `snapshot` after connect (same shape as above).\\n\\n**Reconnect:** clients may reconnect with exponential backoff; server closes stream on shutdown.\\n\\n**Ops:** place stream path behind `proxy_buffering off` and a large `proxy_read_timeout` if using nginx.",
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "SSE stream of event check-in and deliverable stats",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Short-lived stream JWT (alternative to Bearer)",
+                        "name": "ticket",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "text/event-stream sequence (not JSON envelope)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/events/{eventID}/live/status/ticket": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a JWT usable as `?ticket=` on `GET /events/{eventID}/live/status/stream` for EventSource (cannot send Authorization). Caller must be event owner or team member. Ticket TTL is at most 60 seconds.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Issue short-lived SSE stream ticket",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.EventStatusStreamTicketSuccessResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/events/{eventID}/registrations": {
             "get": {
                 "security": [
@@ -6045,6 +6167,28 @@
                 },
                 "name": {
                     "type": "string"
+                }
+            }
+        },
+        "controllers.EventStatusStreamTicketResponse": {
+            "type": "object",
+            "properties": {
+                "expires_at": {
+                    "type": "string"
+                },
+                "ticket": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.EventStatusStreamTicketSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/controllers.EventStatusStreamTicketResponse"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
                 }
             }
         },

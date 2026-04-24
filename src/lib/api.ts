@@ -5,6 +5,8 @@ const baseUrl =
   import.meta.env.VITE_API_URL ??
   (import.meta.env.DEV ? "/api" : "http://localhost:8080")
 
+export const apiBaseUrl = baseUrl
+
 
 export class ApiError extends Error {
   code?: string
@@ -57,6 +59,9 @@ async function request<T>(
 export const apiClient = {
   get<T>(path: string): Promise<T> {
     return request<T>(path, { method: "GET" })
+  },
+  postNoBody<T>(path: string): Promise<T> {
+    return request<T>(path, { method: "POST" })
   },
   post<T>(path: string, body: object): Promise<T> {
     return request<T>(path, { method: "POST", body })
