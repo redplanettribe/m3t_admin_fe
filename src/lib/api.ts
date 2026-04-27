@@ -56,9 +56,40 @@ async function request<T>(
   return json.data as T
 }
 
+async function requestBlob(
+  path: string,
+  options: Omit<RequestInit, "body"> = {}
+): Promise<Blob> {
+  const token = useUserStore.getState().token
+  const headers: Record<string, string> = {
+    ...(options.headers as Record<string, string>),
+  }
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+  const url = `${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`
+  const res = await fetch(url, {
+    ...options,
+    headers,
+  })
+
+  if (!res.ok) {
+    const json = (await res.json().catch(() => ({}))) as {
+      error?: { code?: string; message?: string }
+    }
+    const msg = json.error?.message ?? res.statusText ?? "Request failed"
+    throw new ApiError(msg, json.error?.code, res.status)
+  }
+
+  return res.blob()
+}
+
 export const apiClient = {
   get<T>(path: string): Promise<T> {
     return request<T>(path, { method: "GET" })
+  },
+  getBlob(path: string, init?: Omit<RequestInit, "body">): Promise<Blob> {
+    return requestBlob(path, { method: "GET", ...init })
   },
   postNoBody<T>(path: string): Promise<T> {
     return request<T>(path, { method: "POST" })

@@ -1142,6 +1142,90 @@
                 }
             }
         },
+        "/events/{eventID}/check-ins/export": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Generates a Bevy-compatible CSV file containing checked-in attendees for an event. Caller must be the event owner or a team member.",
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Export event check-ins (Bevy CSV)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "bevy"
+                        ],
+                        "type": "string",
+                        "description": "Export format",
+                        "name": "format",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "csv"
+                        ],
+                        "type": "string",
+                        "description": "File type",
+                        "name": "file_type",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CSV file",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: missing_path_param | invalid_path_param | invalid_query_param",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: not_event_owner",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: event_not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/events/{eventID}/deliverables": {
             "get": {
                 "security": [

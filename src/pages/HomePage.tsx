@@ -9,15 +9,33 @@ import {
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { EditEventModal } from "@/components/EditEventModal"
 import {
   useEventSchedule,
   useEventTags,
   useAddEventTags,
   useDeleteEventTag,
+  useExportEventCheckIns,
+  type ExportEventCheckInsFormat,
 } from "@/hooks/useEvents"
 import { useEventStore } from "@/store/eventStore"
 import { cn } from "@/lib/utils"
+
+function slugifyFilenamePart(value: string): string {
+  const slug = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+  return slug || "event"
+}
 
 export function HomePage(): React.ReactElement {
   const activeEventId = useEventStore((s) => s.activeEventId)
@@ -25,8 +43,11 @@ export function HomePage(): React.ReactElement {
   const { data: eventTags = [] } = useEventTags(activeEventId)
   const addTags = useAddEventTags(activeEventId)
   const deleteTag = useDeleteEventTag(activeEventId)
+  const exportCheckIns = useExportEventCheckIns(activeEventId)
   const [editOpen, setEditOpen] = React.useState(false)
   const [newTagName, setNewTagName] = React.useState("")
+  const [exportFormat, setExportFormat] =
+    React.useState<ExportEventCheckInsFormat>("bevy")
 
   if (activeEventId && schedule) {
     const event = schedule.event
@@ -34,6 +55,30 @@ export function HomePage(): React.ReactElement {
     const sessions = schedule.rooms.flatMap((rw) => rw.sessions)
     const hasLocation =
       event.location_lat != null && event.location_lng != null
+
+    const exportFormatOptions: Array<{ value: ExportEventCheckInsFormat; label: string }> =
+      [{ value: "bevy", label: "Bevy (CSV)" }]
+
+    const exportFilenameBase = slugifyFilenamePart(event.name ?? event.event_code ?? "event")
+
+    const downloadExport = async () => {
+      const blob = await exportCheckIns.mutateAsync({
+        format: exportFormat,
+        fileType: "csv",
+      })
+      const url = window.URL.createObjectURL(blob)
+      try {
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `${exportFilenameBase}-checkins-${exportFormat}.csv`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+      } finally {
+        window.URL.revokeObjectURL(url)
+      }
+    }
+
     return (
       <div className="mx-auto max-w-4xl space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -215,6 +260,48 @@ export function HomePage(): React.ReactElement {
                   <span className="text-sm text-destructive">
                     {deleteTag.error?.message}
                   </span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Exports</CardTitle>
+              <CardDescription>
+                Download event data for other platforms.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-1.5">
+                <div className="text-sm font-medium">Check-ins</div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Select
+                    value={exportFormat}
+                    onValueChange={(v) => setExportFormat(v as ExportEventCheckInsFormat)}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Select format" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {exportFormatOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm"
+                    onClick={() => downloadExport()}
+                    disabled={exportCheckIns.isPending}
+                  >
+                    {exportCheckIns.isPending ? "Downloading…" : "Download CSV"}
+                  </Button>
+                </div>
+                {exportCheckIns.isError && (
+                  <div className="text-sm text-destructive">
+                    {exportCheckIns.error?.message ?? "Export failed."}
+                  </div>
                 )}
               </div>
             </CardContent>

@@ -962,3 +962,29 @@ export function useCheckInAttendee(eventId: string | null) {
     },
   })
 }
+
+export type ExportEventCheckInsFormat = "bevy"
+export type ExportEventCheckInsFileType = "csv"
+
+/** Export event check-ins as a file (GET /events/{eventID}/check-ins/export). */
+export function useExportEventCheckIns(eventId: string | null) {
+  return useMutation({
+    mutationFn: ({
+      format,
+      fileType,
+    }: {
+      format: ExportEventCheckInsFormat
+      fileType: ExportEventCheckInsFileType
+    }) => {
+      if (!eventId) throw new Error("No event selected")
+      const searchParams = new URLSearchParams({
+        format,
+        file_type: fileType,
+      })
+      return apiClient.getBlob(
+        `/events/${eventId}/check-ins/export?${searchParams.toString()}`,
+        { headers: { Accept: "text/csv" } }
+      )
+    },
+  })
+}
