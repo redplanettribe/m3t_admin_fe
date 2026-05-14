@@ -27,7 +27,16 @@ import {
 } from "@/components/ui/select"
 import { useEventSessionsSchedule, useDeleteSession, useCreateSession } from "@/hooks/useEvents"
 import { useEventStore } from "@/store/eventStore"
-import type { RoomWithSessions, SessionInput } from "@/types/event"
+import {
+  DEFAULT_SESSION_TECHNICAL_DIFFICULTY,
+  type RoomWithSessions,
+  type SessionInput,
+  type SessionTechnicalDifficulty,
+} from "@/types/event"
+import {
+  formatSessionTechnicalDifficulty,
+  SESSION_TECHNICAL_DIFFICULTY_OPTIONS,
+} from "@/lib/sessionTechnicalDifficulty"
 import { makeNavigateFrom, type AppNavigateState } from "@/lib/returnNavigation"
 import { cn } from "@/lib/utils"
 
@@ -75,6 +84,7 @@ function SessionsTable(props: {
           <tr className="border-b text-left text-muted-foreground">
             <th className="px-4 py-2 font-medium">Title</th>
             <th className="px-4 py-2 font-medium">Room</th>
+            <th className="px-4 py-2 font-medium">Difficulty</th>
             <th className="px-4 py-2 font-medium">Day / time</th>
             <th className="px-4 py-2 font-medium">Status</th>
             <th className="px-4 py-2 font-medium text-right">Actions</th>
@@ -89,6 +99,10 @@ function SessionsTable(props: {
             const timeLabel =
               start != null && end != null ? `${start}–${end}` : start ?? end ?? "—"
             const status = "status" in s && s.status ? s.status : "—"
+            const difficulty =
+              "technical_difficulty" in s && s.technical_difficulty
+                ? formatSessionTechnicalDifficulty(s.technical_difficulty)
+                : "—"
             return (
               <tr key={id} className="border-b last:border-0">
                 <td className="px-4 py-3 max-w-[200px]">
@@ -96,6 +110,9 @@ function SessionsTable(props: {
                 </td>
                 <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                   {roomLabel}
+                </td>
+                <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                  {difficulty}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                   Day {day}
@@ -146,6 +163,8 @@ export function SessionsPage(): React.ReactElement {
   const [createDraftOpen, setCreateDraftOpen] = useState(false)
   const [draftTitle, setDraftTitle] = useState("")
   const [draftDescription, setDraftDescription] = useState("")
+  const [draftTechnicalDifficulty, setDraftTechnicalDifficulty] =
+    useState<SessionTechnicalDifficulty>(DEFAULT_SESSION_TECHNICAL_DIFFICULTY)
   const [draftValidationError, setDraftValidationError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -218,6 +237,7 @@ export function SessionsPage(): React.ReactElement {
   const openCreateDraftModal = () => {
     setDraftTitle("")
     setDraftDescription("")
+    setDraftTechnicalDifficulty(DEFAULT_SESSION_TECHNICAL_DIFFICULTY)
     setDraftValidationError(null)
     createDraftSession.reset()
     setCreateDraftOpen(true)
@@ -242,12 +262,17 @@ export function SessionsPage(): React.ReactElement {
     }
     setDraftValidationError(null)
     createDraftSession.mutate(
-      { title, description },
+      {
+        title,
+        description,
+        technical_difficulty: draftTechnicalDifficulty,
+      },
       {
         onSuccess: (created) => {
           setCreateDraftOpen(false)
           setDraftTitle("")
           setDraftDescription("")
+          setDraftTechnicalDifficulty(DEFAULT_SESSION_TECHNICAL_DIFFICULTY)
           navigate(`/events/${activeEventId}/sessions/${created.id}`, {
             state: makeNavigateFrom(location),
           })
@@ -381,7 +406,8 @@ export function SessionsPage(): React.ReactElement {
             <DialogHeader>
               <DialogTitle>New draft session</DialogTitle>
               <DialogDescription>
-                Add a title and description. You can assign room and time later on the schedule.
+                Add a title and description. Technical difficulty defaults to Non-technical;
+                change it if needed. You can assign room and time later on the schedule.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
@@ -419,6 +445,29 @@ export function SessionsPage(): React.ReactElement {
                   rows={4}
                   className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="draft-session-difficulty" className="text-sm font-medium">
+                  Technical difficulty
+                </label>
+                <Select
+                  value={draftTechnicalDifficulty}
+                  onValueChange={(v) =>
+                    setDraftTechnicalDifficulty(v as SessionTechnicalDifficulty)
+                  }
+                  disabled={createDraftSession.isPending}
+                >
+                  <SelectTrigger id="draft-session-difficulty" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SESSION_TECHNICAL_DIFFICULTY_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               {(draftValidationError || createDraftSession.isError) && (
                 <p

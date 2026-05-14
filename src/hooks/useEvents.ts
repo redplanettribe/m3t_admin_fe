@@ -7,6 +7,7 @@ import {
 import { apiClient } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
 import { useEventStore } from "@/store/eventStore"
+import { isSessionTechnicalDifficulty } from "@/lib/sessionTechnicalDifficulty"
 import type { CreateEventFormValues } from "@/lib/schemas/event"
 import type {
   Event,
@@ -23,6 +24,7 @@ import type {
   ListEventInvitationsResult,
   ListEventRegistrationsResult,
   ListEventSessionsScheduleResult,
+  SessionInput,
   UpdateRoomRequest,
   UpdateEventRequest,
   UpdateSessionScheduleRequest,
@@ -65,6 +67,7 @@ type ApiSessionResponse = {
   all_attend?: boolean
   tags?: EventTag[]
   speakers?: Speaker[]
+  technical_difficulty?: string
 }
 
 export function useEventsMe() {
@@ -483,6 +486,9 @@ function sessionFromApiResponse(data: ApiSessionResponse): Session {
     all_attend: data.all_attend,
     tags: normalizeTags(data.tags),
     speakers: data.speakers,
+    technical_difficulty: isSessionTechnicalDifficulty(data.technical_difficulty)
+      ? data.technical_difficulty
+      : undefined,
   }
 }
 
@@ -522,6 +528,13 @@ export function useUpdateSessionContent(eventId: string | null, sessionId: strin
           ...rw,
           sessions: rw.sessions.map((s) => (String(s.id) === updated.id ? session : s)),
         }))
+        const unscheduled = prev.unscheduled_sessions
+        if (unscheduled?.length) {
+          const nextUnscheduled: SessionInput[] = unscheduled.map((s) =>
+            String(s.id) === updated.id ? session : s
+          )
+          return { ...prev, rooms, unscheduled_sessions: nextUnscheduled }
+        }
         return { ...prev, rooms }
       })
       if (sessionId) {

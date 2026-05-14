@@ -83,6 +83,21 @@ export const SESSION_STATUSES = [
 
 export type SessionStatus = (typeof SESSION_STATUSES)[number]
 
+/** Wire values for session technical level (domain.SessionTechnicalDifficulty). */
+export const SESSION_TECHNICAL_DIFFICULTIES = [
+  "non_technical",
+  "beginner",
+  "intermediate",
+  "advanced",
+] as const
+
+export type SessionTechnicalDifficulty =
+  (typeof SESSION_TECHNICAL_DIFFICULTIES)[number]
+
+/** UI/API default when no level is stored yet. */
+export const DEFAULT_SESSION_TECHNICAL_DIFFICULTY: SessionTechnicalDifficulty =
+  SESSION_TECHNICAL_DIFFICULTIES[0]
+
 /**
  * Session with optional schedule fields. Drafts may omit room, event_day, and times;
  * scheduled sessions include them. Times are HH:mm, relative to event.start_date + (event_day - 1) days.
@@ -102,6 +117,8 @@ export interface Session {
   tags?: EventTag[]
   /** Fully populated speakers for this session, as returned by the API. */
   speakers?: Speaker[]
+  /** How technical the session content is (API snake_case). */
+  technical_difficulty?: SessionTechnicalDifficulty
 }
 
 /** Session with a room and time slot (grid / schedule views). */
@@ -130,12 +147,14 @@ export interface CreateSessionRequest {
   description?: string
   tags?: string[]
   speaker_ids?: string[]
+  technical_difficulty?: SessionTechnicalDifficulty
 }
 
 /** Request body for PATCH /events/{eventID}/sessions/{sessionID}/content */
 export interface UpdateSessionContentRequest {
   title?: string
   description?: string
+  technical_difficulty?: SessionTechnicalDifficulty
 }
 
 /** Request body for PATCH /events/{eventID}/sessions/{sessionID}/status */
@@ -160,12 +179,15 @@ export type SessionInput =
     tags?: string[] | EventTag[]
     /** Embedded speakers for this session, matching the backend Session model. */
     speakers?: Speaker[]
+    technical_difficulty?: SessionTechnicalDifficulty
   }
 
 /** Response from GET /events/{eventID}: event plus rooms each with nested sessions. */
 export interface EventSchedule {
   event: Event
   rooms: RoomWithSessions[]
+  /** Present when API includes draft / unscheduled sessions on the event payload. */
+  unscheduled_sessions?: SessionInput[]
 }
 
 export interface EventTag {

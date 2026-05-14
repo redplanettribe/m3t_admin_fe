@@ -1,13 +1,17 @@
 import * as React from "react"
 import { Link, useLocation } from "react-router-dom"
 import { makeNavigateFrom } from "@/lib/returnNavigation"
+import { formatSessionTechnicalDifficulty } from "@/lib/sessionTechnicalDifficulty"
 import { cn } from "@/lib/utils"
 import type { EventTag, Session } from "@/types/event"
 import { Button } from "@/components/ui/button"
 import { ExternalLink, Trash2 } from "lucide-react"
 
 const TAG_PILL_CLASS =
-  "text-[10px] rounded-full bg-muted px-1.5 py-0.5 text-muted-foreground shrink-0"
+  "text-[10px] rounded-full bg-muted px-1.5 py-0.5 text-muted-foreground shrink-0 inline-flex items-center justify-center text-center leading-tight"
+/** Before tag pills: soft primary tint (not full muted chip like tags). */
+const TECH_DIFFICULTY_PILL_CLASS =
+  "text-[10px] rounded-md border border-primary/25 bg-primary/12 px-1.5 py-0.5 text-primary shrink-0 inline-flex items-center justify-center text-center font-medium leading-tight dark:border-primary/35 dark:bg-primary/22 dark:text-primary-foreground/95"
 const TAGS_WRAPPER_MAX_LINES = 2
 const LINE_HEIGHT_PX = 18
 const RESIZE_HANDLE_HEIGHT_PX = 6
@@ -19,7 +23,14 @@ function hhmmToMinutes(hhmm: string): number {
 }
 
 /** Tags with max 2 lines; ellipsis pill appears inline when content overflows. Always shows at least one tag. */
-function SessionTags({ tags }: { tags: EventTag[] }) {
+function SessionTags({
+  tags,
+  leading,
+}: {
+  tags: EventTag[]
+  /** Rendered first (e.g. technical difficulty). */
+  leading?: React.ReactNode
+}) {
   const wrapperRef = React.useRef<HTMLDivElement>(null)
   const [showEllipsis, setShowEllipsis] = React.useState(false)
   const [visibleCount, setVisibleCount] = React.useState(tags.length)
@@ -45,9 +56,10 @@ function SessionTags({ tags }: { tags: EventTag[] }) {
   return (
     <div
       ref={wrapperRef}
-      className="flex flex-wrap gap-1 mt-1 overflow-hidden shrink-0"
+      className="flex flex-wrap items-center gap-1 overflow-hidden shrink-0"
       style={{ maxHeight }}
     >
+      {leading}
       {visibleTags.map((tag) => (
         <span key={tag.id || tag.name} className={TAG_PILL_CLASS}>
           {tag.name}
@@ -190,8 +202,23 @@ export function ScheduleSessionCard({
             {session.description}
           </div>
         )}
-        {session.tags && session.tags.length > 0 && (
-          <SessionTags tags={session.tags} />
+        {(session.technical_difficulty ||
+          (session.tags && session.tags.length > 0)) && (
+          <div className="mt-1 min-h-0 shrink-0">
+            <SessionTags
+              tags={session.tags ?? []}
+              leading={
+                session.technical_difficulty ? (
+                  <span
+                    className={TECH_DIFFICULTY_PILL_CLASS}
+                    title="Technical difficulty"
+                  >
+                    {formatSessionTechnicalDifficulty(session.technical_difficulty)}
+                  </span>
+                ) : undefined
+              }
+            />
+          </div>
         )}
       </div>
       {/* Resize handle: bottom edge */}

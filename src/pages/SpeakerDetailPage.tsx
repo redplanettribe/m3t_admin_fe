@@ -31,6 +31,7 @@ import { useEventStore } from "@/store/eventStore"
 import type { Speaker, UpdateSpeakerRequest } from "@/types/event"
 import { useReturnNavigation } from "@/hooks/useReturnNavigation"
 import { makeNavigateFrom } from "@/lib/returnNavigation"
+import { formatSessionTechnicalDifficulty } from "@/lib/sessionTechnicalDifficulty"
 import { cn } from "@/lib/utils"
 
 function speakerDisplayName(s: Speaker): string {
@@ -354,7 +355,7 @@ export function SpeakerDetailPage(): React.ReactElement {
             ) : (
               <ul className="space-y-2">
                 {sessions.map((session) => (
-                  <li key={session.id}>
+                  <li key={session.id} className="space-y-0.5">
                     <Link
                       to={`/events/${eventId}/sessions/${session.id}`}
                       state={sessionNavigateState}
@@ -364,6 +365,11 @@ export function SpeakerDetailPage(): React.ReactElement {
                     >
                       {session.title ?? `Session ${session.id}`}
                     </Link>
+                    {session.technical_difficulty ? (
+                      <p className="text-xs text-muted-foreground">
+                        {formatSessionTechnicalDifficulty(session.technical_difficulty)}
+                      </p>
+                    ) : null}
                   </li>
                 ))}
               </ul>

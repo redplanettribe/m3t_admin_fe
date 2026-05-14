@@ -15,18 +15,31 @@ import { useEventSchedule, useEventSessionsSchedule, useToggleRoomNotBookable, u
 import { useSessionDrag } from "@/hooks/useSessionDrag"
 import { useDraftPlacement } from "@/hooks/useDraftPlacement"
 import { useEventStore } from "@/store/eventStore"
-import type {
-  EventSchedule,
-  EventTag,
-  PlacedSession,
-  Room,
-  Session,
-  SessionInput,
-  Speaker,
+import {
+  DEFAULT_SESSION_TECHNICAL_DIFFICULTY,
+  type EventSchedule,
+  type EventTag,
+  type PlacedSession,
+  type Room,
+  type Session,
+  type SessionInput,
+  type SessionTechnicalDifficulty,
+  type Speaker,
 } from "@/types/event"
+import {
+  SESSION_TECHNICAL_DIFFICULTY_OPTIONS,
+} from "@/lib/sessionTechnicalDifficulty"
 import { DraftSessionsPanel } from "@/components/DraftSessionsPanel"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { isSessionTechnicalDifficulty } from "@/lib/sessionTechnicalDifficulty"
 import { makeNavigateFrom } from "@/lib/returnNavigation"
 import { cn } from "@/lib/utils"
 import { SessionizeImportModal } from "@/components/SessionizeImportModal"
@@ -77,6 +90,15 @@ function normalizeSession(s: SessionInput): PlacedSession | null {
       ? (tagsRaw as string[]).map((name) => ({ id: "", name }))
       : (tagsRaw as EventTag[])
     : undefined
+  const tdCandidate =
+    typeof raw.technical_difficulty === "string"
+      ? raw.technical_difficulty
+      : typeof (s as Session).technical_difficulty === "string"
+        ? (s as Session).technical_difficulty
+        : undefined
+  const technical_difficulty = isSessionTechnicalDifficulty(tdCandidate)
+    ? tdCandidate
+    : undefined
   return {
     id: String(s.id),
     room_id: String(roomId),
@@ -90,6 +112,7 @@ function normalizeSession(s: SessionInput): PlacedSession | null {
     speakers: (raw.speakers as Speaker[] | undefined) ??
       (raw.speakers === null ? undefined : undefined),
     tags,
+    technical_difficulty,
   }
 }
 
@@ -175,6 +198,8 @@ export function SchedulePage(): React.ReactElement {
     endTime: string
   } | null>(null)
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [createSessionTechnicalDifficulty, setCreateSessionTechnicalDifficulty] =
+    useState<SessionTechnicalDifficulty>(DEFAULT_SESSION_TECHNICAL_DIFFICULTY)
   const [hoverPreview, setHoverPreview] = useState<{
     roomIndex: number
     topPx: number
@@ -287,6 +312,7 @@ export function SchedulePage(): React.ReactElement {
       startTime: minutesToHHMM(snappedMinutes),
       endTime: minutesToHHMM(snappedMinutes + DEFAULT_SESSION_DURATION_MINUTES),
     })
+    setCreateSessionTechnicalDifficulty(DEFAULT_SESSION_TECHNICAL_DIFFICULTY)
   }
 
   function handleRoomColumnMouseMove(
@@ -653,6 +679,7 @@ export function SchedulePage(): React.ReactElement {
           if (!open && !createSession.isPending) {
             setCreateSessionDraft(null)
             setSelectedTags([])
+            setCreateSessionTechnicalDifficulty(DEFAULT_SESSION_TECHNICAL_DIFFICULTY)
           }
         }}
       >
@@ -692,11 +719,15 @@ export function SchedulePage(): React.ReactElement {
                   title: title || undefined,
                   description: description || undefined,
                   tags: selectedTags.length > 0 ? selectedTags : undefined,
+                  technical_difficulty: createSessionTechnicalDifficulty,
                 },
                 {
                   onSuccess: () => {
                     setCreateSessionDraft(null)
                     setSelectedTags([])
+                    setCreateSessionTechnicalDifficulty(
+                      DEFAULT_SESSION_TECHNICAL_DIFFICULTY
+                    )
                   },
                 }
               )
@@ -771,6 +802,27 @@ export function SchedulePage(): React.ReactElement {
                   placeholder="Optional description"
                 />
               </label>
+              <div className="flex flex-col gap-1 text-sm">
+                <span className="font-medium">Technical difficulty</span>
+                <Select
+                  value={createSessionTechnicalDifficulty}
+                  onValueChange={(v) =>
+                    setCreateSessionTechnicalDifficulty(v as SessionTechnicalDifficulty)
+                  }
+                  disabled={createSession.isPending}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SESSION_TECHNICAL_DIFFICULTY_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <TagInput
                 suggestions={(eventTags ?? []).map((t) => t.name)}
                 value={selectedTags}
@@ -798,6 +850,9 @@ export function SchedulePage(): React.ReactElement {
                   if (!createSession.isPending) {
                     setCreateSessionDraft(null)
                     setSelectedTags([])
+                    setCreateSessionTechnicalDifficulty(
+                      DEFAULT_SESSION_TECHNICAL_DIFFICULTY
+                    )
                   }
                 }}
                 disabled={createSession.isPending}

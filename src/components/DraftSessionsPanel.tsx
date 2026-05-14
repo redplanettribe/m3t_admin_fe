@@ -10,6 +10,7 @@ import {
   AvatarGroup,
 } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
+import { formatSessionTechnicalDifficulty } from "@/lib/sessionTechnicalDifficulty"
 import type { Session, Speaker } from "@/types/event"
 
 const PANEL_WIDTH = 280
@@ -38,6 +39,11 @@ function DraftSessionItem({ session, onPointerDown }: DraftSessionItemProps) {
         <div className="text-sm font-medium leading-tight truncate">
           {session.title || "Untitled session"}
         </div>
+        {session.technical_difficulty ? (
+          <div className="text-xs text-muted-foreground mt-0.5 truncate">
+            {formatSessionTechnicalDifficulty(session.technical_difficulty)}
+          </div>
+        ) : null}
         {speakers.length > 0 && (
           <AvatarGroup className="mt-1.5">
             {speakers.slice(0, 4).map((speaker) => (

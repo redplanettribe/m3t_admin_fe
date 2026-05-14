@@ -4,6 +4,10 @@
         "description": "This is the backend API for a conference ticketing system.",
         "title": "Multi-Track Ticketing API",
         "contact": {},
+        "license": {
+            "name": "RedPlanetTribe Community License",
+            "url": "https://raw.githubusercontent.com/redplanettribe/m3t_ber/main/LICENSE"
+        },
         "version": "1.0"
     },
     "host": "localhost:8080",
@@ -61,6 +65,39 @@
                         "description": "error.code: internal_error",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/attendee/events/{eventID}/agenda/ws/ticket": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "attendee"
+                ],
+                "summary": "Issue short-lived JWT for agenda WebSocket (when Bearer header unavailable)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.AgendaStreamTicketSuccessResponse"
                         }
                     }
                 }
@@ -995,6 +1032,64 @@
                     },
                     "500": {
                         "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/events/{eventID}/agenda/ws/ticket": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Same ticket shape as attendee issuance; caller must be event owner or team member. Use when browser cannot send `Authorization` on WebSocket handshake (`GET /ws?ticket=...`).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Issue short-lived JWT for agenda WebSocket (organizer app)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.AgendaStreamTicketSuccessResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -3324,7 +3419,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Updates a session's title and/or description. Only the event owner can update. Optional fields omitted from body are unchanged. Requires authentication.",
+                "description": "Updates a session's title, description, and/or technical_difficulty. Only the event owner can update. Optional fields omitted from body are unchanged. Requires authentication.",
                 "consumes": [
                     "application/json"
                 ],
@@ -5478,6 +5573,56 @@
                 }
             }
         },
+        "/mobile/remote-config": {
+            "get": {
+                "description": "Returns minimum required and latest app versions/build numbers and store URLs for attendee/organizer apps. Clients should enforce forced update when their build number is below min_build.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mobile"
+                ],
+                "summary": "Get mobile remote configuration (minimum supported versions)",
+                "parameters": [
+                    {
+                        "enum": [
+                            "attendee",
+                            "organizer"
+                        ],
+                        "type": "string",
+                        "description": "Mobile app identifier",
+                        "name": "app",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "android",
+                            "ios"
+                        ],
+                        "type": "string",
+                        "description": "Client platform",
+                        "name": "platform",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.MobileRemoteConfigSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/sessions/{sessionID}": {
             "get": {
                 "security": [
@@ -5871,6 +6016,28 @@
                 }
             }
         },
+        "controllers.AgendaStreamTicketResponse": {
+            "type": "object",
+            "properties": {
+                "expires_at": {
+                    "type": "string"
+                },
+                "ticket": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.AgendaStreamTicketSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/controllers.AgendaStreamTicketResponse"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
         "controllers.AssignTierUsersRequest": {
             "type": "object",
             "properties": {
@@ -6127,6 +6294,9 @@
                     "items": {
                         "type": "string"
                     }
+                },
+                "technical_difficulty": {
+                    "type": "string"
                 },
                 "title": {
                     "type": "string"
@@ -6763,6 +6933,46 @@
                 }
             }
         },
+        "controllers.MobileRemoteConfigResponse": {
+            "type": "object",
+            "properties": {
+                "android_store_url": {
+                    "type": "string"
+                },
+                "app": {
+                    "type": "string"
+                },
+                "ios_store_url": {
+                    "type": "string"
+                },
+                "latest_build": {
+                    "type": "integer"
+                },
+                "latest_version": {
+                    "type": "string"
+                },
+                "min_build": {
+                    "type": "integer"
+                },
+                "min_version": {
+                    "type": "string"
+                },
+                "platform": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.MobileRemoteConfigSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/controllers.MobileRemoteConfigResponse"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
         "controllers.RegisterForEventByCodeRequest": {
             "type": "object",
             "properties": {
@@ -7041,6 +7251,9 @@
             "type": "object",
             "properties": {
                 "description": {
+                    "type": "string"
+                },
+                "technical_difficulty": {
                     "type": "string"
                 },
                 "title": {
@@ -7591,6 +7804,14 @@
                         "$ref": "#/definitions/domain.Tag"
                     }
                 },
+                "technical_difficulty": {
+                    "description": "TechnicalDifficulty indicates how technical the session content is (snake_case JSON values).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.SessionTechnicalDifficulty"
+                        }
+                    ]
+                },
                 "title": {
                     "type": "string"
                 },
@@ -7660,6 +7881,23 @@
                 "SessionStatusCompleted",
                 "SessionStatusDraft",
                 "SessionStatusCanceled"
+            ]
+        },
+        "domain.SessionTechnicalDifficulty": {
+            "type": "string",
+            "enum": [
+                "non_technical",
+                "beginner",
+                "intermediate",
+                "advanced",
+                "beginner"
+            ],
+            "x-enum-varnames": [
+                "SessionTechnicalDifficultyNonTechnical",
+                "SessionTechnicalDifficultyBeginner",
+                "SessionTechnicalDifficultyIntermediate",
+                "SessionTechnicalDifficultyAdvanced",
+                "DefaultSessionTechnicalDifficulty"
             ]
         },
         "domain.Speaker": {

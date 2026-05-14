@@ -51,11 +51,17 @@ import { useAddSessionSpeaker, useRemoveSessionSpeaker, useSessionSpeakers, useS
 import { useEventStore } from "@/store/eventStore"
 import {
   SESSION_STATUSES,
+  DEFAULT_SESSION_TECHNICAL_DIFFICULTY,
   type Room,
   type Session,
   type SessionStatus,
+  type SessionTechnicalDifficulty,
   type Speaker,
 } from "@/types/event"
+import {
+  formatSessionTechnicalDifficulty,
+  SESSION_TECHNICAL_DIFFICULTY_OPTIONS,
+} from "@/lib/sessionTechnicalDifficulty"
 import { useReturnNavigation } from "@/hooks/useReturnNavigation"
 import { makeNavigateFrom } from "@/lib/returnNavigation"
 import { cn } from "@/lib/utils"
@@ -192,6 +198,8 @@ export function SessionDetailPage(): React.ReactElement {
   const [isEditingContent, setIsEditingContent] = React.useState(false)
   const [editTitle, setEditTitle] = React.useState("")
   const [editDescription, setEditDescription] = React.useState("")
+  const [editTechnicalDifficulty, setEditTechnicalDifficulty] =
+    React.useState<SessionTechnicalDifficulty>(DEFAULT_SESSION_TECHNICAL_DIFFICULTY)
   const [isEditingStatus, setIsEditingStatus] = React.useState(false)
   const [editStatus, setEditStatus] = React.useState<SessionStatus>("Scheduled")
 
@@ -202,8 +210,11 @@ export function SessionDetailPage(): React.ReactElement {
   const startEditingContent = React.useCallback((s: Session) => {
     setEditTitle(s.title ?? "")
     setEditDescription(s.description ?? "")
+    setEditTechnicalDifficulty(
+      s.technical_difficulty ?? DEFAULT_SESSION_TECHNICAL_DIFFICULTY
+    )
     setIsEditingContent(true)
-  }, [setEditTitle, setEditDescription, setIsEditingContent])
+  }, [])
 
   const cancelEditingContent = React.useCallback(() => {
     setIsEditingContent(false)
@@ -211,14 +222,18 @@ export function SessionDetailPage(): React.ReactElement {
 
   const saveContent = React.useCallback(() => {
     updateContent.mutate(
-      { title: editTitle || undefined, description: editDescription || undefined },
+      {
+        title: editTitle || undefined,
+        description: editDescription || undefined,
+        technical_difficulty: editTechnicalDifficulty,
+      },
       {
         onSuccess: () => {
           setIsEditingContent(false)
         },
       }
     )
-  }, [editTitle, editDescription, updateContent])
+  }, [editTitle, editDescription, editTechnicalDifficulty, updateContent])
 
   const startEditingStatus = React.useCallback((s: Session) => {
     setEditStatus(s.status ?? "Scheduled")
@@ -863,7 +878,9 @@ export function SessionDetailPage(): React.ReactElement {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 gap-2">
           <div>
             <CardTitle className="text-base">Session content</CardTitle>
-            <CardDescription>Title and description. Only the event owner can edit.</CardDescription>
+            <CardDescription>
+              Title, description, and technical difficulty. Only the event owner can edit.
+            </CardDescription>
           </div>
           {!isEditingContent ? (
             <Button variant="outline" size="sm" onClick={() => startEditingContent(session)}>
@@ -898,6 +915,26 @@ export function SessionDetailPage(): React.ReactElement {
                   )}
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="session-technical-difficulty">Technical difficulty</Label>
+                <Select
+                  value={editTechnicalDifficulty}
+                  onValueChange={(v) =>
+                    setEditTechnicalDifficulty(v as SessionTechnicalDifficulty)
+                  }
+                >
+                  <SelectTrigger id="session-technical-difficulty" className="w-full max-w-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SESSION_TECHNICAL_DIFFICULTY_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex gap-2">
                 <Button
                   size="sm"
@@ -931,6 +968,12 @@ export function SessionDetailPage(): React.ReactElement {
                 <dt className="font-medium text-muted-foreground">Description</dt>
                 <dd className="mt-0.5 whitespace-pre-wrap">
                   {session.description ?? "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-muted-foreground">Technical difficulty</dt>
+                <dd className="mt-0.5">
+                  {formatSessionTechnicalDifficulty(session.technical_difficulty)}
                 </dd>
               </div>
             </dl>
