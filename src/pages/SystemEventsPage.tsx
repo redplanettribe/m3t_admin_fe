@@ -2,6 +2,7 @@ import * as React from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { ChevronDown, ChevronRight, Loader2, Search, X } from "lucide-react"
 import { AdminEventDetailSheet } from "@/components/AdminEventDetailSheet"
+import { AdminEventTimelineChart } from "@/components/AdminEventTimelineChart"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -21,9 +22,14 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { fetchAdminEventDetail } from "@/hooks/useAdminEventDetail"
+import { useAdminEventTimeline } from "@/hooks/useAdminEventTimeline"
 import { useAdminEvents } from "@/hooks/useAdminEvents"
 import { ApiError } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
+import {
+  aggregateTimelineBuckets,
+  formatTimelineRangeLabel,
+} from "@/lib/adminEventTimeline"
 import {
   EVENT_DISPLAY_STATUS_LABELS,
   HAS_OWNER_ALL,
@@ -40,7 +46,12 @@ import {
 } from "@/lib/adminEventFilters"
 import { formatDateOnly, formatDateTime } from "@/lib/formatDate"
 import { cn } from "@/lib/utils"
-import type { AdminEventListItem, AdminEventOwner, ListAdminEventsParams } from "@/types/admin"
+import type {
+  AdminEventListItem,
+  AdminEventOwner,
+  AdminEventTimelineParams,
+  ListAdminEventsParams,
+} from "@/types/admin"
 
 const SEARCH_DEBOUNCE_MS = 300
 const DEFAULT_PAGE_SIZE = 20
@@ -346,6 +357,38 @@ export function SystemEventsPage(): React.ReactElement {
     createdTo,
   ])
 
+  const timelineParams = React.useMemo((): AdminEventTimelineParams => {
+    const params: AdminEventTimelineParams = {
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      granularity: "day",
+    }
+    if (status !== STATUS_ALL) {
+      params.status = status as AdminEventTimelineParams["status"]
+    }
+    if (startDateFrom.trim()) params.from = startDateFrom.trim()
+    if (startDateTo.trim()) params.to = startDateTo.trim()
+    return params
+  }, [status, startDateFrom, startDateTo])
+
+  const {
+    data: timelineData,
+    isLoading: timelineLoading,
+    isError: timelineError,
+    error: timelineErrorObj,
+    refetch: refetchTimeline,
+  } = useAdminEventTimeline(timelineParams)
+
+  const chartPoints = React.useMemo(
+    () => aggregateTimelineBuckets(timelineData?.buckets ?? []),
+    [timelineData]
+  )
+
+  const timelineRangeLabel = formatTimelineRangeLabel(
+    timelineData,
+    startDateFrom.trim() || undefined,
+    startDateTo.trim() || undefined
+  )
+
   const { data, isLoading, isError, error, refetch, isFetching } = useAdminEvents(queryParams)
 
   const items = data?.items ?? []
@@ -446,6 +489,15 @@ export function SystemEventsPage(): React.ReactElement {
           Explore, filter, and sort all events on the platform.
         </p>
       </div>
+
+      <AdminEventTimelineChart
+        data={chartPoints}
+        isLoading={timelineLoading}
+        isError={timelineError}
+        error={timelineErrorObj}
+        rangeLabel={timelineRangeLabel}
+        onRetry={() => void refetchTimeline()}
+      />
 
       <section className="space-y-3">
         <Card className="py-0 gap-0">

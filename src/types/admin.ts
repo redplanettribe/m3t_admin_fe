@@ -84,3 +84,35 @@ export interface AdminEventDetail {
   rooms: RoomWithSessions[]
   unscheduled_sessions: Session[]
 }
+
+export interface AdminEventTimelineItem {
+  id?: string
+  title?: string
+  status?: string
+  registration_count?: number
+  check_in_count?: number
+  invitation_sent_count?: number
+}
+
+export interface AdminEventTimelineBucket {
+  bucket_start?: string
+  events?: AdminEventTimelineItem[]
+}
+
+export type AdminEventTimelineGranularity = "day"
+
+export interface AdminEventTimelineParams {
+  from?: string
+  to?: string
+  timezone?: string
+  granularity?: AdminEventTimelineGranularity
+  status?: AdminEventsStatus
+}
+
+export interface AdminEventTimelineResult {
+  buckets?: AdminEventTimelineBucket[]
+  from?: string
+  to?: string
+  granularity?: string
+  timezone?: string
+}

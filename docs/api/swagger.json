@@ -148,6 +148,87 @@
                 }
             }
         },
+        "/admin/events/timeline": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns time-bucketed events (by start calendar day, multi-day events repeat each day) with registration, check-in, and sent-invitation counts. Requires system_admin role.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Event timeline for platform admin",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Range start (YYYY-MM-DD, inclusive)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Range end (YYYY-MM-DD, inclusive)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "IANA timezone (default UTC)",
+                        "name": "timezone",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bucket size: day (default). week and month are not yet supported.",
+                        "name": "granularity",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter events: active, past, or all (default all)",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data contains buckets",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.GetAdminEventTimelineSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: invalid_query_param",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/events/{eventID}": {
             "get": {
                 "security": [
@@ -6326,6 +6407,43 @@
                 }
             }
         },
+        "controllers.AdminEventTimelineBucketResponse": {
+            "type": "object",
+            "properties": {
+                "bucket_start": {
+                    "type": "string"
+                },
+                "events": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/controllers.AdminEventTimelineItemResponse"
+                    }
+                }
+            }
+        },
+        "controllers.AdminEventTimelineItemResponse": {
+            "type": "object",
+            "properties": {
+                "check_in_count": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "invitation_sent_count": {
+                    "type": "integer"
+                },
+                "registration_count": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
         "controllers.AdminPingResponse": {
             "type": "object",
             "properties": {
@@ -6830,6 +6948,40 @@
             "properties": {
                 "data": {
                     "$ref": "#/definitions/controllers.GetAdminEventDetailResponse"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
+        "controllers.GetAdminEventTimelineResponse": {
+            "type": "object",
+            "properties": {
+                "buckets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/controllers.AdminEventTimelineBucketResponse"
+                    }
+                },
+                "from": {
+                    "type": "string"
+                },
+                "granularity": {
+                    "type": "string"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "to": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.GetAdminEventTimelineSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/controllers.GetAdminEventTimelineResponse"
                 },
                 "error": {
                     "$ref": "#/definitions/helpers.APIError"

@@ -1,4 +1,4 @@
-import type { ListAdminEventsParams } from "@/types/admin"
+import type { AdminEventTimelineParams, ListAdminEventsParams } from "@/types/admin"
 
 /**
  * Central TanStack Query key factory.
@@ -9,6 +9,8 @@ export const queryKeys = {
   admin: {
     ping: ["admin", "ping"] as const,
     events: (params: ListAdminEventsParams) => ["admin", "events", params] as const,
+    eventTimeline: (params: AdminEventTimelineParams) =>
+      ["admin", "events", "timeline", params] as const,
     eventDetail: (eventId: string) => ["admin", "events", eventId] as const,
   },
   auth: {
