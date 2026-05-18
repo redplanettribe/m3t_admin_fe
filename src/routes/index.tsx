@@ -24,6 +24,7 @@ import { DeliverablesPage } from "@/pages/DeliverablesPage"
 import { LiveDashboardPage } from "@/pages/LiveDashboardPage"
 import { LiveRedirectPage } from "@/pages/LiveRedirectPage"
 import { SystemAdminPage } from "@/pages/SystemAdminPage"
+import { SystemEventsPage } from "@/pages/SystemEventsPage"
 
 const routes: RouteObject[] = [
   {
@@ -131,6 +132,10 @@ const routes: RouteObject[] = [
       {
         index: true,
         element: <SystemAdminPage />,
+      },
+      {
+        path: "events",
+        element: <SystemEventsPage />,
       },
     ],
   },

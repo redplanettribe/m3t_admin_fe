@@ -1,3 +1,5 @@
+import type { ListAdminEventsParams } from "@/types/admin"
+
 /**
  * Central TanStack Query key factory.
  * Use a factory pattern for list/detail keys, e.g.:
@@ -6,6 +8,7 @@
 export const queryKeys = {
   admin: {
     ping: ["admin", "ping"] as const,
+    events: (params: ListAdminEventsParams) => ["admin", "events", params] as const,
   },
   auth: {
     requestLoginCode: ["auth", "requestLoginCode"] as const,

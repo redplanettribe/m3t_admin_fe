@@ -1,4 +1,7 @@
 import * as React from "react"
+import { Link } from "react-router-dom"
+import { CalendarDays } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 export function SystemAdminPage(): React.ReactElement {
   return (
@@ -11,11 +14,17 @@ export function SystemAdminPage(): React.ReactElement {
         visit by the server.
       </p>
 
-      <section className="space-y-2 rounded-lg border p-4">
+      <section className="space-y-3 rounded-lg border p-4">
         <h3 className="font-medium">Platform tools</h3>
         <p className="text-sm text-muted-foreground">
-          Additional system administration features will appear here.
+          Browse and filter all events across the platform.
         </p>
+        <Button variant="outline" asChild>
+          <Link to="/system/events">
+            <CalendarDays className="size-4" />
+            Explore events
+          </Link>
+        </Button>
       </section>
     </div>
   )

@@ -13,6 +13,141 @@
     "host": "localhost:8080",
     "basePath": "/",
     "paths": {
+        "/admin/events": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a paginated cross-tenant list of events with optional filters and sorting. Requires system_admin role.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List all events (platform admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by status: active, past, or all (default all)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Case-insensitive search on event name, event_code, or description",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Case-insensitive search on owner email, name, or last_name",
+                        "name": "owner_search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by exact owner UUID",
+                        "name": "owner_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by exact event code (lowercase)",
+                        "name": "event_code",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "true: owner_id set; false: no owner",
+                        "name": "has_owner",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Event start_date from (YYYY-MM-DD, inclusive)",
+                        "name": "start_date_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Event start_date to (YYYY-MM-DD, inclusive)",
+                        "name": "start_date_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "created_at from (RFC3339 or YYYY-MM-DD)",
+                        "name": "created_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "created_at to (RFC3339 or YYYY-MM-DD)",
+                        "name": "created_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: created_at (default), updated_at, start_date, end_date, name, event_code, owner_email",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort order: asc or desc (default desc)",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size (default 20, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data contains items and pagination",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.ListAdminEventsSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: invalid_query_param",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/ping": {
             "get": {
                 "security": [
@@ -6059,6 +6194,34 @@
                 }
             }
         },
+        "controllers.AdminEventListItemResponse": {
+            "type": "object",
+            "properties": {
+                "event": {
+                    "$ref": "#/definitions/domain.Event"
+                },
+                "owner": {
+                    "$ref": "#/definitions/controllers.AdminEventOwnerResponse"
+                }
+            }
+        },
+        "controllers.AdminEventOwnerResponse": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "controllers.AdminPingResponse": {
             "type": "object",
             "properties": {
@@ -6685,6 +6848,31 @@
             "properties": {
                 "data": {
                     "$ref": "#/definitions/controllers.ImportSessionizeResponse"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
+        "controllers.ListAdminEventsResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/controllers.AdminEventListItemResponse"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/helpers.PaginationMeta"
+                }
+            }
+        },
+        "controllers.ListAdminEventsSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/controllers.ListAdminEventsResponse"
                 },
                 "error": {
                     "$ref": "#/definitions/helpers.APIError"

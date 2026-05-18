@@ -1,6 +1,6 @@
 import * as React from "react"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
-import { ArrowLeft, LayoutDashboard, Shield } from "lucide-react"
+import { ArrowLeft, CalendarDays, LayoutDashboard, Shield } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Sidebar,
@@ -43,6 +43,11 @@ const systemNavMain: SystemNavItem[] = [
     icon: LayoutDashboard,
     end: true,
   },
+  {
+    title: "Events",
+    url: "/system/events",
+    icon: CalendarDays,
+  },
 ]
 
 function SystemAdminLayoutInner(): React.ReactElement {
@@ -58,7 +63,7 @@ function SystemAdminLayoutInner(): React.ReactElement {
           <div className="flex items-center gap-2 px-2 py-1 group-data-[collapsible=icon]:justify-center">
             <Shield className="size-5 shrink-0 text-primary" aria-hidden />
             <span className="font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
-              Platform
+              Platform Admin
             </span>
           </div>
         </SidebarHeader>
