@@ -148,6 +148,70 @@
                 }
             }
         },
+        "/admin/events/{eventID}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns cross-tenant event detail including schedule, owner, attendee counts, team, deliverables, and tiers. Requires system_admin role.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Get full event details (platform admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data contains full event detail",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.GetAdminEventDetailSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: invalid_query_param",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: event_not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/ping": {
             "get": {
                 "security": [
@@ -6194,6 +6258,35 @@
                 }
             }
         },
+        "controllers.AdminEventDeliverableResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "delivered_count": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "event_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "repeatable": {
+                    "type": "boolean"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "controllers.AdminEventListItemResponse": {
             "type": "object",
             "properties": {
@@ -6219,6 +6312,17 @@
                 },
                 "name": {
                     "type": "string"
+                }
+            }
+        },
+        "controllers.AdminEventStatsResponse": {
+            "type": "object",
+            "properties": {
+                "checked_in_count": {
+                    "type": "integer"
+                },
+                "registration_count": {
+                    "type": "integer"
                 }
             }
         },
@@ -6671,6 +6775,61 @@
             "properties": {
                 "data": {
                     "$ref": "#/definitions/controllers.EventStatusStreamTicketResponse"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
+        "controllers.GetAdminEventDetailResponse": {
+            "type": "object",
+            "properties": {
+                "deliverables": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/controllers.AdminEventDeliverableResponse"
+                    }
+                },
+                "event": {
+                    "$ref": "#/definitions/domain.Event"
+                },
+                "owner": {
+                    "$ref": "#/definitions/controllers.AdminEventOwnerResponse"
+                },
+                "rooms": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.RoomWithSessions"
+                    }
+                },
+                "stats": {
+                    "$ref": "#/definitions/controllers.AdminEventStatsResponse"
+                },
+                "team_members": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.EventTeamMember"
+                    }
+                },
+                "tiers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.EventTier"
+                    }
+                },
+                "unscheduled_sessions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Session"
+                    }
+                }
+            }
+        },
+        "controllers.GetAdminEventDetailSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/controllers.GetAdminEventDetailResponse"
                 },
                 "error": {
                     "$ref": "#/definitions/helpers.APIError"

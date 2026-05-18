@@ -1,5 +1,7 @@
 import * as React from "react"
-import { ChevronDown, Loader2, Search, X } from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
+import { ChevronDown, ChevronRight, Loader2, Search, X } from "lucide-react"
+import { AdminEventDetailSheet } from "@/components/AdminEventDetailSheet"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -18,8 +20,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { fetchAdminEventDetail } from "@/hooks/useAdminEventDetail"
 import { useAdminEvents } from "@/hooks/useAdminEvents"
 import { ApiError } from "@/lib/api"
+import { queryKeys } from "@/lib/queryKeys"
 import {
   EVENT_DISPLAY_STATUS_LABELS,
   HAS_OWNER_ALL,
@@ -141,12 +145,34 @@ function OwnerCell({ owner }: { owner?: AdminEventOwner | null }): React.ReactEl
   )
 }
 
-function EventRow({ item }: { item: AdminEventListItem }): React.ReactElement {
+function EventRow({
+  item,
+  onSelect,
+  onPrefetch,
+}: {
+  item: AdminEventListItem
+  onSelect: (eventId: string) => void
+  onPrefetch?: (eventId: string) => void
+}): React.ReactElement {
   const { event, owner } = item
   const displayStatus = getEventDisplayStatus(event)
+  const detailLabel = `View details for ${event.name ?? event.event_code ?? "event"}`
 
   return (
-    <tr className="border-b last:border-0">
+    <tr
+      className="border-b last:border-0 cursor-pointer hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
+      role="button"
+      tabIndex={0}
+      aria-label={detailLabel}
+      onClick={() => onSelect(event.id)}
+      onMouseEnter={() => onPrefetch?.(event.id)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          onSelect(event.id)
+        }
+      }}
+    >
       <td className="px-4 py-2">
         <div className="min-w-0 max-w-[14rem]">
           <p className="font-medium truncate text-sm">{event.name ?? "—"}</p>
@@ -173,6 +199,9 @@ function EventRow({ item }: { item: AdminEventListItem }): React.ReactElement {
       </td>
       <td className="px-4 py-2 text-muted-foreground whitespace-nowrap tabular-nums hidden lg:table-cell">
         {formatDateTime(event.updated_at)}
+      </td>
+      <td className="px-2 py-2 w-10 text-muted-foreground">
+        <ChevronRight className="size-4 mx-auto" aria-hidden />
       </td>
     </tr>
   )
@@ -204,6 +233,8 @@ function getInitialAdvancedOpen(state: FilterState): boolean {
 }
 
 export function SystemEventsPage(): React.ReactElement {
+  const queryClient = useQueryClient()
+  const [selectedEventId, setSelectedEventId] = React.useState<string | null>(null)
   const [page, setPage] = React.useState(1)
   const [pageSize, setPageSize] = React.useState(DEFAULT_PAGE_SIZE)
   const [searchInput, setSearchInput] = React.useState("")
@@ -318,6 +349,18 @@ export function SystemEventsPage(): React.ReactElement {
   const { data, isLoading, isError, error, refetch, isFetching } = useAdminEvents(queryParams)
 
   const items = data?.items ?? []
+  const selectedPreview =
+    items.find((item) => item.event.id === selectedEventId) ?? null
+
+  const prefetchEventDetail = React.useCallback(
+    (eventId: string) => {
+      void queryClient.prefetchQuery({
+        queryKey: queryKeys.admin.eventDetail(eventId),
+        queryFn: () => fetchAdminEventDetail(eventId),
+      })
+    },
+    [queryClient]
+  )
   const pagination = data?.pagination
   const total = pagination?.total ?? 0
   const canGoPrev = page > 1
@@ -695,12 +738,15 @@ export function SystemEventsPage(): React.ReactElement {
                     >
                       Updated
                     </th>
+                    <th scope="col" className="h-9 w-10 px-2">
+                      <span className="sr-only">View details</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className={cn(isFetching && "opacity-60 pointer-events-none")}>
                   {items.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center">
+                      <td colSpan={8} className="px-4 py-8 text-center">
                         <p className="text-muted-foreground">
                           {filtersActive
                             ? "No events match the current filters."
@@ -720,7 +766,14 @@ export function SystemEventsPage(): React.ReactElement {
                       </td>
                     </tr>
                   ) : (
-                    items.map((item) => <EventRow key={item.event.id} item={item} />)
+                    items.map((item) => (
+                      <EventRow
+                        key={item.event.id}
+                        item={item}
+                        onSelect={setSelectedEventId}
+                        onPrefetch={prefetchEventDetail}
+                      />
+                    ))
                   )}
                 </tbody>
               </table>
@@ -780,6 +833,15 @@ export function SystemEventsPage(): React.ReactElement {
           </Card>
         )}
       </section>
+
+      <AdminEventDetailSheet
+        eventId={selectedEventId}
+        preview={selectedPreview}
+        open={selectedEventId != null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedEventId(null)
+        }}
+      />
     </div>
   )
 }

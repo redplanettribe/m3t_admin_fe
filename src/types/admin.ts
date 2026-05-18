@@ -1,4 +1,11 @@
-import type { Event, PaginationMeta } from "@/types/event"
+import type {
+  Event,
+  EventTeamMember,
+  EventTier,
+  PaginationMeta,
+  RoomWithSessions,
+  Session,
+} from "@/types/event"
 
 export interface AdminPingResponse {
   ok: boolean
@@ -49,4 +56,31 @@ export interface ListAdminEventsParams {
   order?: AdminEventsOrder
   page?: number
   page_size?: number
+}
+
+export interface AdminEventStats {
+  registration_count?: number
+  checked_in_count?: number
+}
+
+export interface AdminEventDeliverable {
+  id: string
+  event_id?: string
+  name?: string
+  description?: string
+  repeatable?: boolean
+  delivered_count?: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface AdminEventDetail {
+  event: Event
+  owner?: AdminEventOwner | null
+  stats?: AdminEventStats | null
+  team_members: EventTeamMember[]
+  tiers: EventTier[]
+  deliverables: AdminEventDeliverable[]
+  rooms: RoomWithSessions[]
+  unscheduled_sessions: Session[]
 }

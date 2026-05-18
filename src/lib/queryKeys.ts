@@ -9,6 +9,7 @@ export const queryKeys = {
   admin: {
     ping: ["admin", "ping"] as const,
     events: (params: ListAdminEventsParams) => ["admin", "events", params] as const,
+    eventDetail: (eventId: string) => ["admin", "events", eventId] as const,
   },
   auth: {
     requestLoginCode: ["auth", "requestLoginCode"] as const,
