@@ -1,7 +1,9 @@
 import { createBrowserRouter, type RouteObject } from "react-router-dom"
 import { AppLayout } from "@/components/AppLayout"
+import { SystemAdminLayout } from "@/components/SystemAdminLayout"
 import { AuthLayout } from "@/components/AuthLayout"
 import { RequireAuth } from "@/components/RequireAuth"
+import { RequireSystemAdmin } from "@/components/RequireSystemAdmin"
 import { AccountPage } from "@/pages/AccountPage"
 import { HomePage } from "@/pages/HomePage"
 import { EventsPage } from "@/pages/EventsPage"
@@ -21,6 +23,7 @@ import { TiersPage } from "@/pages/TiersPage"
 import { DeliverablesPage } from "@/pages/DeliverablesPage"
 import { LiveDashboardPage } from "@/pages/LiveDashboardPage"
 import { LiveRedirectPage } from "@/pages/LiveRedirectPage"
+import { SystemAdminPage } from "@/pages/SystemAdminPage"
 
 const routes: RouteObject[] = [
   {
@@ -112,6 +115,22 @@ const routes: RouteObject[] = [
       {
         path: "settings",
         element: <SettingsPage />,
+      },
+    ],
+  },
+  {
+    path: "/system",
+    element: (
+      <RequireAuth>
+        <RequireSystemAdmin>
+          <SystemAdminLayout />
+        </RequireSystemAdmin>
+      </RequireAuth>
+    ),
+    children: [
+      {
+        index: true,
+        element: <SystemAdminPage />,
       },
     ],
   },

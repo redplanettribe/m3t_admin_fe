@@ -1,0 +1,49 @@
+---
+description: "System admin (/system) authorization — server-verified via GET /admin/ping"
+globs:
+  - "src/components/RequireSystemAdmin.tsx"
+  - "src/components/SystemAdminLayout.tsx"
+  - "src/hooks/useAdminPing.ts"
+  - "src/types/admin.ts"
+  - "src/pages/SystemAdmin*.tsx"
+  - "src/pages/system/**/*.tsx"
+  - "src/routes/index.tsx"
+alwaysApply: false
+---
+
+# System admin authorization
+
+## Scope
+
+Routes under `/system/*` are **platform** administration for users with the backend `system_admin` role. They are separate from event-scoped pages under `/` (schedule, sessions, settings, etc.).
+
+## Verification (required)
+
+- Authorization is proven only by **`GET /admin/ping`** with the Bearer token from `useUserStore`.
+- Treat access as granted only when the response body has **`data.ok === true`** (see `controllers.AdminPingResponse` in [docs/api/swagger.json](docs/api/swagger.json)).
+- **401** → unauthenticated (redirect to `/login`).
+- **403** or any other failure → deny (fail closed; redirect `/`).
+
+## Route guard
+
+- All system admin pages must live under the `/system` route branch in [src/routes/index.tsx](src/routes/index.tsx), wrapped by **`RequireAuth` → `RequireSystemAdmin` → `SystemAdminLayout`** (not `AppLayout`).
+- Use [SystemAdminLayout](src/components/SystemAdminLayout.tsx) for platform UI: dedicated sidebar, no event selector. Add nav items in `systemNavMain` there, not in `AppLayout`.
+- Never add platform-admin pages as children of the unguarded `/` tree.
+- Do not duplicate `RequireSystemAdmin` on every child route unless introducing a nested layout that needs its own guard boundary.
+
+## Hooks and cache
+
+- Use **`useAdminPing()`** and **`queryKeys.admin.ping`** for the ping query.
+- Do **not** persist “is system admin” in Zustand, localStorage, or JWT-derived flags.
+- Ping query: `staleTime: 0`, `refetchOnMount: "always"`, no retry on 401/403.
+- New `/admin/*` API hooks: types from swagger, keys under `queryKeys.admin.*`, `apiClient` in `src/hooks/`. Server still enforces role on every call.
+
+## Forbidden
+
+- Do **not** gate routes or UI on `user.role`, JWT `roles`, or client-only checks.
+- Do **not** skip the route guard because the sidebar hides the System link (nav is UX only).
+- Do **not** assume login success implies system admin access.
+
+## Fail closed
+
+On ping error, non-ok body, 403, or network failure after retries: deny access (redirect `/`). On 401: redirect `/login`.

@@ -12,6 +12,7 @@ import {
   Mic2,
   Package,
   Settings,
+  Shield,
   UserPlus,
   Users,
 } from "lucide-react"
@@ -54,6 +55,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useQueryClient } from "@tanstack/react-query"
+import { useAdminPing } from "@/hooks/useAdminPing"
 import { useEventsMe } from "@/hooks/useEvents"
 import { queryKeys } from "@/lib/queryKeys"
 import { getDisplayName, getInitials } from "@/lib/user"
@@ -136,8 +138,19 @@ function AppLayoutInner(): React.ReactElement {
   const setActiveEventId = useEventStore((s) => s.setActiveEventId)
   const queryClient = useQueryClient()
   const { data: events = [], isLoading, isError } = useEventsMe()
+  const { data: adminPing, isSuccess: isAdminPingSuccess } = useAdminPing()
   const { state, isMobile } = useSidebar()
   const [createEventOpen, setCreateEventOpen] = useState(false)
+
+  const navItems = React.useMemo((): NavItem[] => {
+    if (isAdminPingSuccess && adminPing?.ok) {
+      return [
+        ...navMain,
+        { title: "System", url: "/system", icon: Shield },
+      ]
+    }
+    return navMain
+  }, [isAdminPingSuccess, adminPing?.ok])
 
   const handleEventSelect = (value: string) => {
     if (value === CREATE_NEW_EVENT_VALUE) {
@@ -162,9 +175,12 @@ function AppLayoutInner(): React.ReactElement {
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
-                {navMain.map((item) => {
+                {navItems.map((item) => {
                     const subItems = "items" in item ? item.items : undefined
-                    const isDisabled = !activeEventId && item.url !== "/"
+                    const isDisabled =
+                      !activeEventId &&
+                      item.url !== "/" &&
+                      item.url !== "/system"
                     return subItems ? (
                       <Collapsible
                         key={item.title}

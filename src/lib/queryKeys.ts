@@ -4,6 +4,9 @@
  *   events: { list: ['events'], detail: (id) => ['events', id] }
  */
 export const queryKeys = {
+  admin: {
+    ping: ["admin", "ping"] as const,
+  },
   auth: {
     requestLoginCode: ["auth", "requestLoginCode"] as const,
     verifyLoginCode: ["auth", "verifyLoginCode"] as const,

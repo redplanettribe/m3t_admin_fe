@@ -13,6 +13,49 @@
     "host": "localhost:8080",
     "basePath": "/",
     "paths": {
+        "/admin/ping": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns ok when the caller is authenticated and has the system_admin role. Used to verify platform-admin access.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Ping for system admin authorization",
+                "responses": {
+                    "200": {
+                        "description": "data.ok is true",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.AdminPingSuccessResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized | missing_authorization_header | invalid_or_expired_token",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/attendee/events": {
             "get": {
                 "security": [
@@ -6013,6 +6056,25 @@
             "properties": {
                 "tier_id": {
                     "type": "string"
+                }
+            }
+        },
+        "controllers.AdminPingResponse": {
+            "type": "object",
+            "properties": {
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "controllers.AdminPingSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/controllers.AdminPingResponse"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
                 }
             }
         },
