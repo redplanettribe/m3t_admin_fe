@@ -25,7 +25,30 @@ import {
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
-const SIDEBAR_WIDTH = "16rem"
+const SIDEBAR_WIDTH_STORAGE_KEY = "sidebar_width_px"
+const SIDEBAR_WIDTH_DEFAULT_PX = 256
+const SIDEBAR_WIDTH_MIN_PX = 192
+const SIDEBAR_WIDTH_MAX_PX = 480
+const SIDEBAR_RESIZE_DRAG_THRESHOLD_PX = 3
+
+function getSidebarWidthFromStorage(defaultPx: number): number {
+  if (typeof localStorage === "undefined") return defaultPx
+  const stored = localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY)
+  if (!stored) return defaultPx
+  const parsed = Number.parseInt(stored, 10)
+  if (Number.isNaN(parsed)) return defaultPx
+  return Math.min(
+    SIDEBAR_WIDTH_MAX_PX,
+    Math.max(SIDEBAR_WIDTH_MIN_PX, parsed)
+  )
+}
+
+function clampSidebarWidth(widthPx: number): number {
+  return Math.min(
+    SIDEBAR_WIDTH_MAX_PX,
+    Math.max(SIDEBAR_WIDTH_MIN_PX, widthPx)
+  )
+}
 
 function getSidebarOpenFromCookie(
   defaultOpen: boolean,
@@ -53,6 +76,10 @@ type SidebarContextProps = {
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
   toggleSidebar: () => void
+  widthPx: number
+  setWidthPx: (widthPx: number) => void
+  isResizing: boolean
+  setIsResizing: (isResizing: boolean) => void
 }
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
@@ -81,6 +108,16 @@ function SidebarProvider({
 }) {
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
+  const [widthPx, setWidthPxState] = React.useState(() =>
+    getSidebarWidthFromStorage(SIDEBAR_WIDTH_DEFAULT_PX)
+  )
+  const [isResizing, setIsResizing] = React.useState(false)
+
+  const setWidthPx = React.useCallback((nextWidthPx: number) => {
+    const clampedWidth = clampSidebarWidth(nextWidthPx)
+    setWidthPxState(clampedWidth)
+    localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(clampedWidth))
+  }, [])
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -138,8 +175,24 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
+      widthPx,
+      setWidthPx,
+      isResizing,
+      setIsResizing,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+    [
+      state,
+      open,
+      setOpen,
+      isMobile,
+      openMobile,
+      setOpenMobile,
+      toggleSidebar,
+      widthPx,
+      setWidthPx,
+      isResizing,
+      setIsResizing,
+    ]
   )
 
   return (
@@ -147,15 +200,17 @@ function SidebarProvider({
       <TooltipProvider delayDuration={0}>
         <div
           data-slot="sidebar-wrapper"
+          data-resizing={isResizing ? "" : undefined}
           style={
             {
-              "--sidebar-width": SIDEBAR_WIDTH,
+              "--sidebar-width": `${widthPx}px`,
               "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
               ...style,
             } as React.CSSProperties
           }
           className={cn(
             "group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full",
+            "data-[resizing]:[&_[data-slot=sidebar-gap]]:transition-none data-[resizing]:[&_[data-slot=sidebar-container]]:transition-none",
             className
           )}
           {...props}
@@ -296,16 +351,90 @@ function SidebarTrigger({
 }
 
 function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
-  const { toggleSidebar } = useSidebar()
+  const {
+    toggleSidebar,
+    state,
+    isMobile,
+    widthPx,
+    setWidthPx,
+    setIsResizing,
+  } = useSidebar()
+  const dragStateRef = React.useRef<{
+    pointerId: number
+    startX: number
+    startWidth: number
+    hasDragged: boolean
+  } | null>(null)
+
+  const resetDragState = React.useCallback(() => {
+    dragStateRef.current = null
+    setIsResizing(false)
+    document.body.style.removeProperty("cursor")
+    document.body.style.removeProperty("user-select")
+  }, [setIsResizing])
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (isMobile || state !== "expanded") return
+
+    dragStateRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startWidth: widthPx,
+      hasDragged: false,
+    }
+    event.currentTarget.setPointerCapture(event.pointerId)
+    setIsResizing(true)
+    document.body.style.cursor = "col-resize"
+    document.body.style.userSelect = "none"
+  }
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const dragState = dragStateRef.current
+    if (!dragState || dragState.pointerId !== event.pointerId) return
+
+    const deltaX = event.clientX - dragState.startX
+    if (Math.abs(deltaX) >= SIDEBAR_RESIZE_DRAG_THRESHOLD_PX) {
+      dragState.hasDragged = true
+    }
+
+    setWidthPx(dragState.startWidth + deltaX)
+  }
+
+  const handlePointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const dragState = dragStateRef.current
+    if (!dragState || dragState.pointerId !== event.pointerId) return
+
+    event.currentTarget.releasePointerCapture(event.pointerId)
+
+    const didDrag = dragState.hasDragged
+    resetDragState()
+
+    if (!didDrag) {
+      toggleSidebar()
+    }
+  }
+
+  const handlePointerCancel = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const dragState = dragStateRef.current
+    if (!dragState || dragState.pointerId !== event.pointerId) return
+
+    event.currentTarget.releasePointerCapture(event.pointerId)
+    resetDragState()
+  }
 
   return (
     <button
+      type="button"
       data-sidebar="rail"
       data-slot="sidebar-rail"
-      aria-label="Toggle Sidebar"
+      aria-label="Resize sidebar"
       tabIndex={-1}
-      onClick={toggleSidebar}
-      title="Toggle Sidebar"
+      title="Drag to resize sidebar"
+      onClick={state === "expanded" && !isMobile ? undefined : toggleSidebar}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
       className={cn(
         "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex",
         "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
