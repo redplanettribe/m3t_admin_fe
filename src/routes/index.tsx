@@ -23,8 +23,10 @@ import { TiersPage } from "@/pages/TiersPage"
 import { DeliverablesPage } from "@/pages/DeliverablesPage"
 import { LiveDashboardPage } from "@/pages/LiveDashboardPage"
 import { LiveRedirectPage } from "@/pages/LiveRedirectPage"
+import { AnalyticsPage } from "@/pages/AnalyticsPage"
 import { SystemAdminPage } from "@/pages/SystemAdminPage"
 import { SystemEventsPage } from "@/pages/SystemEventsPage"
+import { RequireEventNotEnded } from "@/components/RequireEventNotEnded"
 
 const routes: RouteObject[] = [
   {
@@ -110,8 +112,16 @@ const routes: RouteObject[] = [
         element: <LiveRedirectPage />,
       },
       {
+        path: "analytics",
+        element: <AnalyticsPage />,
+      },
+      {
         path: "events/:eventId/live",
-        element: <LiveDashboardPage />,
+        element: (
+          <RequireEventNotEnded>
+            <LiveDashboardPage />
+          </RequireEventNotEnded>
+        ),
       },
       {
         path: "settings",

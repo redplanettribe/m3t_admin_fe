@@ -3,6 +3,7 @@ import { useState } from "react"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
 import {
   Activity,
+  BarChart3,
   CalendarDays,
   ChevronRight,
   Clapperboard,
@@ -57,6 +58,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query"
 import { useAdminPing } from "@/hooks/useAdminPing"
 import { useEventsMe } from "@/hooks/useEvents"
+import { isEventEnded } from "@/lib/adminEventFilters"
 import { queryKeys } from "@/lib/queryKeys"
 import { getDisplayName, getInitials } from "@/lib/user"
 import { useEventStore } from "@/store/eventStore"
@@ -81,6 +83,11 @@ const navMain: NavItem[] = [
     title: "Live",
     url: "/live",
     icon: Activity,
+  },
+  {
+    title: "Analytics",
+    url: "/analytics",
+    icon: BarChart3,
   },
   {
     title: "Schedule",
@@ -143,14 +150,21 @@ function AppLayoutInner(): React.ReactElement {
   const [createEventOpen, setCreateEventOpen] = useState(false)
 
   const navItems = React.useMemo((): NavItem[] => {
+    const activeEvent = activeEventId ? events.find((e) => e.id === activeEventId) : undefined
+    const ended = activeEvent ? isEventEnded(activeEvent) : false
+
+    const baseNav = ended
+      ? navMain.filter((item) => item.url !== "/live")
+      : navMain.filter((item) => item.url !== "/analytics")
+
     if (isAdminPingSuccess && adminPing?.ok) {
       return [
-        ...navMain,
+        ...baseNav,
         { title: "System", url: "/system", icon: Shield },
       ]
     }
-    return navMain
-  }, [isAdminPingSuccess, adminPing?.ok])
+    return baseNav
+  }, [activeEventId, adminPing?.ok, events, isAdminPingSuccess])
 
   const handleEventSelect = (value: string) => {
     if (value === CREATE_NEW_EVENT_VALUE) {

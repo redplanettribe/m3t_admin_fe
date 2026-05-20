@@ -1,10 +1,17 @@
 import * as React from "react"
 import { Navigate } from "react-router-dom"
+import { useEventSchedule } from "@/hooks/useEvents"
+import { isEventEnded } from "@/lib/adminEventFilters"
 import { useEventStore } from "@/store/eventStore"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export function LiveRedirectPage(): React.ReactElement {
   const activeEventId = useEventStore((s) => s.activeEventId)
+  const { data: schedule } = useEventSchedule(activeEventId)
+
+  if (activeEventId && schedule?.event && isEventEnded(schedule.event)) {
+    return <Navigate to="/analytics" replace />
+  }
 
   if (activeEventId) {
     return <Navigate to={`/events/${activeEventId}/live`} replace />

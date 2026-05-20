@@ -115,6 +115,10 @@ export function getEventDisplayStatus(event: Event): EventDisplayStatus {
   return "active"
 }
 
+export function isEventEnded(event: Event): boolean {
+  return getEventDisplayStatus(event) === "past"
+}
+
 export const SORT_PRESETS: { value: string; label: string; sort: AdminEventsSort; order: AdminEventsOrder }[] = [
   { value: "created_at:desc", label: "Newest created", sort: "created_at", order: "desc" },
   { value: "created_at:asc", label: "Oldest created", sort: "created_at", order: "asc" },
