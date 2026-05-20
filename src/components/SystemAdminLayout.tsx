@@ -59,10 +59,10 @@ function SystemAdminLayoutInner(): React.ReactElement {
     <>
       <Sidebar collapsible="icon">
         <SidebarRail />
-        <SidebarHeader className="border-b border-sidebar-border">
-          <div className="flex items-center gap-2 px-2 py-1 group-data-[collapsible=icon]:justify-center">
+        <SidebarHeader className="border-b border-sidebar-border min-w-0 overflow-x-hidden">
+          <div className="flex min-w-0 items-center gap-2 px-2 py-1 group-data-[collapsible=icon]:justify-center">
             <Shield className="size-5 shrink-0 text-primary" aria-hidden />
-            <span className="font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
+            <span className="truncate font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
               Platform Admin
             </span>
           </div>
@@ -109,17 +109,16 @@ function SystemAdminLayoutInner(): React.ReactElement {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border">
-          <div className="flex flex-col gap-2 p-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <NavLink
-                  to="/account"
-                  className={({ isActive }) =>
-                    `flex items-center rounded-md p-1 -m-1 no-underline transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground"}`
-                  }
-                >
-                  <span className="flex flex-row flex-nowrap items-center gap-3 min-w-0 w-full">
+        <SidebarFooter className="border-t border-sidebar-border min-w-0 overflow-x-hidden">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <NavLink
+                to="/account"
+                className={({ isActive }) =>
+                  `flex min-w-0 w-full items-center rounded-md p-1 -m-1 no-underline transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground"}`
+                }
+              >
+                <span className="flex min-w-0 w-full flex-row flex-nowrap items-center gap-3">
                     <Avatar size="sm">
                       {user?.profile_picture_url ? (
                         <AvatarImage
@@ -132,7 +131,7 @@ function SystemAdminLayoutInner(): React.ReactElement {
                         {getInitials(getDisplayName(user) || user?.email || "U")}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="flex flex-col text-sm min-w-0 shrink text-left group-data-[collapsible=icon]:hidden">
+                    <span className="flex min-w-0 flex-1 flex-col text-sm text-left group-data-[collapsible=icon]:hidden">
                       <span className="font-medium truncate">
                         {getDisplayName(user) || "Admin"}
                       </span>
@@ -151,7 +150,6 @@ function SystemAdminLayoutInner(): React.ReactElement {
                 {getDisplayName(user) || "Account"}
               </TooltipContent>
             </Tooltip>
-          </div>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
