@@ -23,6 +23,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
+import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { AdminEventTimelineChartPoint } from "@/lib/adminEventTimeline"
 import { ApiError } from "@/lib/api"
@@ -48,12 +49,24 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-const CHART_HEIGHT = 300
+const CHART_HEIGHT = 390
+const TOP_CHART_HEIGHT = 220
+const BOTTOM_CHART_HEIGHT = 110
+const SYNC_ID = "adminEventTimeline"
 
 function sparseTickIndex(index: number, total: number): boolean {
   if (total <= 7) return true
   const step = Math.ceil(total / 6)
   return index === 0 || index === total - 1 || index % step === 0
+}
+
+function tooltipLabelFormatter(
+  _: React.ReactNode,
+  payload: readonly unknown[]
+): React.ReactNode {
+  const first = payload[0] as { payload?: AdminEventTimelineChartPoint } | undefined
+  const point = first?.payload
+  return point?.date ? formatDateOnly(point.date) : null
 }
 
 function ChartStatePanel(props: {
@@ -113,90 +126,140 @@ export function AdminEventTimelineChart(props: {
         ) : !hasData ? (
           <ChartStatePanel message="No events in this period" />
         ) : (
-          <ChartContainer
-            config={chartConfig}
-            className={cn("aspect-auto w-full")}
-            style={{ height: CHART_HEIGHT }}
-          >
-            <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="fillRegistrations" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-registrations)" stopOpacity={0.45} />
-                  <stop offset="95%" stopColor="var(--color-registrations)" stopOpacity={0.05} />
-                </linearGradient>
-                <linearGradient id="fillCheckIns" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-checkIns)" stopOpacity={0.45} />
-                  <stop offset="95%" stopColor="var(--color-checkIns)" stopOpacity={0.05} />
-                </linearGradient>
-                <linearGradient id="fillInvitations" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-invitations)" stopOpacity={0.45} />
-                  <stop offset="95%" stopColor="var(--color-invitations)" stopOpacity={0.05} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis
-                dataKey="label"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                interval={0}
-                tickFormatter={(value, index) =>
-                  sparseTickIndex(index, data.length) ? String(value) : ""
-                }
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                allowDecimals={false}
-                width={40}
-              />
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(_, payload) => {
-                      const point = payload?.[0]?.payload as
-                        | AdminEventTimelineChartPoint
-                        | undefined
-                      return point?.date ? formatDateOnly(point.date) : null
-                    }}
-                  />
-                }
-              />
-              <ChartLegend content={<ChartLegendContent />} />
-              <Bar
-                dataKey="eventCount"
-                fill="var(--color-eventCount)"
-                fillOpacity={0.2}
-                radius={[2, 2, 0, 0]}
-                barSize={Math.max(4, Math.min(24, Math.floor(320 / data.length)))}
-              />
-              <Area
-                type="monotone"
-                dataKey="registrations"
-                stroke="var(--color-registrations)"
-                fill="url(#fillRegistrations)"
-                strokeWidth={2}
-                dot={false}
-              />
-              <Area
-                type="monotone"
-                dataKey="checkIns"
-                stroke="var(--color-checkIns)"
-                fill="url(#fillCheckIns)"
-                strokeWidth={2}
-                dot={false}
-              />
-              <Area
-                type="monotone"
-                dataKey="invitations"
-                stroke="var(--color-invitations)"
-                fill="url(#fillInvitations)"
-                strokeWidth={2}
-                dot={false}
-              />
-            </ComposedChart>
-          </ChartContainer>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Engagement
+              </p>
+            </div>
+            <ChartContainer
+              config={chartConfig}
+              className={cn("aspect-auto w-full")}
+              style={{ height: TOP_CHART_HEIGHT }}
+            >
+              <ComposedChart
+                data={data}
+                syncId={SYNC_ID}
+                syncMethod="index"
+                margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="fillRegistrations" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="5%"
+                      stopColor="var(--color-registrations)"
+                      stopOpacity={0.45}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor="var(--color-registrations)"
+                      stopOpacity={0.05}
+                    />
+                  </linearGradient>
+                  <linearGradient id="fillCheckIns" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-checkIns)" stopOpacity={0.45} />
+                    <stop offset="95%" stopColor="var(--color-checkIns)" stopOpacity={0.05} />
+                  </linearGradient>
+                  <linearGradient id="fillInvitations" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-invitations)" stopOpacity={0.45} />
+                    <stop offset="95%" stopColor="var(--color-invitations)" stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="label"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={false}
+                  height={0}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  allowDecimals={false}
+                  width={40}
+                />
+                <ChartTooltip
+                  content={<ChartTooltipContent labelFormatter={tooltipLabelFormatter} />}
+                />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Area
+                  type="monotone"
+                  dataKey="registrations"
+                  stroke="var(--color-registrations)"
+                  fill="url(#fillRegistrations)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="checkIns"
+                  stroke="var(--color-checkIns)"
+                  fill="url(#fillCheckIns)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="invitations"
+                  stroke="var(--color-invitations)"
+                  fill="url(#fillInvitations)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </ComposedChart>
+            </ChartContainer>
+
+            <Separator />
+
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Events/day
+              </p>
+            </div>
+            <ChartContainer
+              config={chartConfig}
+              className={cn("aspect-auto w-full")}
+              style={{ height: BOTTOM_CHART_HEIGHT }}
+            >
+              <ComposedChart
+                data={data}
+                syncId={SYNC_ID}
+                syncMethod="index"
+                margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="label"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  interval={0}
+                  tickFormatter={(value, index) =>
+                    sparseTickIndex(index, data.length) ? String(value) : ""
+                  }
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  allowDecimals={false}
+                  width={40}
+                />
+                <ChartTooltip
+                  content={<ChartTooltipContent labelFormatter={tooltipLabelFormatter} />}
+                />
+                <Bar
+                  dataKey="eventCount"
+                  fill="var(--color-eventCount)"
+                  fillOpacity={0.55}
+                  radius={[2, 2, 0, 0]}
+                  barSize={Math.max(4, Math.min(24, Math.floor(320 / data.length)))}
+                />
+              </ComposedChart>
+            </ChartContainer>
+          </div>
         )}
       </CardContent>
     </Card>
