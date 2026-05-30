@@ -13,7 +13,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import type { EventAttendeeFlow } from "@/types/event"
 
-const CHART_HEIGHT = 380
+const MIN_CHART_HEIGHT = 360
+const MAX_CHART_HEIGHT = 720
+const ROW_HEIGHT = 46
+const LABEL_MAX_CHARS = 22
 
 const NODE_COLORS = [
   "var(--chart-1)",
@@ -25,6 +28,23 @@ const NODE_COLORS = [
 
 function nodeColor(index: number): string {
   return NODE_COLORS[index % NODE_COLORS.length]
+}
+
+function chartHeightForNodes(nodeCount: number): number {
+  return Math.min(MAX_CHART_HEIGHT, Math.max(MIN_CHART_HEIGHT, nodeCount * ROW_HEIGHT))
+}
+
+function truncateLabel(label: string, max = LABEL_MAX_CHARS): string {
+  if (label.length <= max) return label
+  return `${label.slice(0, max - 1).trimEnd()}…`
+}
+
+/** Keeps SVG label text legible when it overlaps colored links. */
+const LABEL_HALO_STYLE: React.CSSProperties = {
+  paintOrder: "stroke",
+  stroke: "var(--background)",
+  strokeWidth: 3,
+  strokeLinejoin: "round",
 }
 
 const chartConfig = {} satisfies ChartConfig
@@ -75,19 +95,50 @@ interface FlowNodeProps {
   payload: {
     name: string
     value: number
-    sourceLinks?: unknown[]
-    targetLinks?: unknown[]
+    sourceLinks?: number[]
+    targetLinks?: number[]
   }
 }
 
-function FlowNode(props: FlowNodeProps): React.ReactElement {
-  const { x, y, width, height, index, payload } = props
-  const isTerminal = (payload.sourceLinks?.length ?? 0) === 0
-  const labelOnLeft = isTerminal
+function FlowNode(
+  props: FlowNodeProps & {
+    onActivate: (links: number[] | null) => void
+  }
+): React.ReactElement {
+  const { x, y, width, height, index, payload, onActivate } = props
+  const incoming = payload.targetLinks?.length ?? 0
+  const outgoing = payload.sourceLinks?.length ?? 0
+  const isFirst = incoming === 0
+  const isLast = outgoing === 0
+  const isMiddle = !isFirst && !isLast
   const color = nodeColor(index)
+  const centerY = y + height / 2
+  const label = truncateLabel(payload.name)
+
+  let labelX: number
+  let anchor: "start" | "middle" | "end"
+  let nameY: number
+  if (isLast) {
+    labelX = x - 8
+    anchor = "end"
+    nameY = centerY
+  } else if (isFirst) {
+    labelX = x + width + 8
+    anchor = "start"
+    nameY = centerY
+  } else {
+    labelX = x + width / 2
+    anchor = "middle"
+    nameY = y - 6
+  }
+
+  const connectedLinks = [...(payload.sourceLinks ?? []), ...(payload.targetLinks ?? [])]
 
   return (
-    <g>
+    <g
+      onMouseEnter={() => onActivate(connectedLinks)}
+      onMouseLeave={() => onActivate(null)}
+    >
       <rect
         x={x}
         y={y}
@@ -98,26 +149,30 @@ function FlowNode(props: FlowNodeProps): React.ReactElement {
         fillOpacity={0.95}
       />
       <text
-        x={labelOnLeft ? x - 8 : x + width + 8}
-        y={y + height / 2}
-        textAnchor={labelOnLeft ? "end" : "start"}
-        dominantBaseline="middle"
+        x={labelX}
+        y={nameY}
+        textAnchor={anchor}
+        dominantBaseline={isMiddle ? "auto" : "middle"}
         className="fill-foreground"
         fontSize={12}
         fontWeight={600}
+        style={LABEL_HALO_STYLE}
       >
-        {payload.name}
+        {label}
       </text>
-      <text
-        x={labelOnLeft ? x - 8 : x + width + 8}
-        y={y + height / 2 + 15}
-        textAnchor={labelOnLeft ? "end" : "start"}
-        dominantBaseline="middle"
-        className="fill-muted-foreground"
-        fontSize={11}
-      >
-        {payload.value.toLocaleString()}
-      </text>
+      {!isMiddle ? (
+        <text
+          x={labelX}
+          y={centerY + 15}
+          textAnchor={anchor}
+          dominantBaseline="middle"
+          className="fill-muted-foreground"
+          fontSize={11}
+          style={LABEL_HALO_STYLE}
+        >
+          {payload.value.toLocaleString()}
+        </text>
+      ) : null}
     </g>
   )
 }
@@ -135,8 +190,8 @@ interface FlowLinkProps {
 
 function FlowLink(
   props: FlowLinkProps & {
-    activeLink: number | null
-    onActivate: (index: number | null) => void
+    highlightedLinks: number[] | null
+    onActivate: (links: number[] | null) => void
   }
 ): React.ReactElement {
   const {
@@ -148,10 +203,12 @@ function FlowLink(
     targetControlX,
     linkWidth,
     index,
-    activeLink,
+    highlightedLinks,
     onActivate,
   } = props
-  const isActive = activeLink === index
+  const isActive = highlightedLinks?.includes(index) ?? false
+  const isDimmed = highlightedLinks != null && !isActive
+  const strokeOpacity = isActive ? 0.7 : isDimmed ? 0.15 : 0.4
 
   return (
     <path
@@ -159,8 +216,8 @@ function FlowLink(
       fill="none"
       stroke={`url(#flowLinkGradient-${index})`}
       strokeWidth={Math.max(linkWidth, 1)}
-      strokeOpacity={isActive ? 0.7 : 0.4}
-      onMouseEnter={() => onActivate(index)}
+      strokeOpacity={strokeOpacity}
+      onMouseEnter={() => onActivate([index])}
       onMouseLeave={() => onActivate(null)}
       style={{ transition: "stroke-opacity 150ms ease" }}
     />
@@ -203,13 +260,14 @@ function FlowTooltipContent(props: {
 
 function ChartStatePanel(props: {
   message: string
+  height: number
   onRetry?: () => void
 }): React.ReactElement {
-  const { message, onRetry } = props
+  const { message, height, onRetry } = props
   return (
     <div
       className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed bg-muted/30 px-4 text-center text-sm text-muted-foreground"
-      style={{ height: CHART_HEIGHT }}
+      style={{ height }}
     >
       <p>{message}</p>
       {onRetry ? (
@@ -230,10 +288,11 @@ export function EventAttendeeFlowChart(props: {
   onRetry?: () => void
 }): React.ReactElement {
   const { data, isLoading, isError, error, errorMessage, onRetry } = props
-  const [activeLink, setActiveLink] = React.useState<number | null>(null)
+  const [highlightedLinks, setHighlightedLinks] = React.useState<number[] | null>(null)
 
   const sankeyData = React.useMemo(() => toSankeyData(data), [data])
   const hasData = sankeyData.nodes.length > 0 && sankeyData.links.length > 0
+  const chartHeight = chartHeightForNodes(sankeyData.nodes.length)
 
   const displayErrorMessage =
     errorMessage ??
@@ -249,16 +308,23 @@ export function EventAttendeeFlowChart(props: {
       </CardHeader>
       <CardContent className="pb-4">
         {isLoading ? (
-          <Skeleton className="w-full rounded-lg" style={{ height: CHART_HEIGHT }} />
+          <Skeleton className="w-full rounded-lg" style={{ height: chartHeight }} />
         ) : isError ? (
-          <ChartStatePanel message={displayErrorMessage} onRetry={onRetry} />
+          <ChartStatePanel
+            message={displayErrorMessage}
+            height={chartHeight}
+            onRetry={onRetry}
+          />
         ) : !hasData ? (
-          <ChartStatePanel message="No attendee flow recorded for this event" />
+          <ChartStatePanel
+            message="No attendee flow recorded for this event"
+            height={chartHeight}
+          />
         ) : (
           <ChartContainer
             config={chartConfig}
             className={cn("aspect-auto w-full")}
-            style={{ height: CHART_HEIGHT }}
+            style={{ height: chartHeight }}
           >
             <Sankey
               data={sankeyData}
@@ -266,13 +332,15 @@ export function EventAttendeeFlowChart(props: {
               nodeWidth={14}
               linkCurvature={0.5}
               iterations={64}
-              margin={{ top: 12, right: 12, bottom: 12, left: 12 }}
-              node={(nodeProps: FlowNodeProps) => <FlowNode {...nodeProps} />}
+              margin={{ top: 16, right: 16, bottom: 16, left: 16 }}
+              node={(nodeProps: FlowNodeProps) => (
+                <FlowNode {...nodeProps} onActivate={setHighlightedLinks} />
+              )}
               link={(linkProps: FlowLinkProps) => (
                 <FlowLink
                   {...linkProps}
-                  activeLink={activeLink}
-                  onActivate={setActiveLink}
+                  highlightedLinks={highlightedLinks}
+                  onActivate={setHighlightedLinks}
                 />
               )}
             >
