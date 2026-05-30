@@ -104,10 +104,24 @@ export function useCreateRoom(eventId: string | null) {
       if (!eventId) throw new Error("No event selected")
       return apiClient.post<Room>(`/events/${eventId}/rooms`, body)
     },
-    onSuccess: () => {
+    onSuccess: (createdRoom) => {
       if (!eventId) return
       queryClient.invalidateQueries({ queryKey: queryKeys.events.rooms(eventId) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+      const detailKey = queryKeys.events.detail(eventId)
+      queryClient.setQueryData<EventSchedule>(detailKey, (prev) => {
+        if (!prev) {
+          queryClient.invalidateQueries({ queryKey: detailKey })
+          return prev
+        }
+        if (prev.rooms?.some((rw) => rw.room.id === createdRoom.id)) {
+          return prev
+        }
+        return {
+          ...prev,
+          rooms: [...(prev.rooms ?? []), { room: createdRoom, sessions: [] }],
+        }
+      })
+      invalidateEventSessionsScheduleQueries(queryClient, eventId)
     },
   })
 }
