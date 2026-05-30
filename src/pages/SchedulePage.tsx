@@ -226,7 +226,7 @@ export function SchedulePage(): React.ReactElement {
   const [addRoomOpen, setAddRoomOpen] = useState(false)
   const [addRoomHovered, setAddRoomHovered] = useState(false)
   const [selectedDayIndex, setSelectedDayIndex] = useState(0)
-  const [draftPanelCollapsed, setDraftPanelCollapsed] = useState(false)
+  const [draftPanelCollapsed, setDraftPanelCollapsed] = useState(true)
   const gridBodyRef = React.useRef<HTMLDivElement>(null)
 
   const { data: sessionsSchedule, isLoading: draftsLoading } =
