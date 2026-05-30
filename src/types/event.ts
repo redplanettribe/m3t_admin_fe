@@ -380,3 +380,47 @@ export interface GetEventSpeakerResponse {
   speaker: Speaker
   sessions: Session[]
 }
+
+/** Attendee funnel from GET /events/{eventID}/analytics */
+export interface EventAnalyticsAttendees {
+  registration_count: number
+  check_in_count: number
+  /** 0–1; omitted when registration_count === 0 */
+  check_in_rate?: number
+  check_ins_not_on_sent_invitations_count: number
+  /** 0–1; omitted when check_in_count === 0 */
+  check_ins_not_on_sent_invitations_rate?: number
+}
+
+/** Invitation outbox counts from GET /events/{eventID}/analytics */
+export interface EventAnalyticsInvitations {
+  sent: number
+  pending: number
+  failed: number
+}
+
+export interface EventAnalyticsDeliverable {
+  deliverable_id: string
+  name: string
+  delivered_count: number
+}
+
+export interface EventAnalyticsSessionRoom {
+  name: string
+  capacity: number
+}
+
+export interface EventAnalyticsSession {
+  session_id: string
+  title: string
+  check_in_count: number
+  room?: EventAnalyticsSessionRoom
+}
+
+/** Post-event summary from GET /events/{eventID}/analytics */
+export interface EventAnalytics {
+  attendees: EventAnalyticsAttendees
+  invitations: EventAnalyticsInvitations
+  deliverables: EventAnalyticsDeliverable[]
+  sessions: EventAnalyticsSession[]
+}

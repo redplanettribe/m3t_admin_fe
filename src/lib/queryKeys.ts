@@ -57,5 +57,6 @@ export const queryKeys = {
       ["events", eventId, "registrations", page, pageSize, search ?? "", tierId ?? ""] as const,
     sessionsSchedule: (eventId: string, page: number, pageSize: number, search: string) =>
       ["events", eventId, "sessions-schedule", page, pageSize, search ?? ""] as const,
+    analytics: (eventId: string) => ["events", eventId, "analytics"] as const,
   },
 } as const
