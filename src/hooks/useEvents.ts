@@ -420,16 +420,49 @@ export function useUpdateRoom(eventId: string | null) {
 export function useImportSessionize(eventId: string | null) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ sessionizeId }: { sessionizeId: string }) =>
-      apiClient.post(
+    mutationFn: async ({ sessionizeId }: { sessionizeId: string }) => {
+      const importResult = await apiClient.post<Record<string, unknown>>(
         `/events/${eventId}/import/sessionize/${sessionizeId}`,
         {}
-      ),
-    onSuccess: () => {
-      if (eventId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
-        invalidateEventSessionsScheduleQueries(queryClient, eventId)
-      }
+      )
+      if (!eventId) return importResult
+
+      const detailKey = queryKeys.events.detail(eventId)
+      const sessionsKey = queryKeys.events.sessionsSchedule(eventId, 1, 200, "")
+      const sessionsParams = new URLSearchParams({ page: "1", page_size: "200" })
+
+      const [detailFromNetwork, sessionsFromNetwork] = await Promise.all([
+        apiClient.get<EventSchedule>(`/events/${eventId}`),
+        apiClient.get<ListEventSessionsScheduleResult>(
+          `/events/${eventId}/sessions?${sessionsParams.toString()}`
+        ),
+      ])
+
+      const detailRoomCount = detailFromNetwork.rooms?.length ?? 0
+      const detailSessionCount =
+        detailFromNetwork.rooms?.flatMap((rw) => rw.sessions).length ?? 0
+      const sessionsRoomCount = sessionsFromNetwork.rooms?.length ?? 0
+      const sessionsSessionCount =
+        sessionsFromNetwork.rooms?.flatMap((rw) => rw.sessions).length ?? 0
+
+      const useSessionsForDetail =
+        sessionsRoomCount > detailRoomCount ||
+        sessionsSessionCount > detailSessionCount
+
+      const mergedDetail: EventSchedule = useSessionsForDetail
+        ? {
+            ...detailFromNetwork,
+            rooms: sessionsFromNetwork.rooms,
+            unscheduled_sessions:
+              sessionsFromNetwork.unscheduled_sessions ??
+              detailFromNetwork.unscheduled_sessions,
+          }
+        : detailFromNetwork
+
+      queryClient.setQueryData(detailKey, mergedDetail)
+      queryClient.setQueryData(sessionsKey, sessionsFromNetwork)
+
+      return importResult
     },
   })
 }

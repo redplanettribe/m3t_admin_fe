@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useState } from "react"
-import { Link, useLocation } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -40,6 +40,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { isSessionTechnicalDifficulty } from "@/lib/sessionTechnicalDifficulty"
+import { formatDateOnly } from "@/lib/formatDate"
 import { makeNavigateFrom } from "@/lib/returnNavigation"
 import { cn } from "@/lib/utils"
 import { SessionizeImportModal } from "@/components/SessionizeImportModal"
@@ -47,6 +48,12 @@ import { ScheduleSessionCard } from "@/components/ScheduleSessionCard"
 import { TagInput } from "@/components/TagInput"
 import { AddRoomModal } from "@/components/AddRoomModal"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+
+type ScheduleLocationState = {
+  liveUnavailable?: boolean
+  liveOpensOn?: string
+}
 
 const PIXELS_PER_MINUTE = 3
 const TIME_LABEL_INTERVAL_MINUTES = 30
@@ -178,7 +185,18 @@ function getScheduleDayOptions(
 
 export function SchedulePage(): React.ReactElement {
   const location = useLocation()
+  const navigate = useNavigate()
   const roomNavigateState = makeNavigateFrom(location)
+  const [liveUnavailableNotice, setLiveUnavailableNotice] = React.useState<{
+    opensOn?: string
+  } | null>(null)
+
+  React.useEffect(() => {
+    const state = location.state as ScheduleLocationState | null
+    if (!state?.liveUnavailable) return
+    setLiveUnavailableNotice({ opensOn: state.liveOpensOn })
+    navigate(".", { replace: true, state: {} })
+  }, [location.state, navigate])
   const activeEventId = useEventStore((s) => s.activeEventId)
   const savedSessionizeId = useEventStore((s) =>
     activeEventId ? s.sessionizeIdByEventId[activeEventId] ?? "" : ""
@@ -213,12 +231,33 @@ export function SchedulePage(): React.ReactElement {
 
   const { data: sessionsSchedule, isLoading: draftsLoading } =
     useEventSessionsSchedule(activeEventId, { page: 1, pageSize: 200, search: "" })
-  const draftSessions: Session[] = (sessionsSchedule?.unscheduled_sessions as Session[] | undefined) ?? []
+  const draftSessionsFromApi: Session[] =
+    (sessionsSchedule?.unscheduled_sessions as Session[] | undefined) ?? []
+  const draftSessionsFromSchedule: Session[] =
+    (schedule?.unscheduled_sessions as Session[] | undefined) ?? []
+  const draftSessions: Session[] = React.useMemo(() => {
+    const byId = new Map<string, Session>()
+    for (const session of [...draftSessionsFromApi, ...draftSessionsFromSchedule]) {
+      byId.set(String(session.id), session)
+    }
+    return [...byId.values()]
+  }, [draftSessionsFromApi, draftSessionsFromSchedule])
 
   const { rooms: roomsFromSchedule, rawSessions: rawSessionsFromSchedule } =
     schedule != null ? getRoomsAndSessions(schedule) : { rooms: [] as Room[], rawSessions: [] as unknown[] }
+  const sessionsApiRooms = sessionsSchedule?.rooms ?? []
+  const sessionsApiRawSessions = sessionsApiRooms.flatMap((rw) => rw.sessions)
+  const useSessionsApiForGrid =
+    sessionsApiRawSessions.length > rawSessionsFromSchedule.length ||
+    (roomsFromSchedule.length === 0 && sessionsApiRooms.length > 0)
+  const roomsFromScheduleOrApi = useSessionsApiForGrid
+    ? sessionsApiRooms.map((rw) => rw.room)
+    : roomsFromSchedule
+  const rawSessionsFromScheduleOrApi = useSessionsApiForGrid
+    ? sessionsApiRawSessions
+    : rawSessionsFromSchedule
   const event = schedule?.event
-  const allSessions = rawSessionsFromSchedule
+  const allSessions = rawSessionsFromScheduleOrApi
     .map((s) => normalizeSession(s as SessionInput))
     .filter((s): s is PlacedSession => s !== null)
   const maxSessionDay = allSessions.length > 0
@@ -231,7 +270,7 @@ export function SchedulePage(): React.ReactElement {
     }
   }, [scheduleDayOptions.length, selectedDayIndex])
 
-  const roomsList = roomsFromSchedule
+  const roomsList = roomsFromScheduleOrApi
     .slice()
     .sort((a, b) => {
       const aNotBookable = Boolean(a.not_bookable)
@@ -402,6 +441,18 @@ export function SchedulePage(): React.ReactElement {
 
   return (
     <div className="space-y-6 min-w-0 w-full">
+      {liveUnavailableNotice && (
+        <Card className="border-muted-foreground/25 bg-muted/30">
+          <CardHeader className="py-4">
+            <CardTitle className="text-base">Live dashboard not available yet</CardTitle>
+            <CardDescription>
+              {liveUnavailableNotice.opensOn?.trim()
+                ? `Live dashboard opens on ${formatDateOnly(liveUnavailableNotice.opensOn)}.`
+                : "Set a start date in Settings to enable the live dashboard."}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Schedule</h2>

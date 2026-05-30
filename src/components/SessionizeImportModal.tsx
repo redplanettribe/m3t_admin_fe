@@ -59,17 +59,15 @@ export function SessionizeImportModal({
     }
   }, [open, defaultSessionizeId, form])
 
-  const onSubmit = (values: SessionizeImportFormValues) => {
-    importSessionize.mutateAsync(
-      { sessionizeId: values.sessionizeId },
-      {
-        onSuccess: () => {
-          setSessionizeIdForEvent(eventId, values.sessionizeId)
-          onOpenChange(false)
-          form.reset({ sessionizeId: values.sessionizeId })
-        },
-      }
-    )
+  const onSubmit = async (values: SessionizeImportFormValues) => {
+    try {
+      await importSessionize.mutateAsync({ sessionizeId: values.sessionizeId })
+      setSessionizeIdForEvent(eventId, values.sessionizeId)
+      onOpenChange(false)
+      form.reset({ sessionizeId: values.sessionizeId })
+    } catch {
+      // mutation error state shown in UI
+    }
   }
 
   return (
