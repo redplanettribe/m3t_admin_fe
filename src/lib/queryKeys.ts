@@ -1,4 +1,5 @@
 import type { AdminEventTimelineParams, ListAdminEventsParams } from "@/types/admin"
+import type { EventCheckInTimelineGranularity } from "@/types/event"
 
 /**
  * Central TanStack Query key factory.
@@ -58,5 +59,7 @@ export const queryKeys = {
     sessionsSchedule: (eventId: string, page: number, pageSize: number, search: string) =>
       ["events", eventId, "sessions-schedule", page, pageSize, search ?? ""] as const,
     analytics: (eventId: string) => ["events", eventId, "analytics"] as const,
+    checkInTimeline: (eventId: string, granularity: EventCheckInTimelineGranularity) =>
+      ["events", eventId, "analytics", "check-ins", "timeline", granularity] as const,
   },
 } as const

@@ -424,3 +424,21 @@ export interface EventAnalytics {
   deliverables: EventAnalyticsDeliverable[]
   sessions: EventAnalyticsSession[]
 }
+
+/** Bucket granularity for GET /events/{eventID}/analytics/check-ins/timeline */
+export type EventCheckInTimelineGranularity = "hour" | "15min"
+
+export interface EventCheckInTimelineBucket {
+  bucket_start?: string
+  check_in_count?: number
+}
+
+/** Check-in time series from GET /events/{eventID}/analytics/check-ins/timeline */
+export interface EventCheckInTimeline {
+  buckets?: EventCheckInTimelineBucket[]
+  from?: string
+  to?: string
+  granularity?: string
+  timezone?: string
+  total_check_in_count?: number
+}

@@ -1859,6 +1859,82 @@
                 }
             }
         },
+        "/events/{eventID}/analytics/check-ins/timeline": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns time-bucketed event check-in counts across all event calendar days (hourly or 15-minute buckets in the event time zone). Caller must be the event owner or a team member. Available only after the event has ended.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Get check-in time series for post-event analytics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bucket size: hour (default) or 15min",
+                        "name": "granularity",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data contains buckets",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.GetEventCheckInTimelineSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: missing_path_param | invalid_path_param | invalid_query_param",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: not_event_owner",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: event_not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "error.code: event_not_past",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/events/{eventID}/attendee-schedule": {
             "get": {
                 "security": [
@@ -7278,6 +7354,17 @@
                 }
             }
         },
+        "controllers.EventCheckInTimelineBucketResponse": {
+            "type": "object",
+            "properties": {
+                "bucket_start": {
+                    "type": "string"
+                },
+                "check_in_count": {
+                    "type": "integer"
+                }
+            }
+        },
         "controllers.EventRegistrationItem": {
             "type": "object",
             "properties": {
@@ -7477,6 +7564,43 @@
             "properties": {
                 "data": {
                     "$ref": "#/definitions/controllers.GetEventByIDResponse"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
+        "controllers.GetEventCheckInTimelineResponse": {
+            "type": "object",
+            "properties": {
+                "buckets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/controllers.EventCheckInTimelineBucketResponse"
+                    }
+                },
+                "from": {
+                    "type": "string"
+                },
+                "granularity": {
+                    "type": "string"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "to": {
+                    "type": "string"
+                },
+                "total_check_in_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "controllers.GetEventCheckInTimelineSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/controllers.GetEventCheckInTimelineResponse"
                 },
                 "error": {
                     "$ref": "#/definitions/helpers.APIError"

@@ -1,8 +1,14 @@
 import * as React from "react"
+import { EventCheckInTimelineChart } from "@/components/EventCheckInTimelineChart"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useEventAnalytics } from "@/hooks/useEventAnalytics"
+import { useEventCheckInTimeline } from "@/hooks/useEventCheckInTimeline"
 import { useEventSchedule } from "@/hooks/useEvents"
+import {
+  formatCheckInTimelineRangeLabel,
+  mapCheckInTimelineBuckets,
+} from "@/lib/eventCheckInTimeline"
 import { isEventEnded } from "@/lib/adminEventFilters"
 import { ApiError } from "@/lib/api"
 import { useEventStore } from "@/store/eventStore"
@@ -85,6 +91,13 @@ export function AnalyticsPage(): React.ReactElement {
     isError,
     error,
   } = useEventAnalytics(activeEventId, ended)
+  const {
+    data: checkInTimeline,
+    isLoading: checkInTimelineLoading,
+    isError: checkInTimelineError,
+    error: checkInTimelineErrorObj,
+    refetch: refetchCheckInTimeline,
+  } = useEventCheckInTimeline(activeEventId, ended)
 
   if (!activeEventId) {
     return (
@@ -162,6 +175,11 @@ export function AnalyticsPage(): React.ReactElement {
   const invitations = analytics?.invitations
   const deliverables = analytics?.deliverables ?? []
   const sessions = analytics?.sessions ?? []
+  const checkInTimelinePoints = mapCheckInTimelineBuckets(
+    checkInTimeline?.buckets ?? [],
+    "hour"
+  )
+  const checkInTimelineRangeLabel = formatCheckInTimelineRangeLabel(checkInTimeline)
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -191,6 +209,29 @@ export function AnalyticsPage(): React.ReactElement {
             value={attendees?.check_ins_not_on_sent_invitations_count ?? 0}
           />
         </div>
+      </section>
+
+      <section className="space-y-3">
+        <div>
+          <h3 className="text-lg font-semibold tracking-tight">Check-ins over time</h3>
+          <p className="text-sm text-muted-foreground">
+            Hourly check-in volume during event day(s)
+          </p>
+        </div>
+        <EventCheckInTimelineChart
+          data={checkInTimelinePoints}
+          isLoading={checkInTimelineLoading}
+          isError={checkInTimelineError}
+          error={checkInTimelineErrorObj}
+          errorMessage={
+            checkInTimelineError
+              ? analyticsErrorMessage(checkInTimelineErrorObj ?? new Error("Unknown error"))
+              : undefined
+          }
+          rangeLabel={checkInTimelineRangeLabel}
+          totalCheckIns={checkInTimeline?.total_check_in_count}
+          onRetry={() => void refetchCheckInTimeline()}
+        />
       </section>
 
       <section className="space-y-3">
