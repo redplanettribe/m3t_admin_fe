@@ -61,5 +61,7 @@ export const queryKeys = {
     analytics: (eventId: string) => ["events", eventId, "analytics"] as const,
     checkInTimeline: (eventId: string, granularity: EventCheckInTimelineGranularity) =>
       ["events", eventId, "analytics", "check-ins", "timeline", granularity] as const,
+    attendeeFlow: (eventId: string) =>
+      ["events", eventId, "analytics", "flow"] as const,
   },
 } as const

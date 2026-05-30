@@ -425,6 +425,25 @@ export interface EventAnalytics {
   sessions: EventAnalyticsSession[]
 }
 
+/** Node in the attendee flow graph from GET /events/{eventID}/analytics/flow */
+export interface EventAttendeeFlowNode {
+  id: string
+  name: string
+}
+
+/** Directed transition between two flow nodes, weighted by attendee count */
+export interface EventAttendeeFlowLink {
+  source: string
+  target: string
+  value: number
+}
+
+/** Attendee flow (Sankey) graph from GET /events/{eventID}/analytics/flow */
+export interface EventAttendeeFlow {
+  nodes?: EventAttendeeFlowNode[]
+  links?: EventAttendeeFlowLink[]
+}
+
 /** Bucket granularity for GET /events/{eventID}/analytics/check-ins/timeline */
 export type EventCheckInTimelineGranularity = "hour" | "15min"
 

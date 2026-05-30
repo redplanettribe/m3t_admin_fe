@@ -1935,6 +1935,70 @@
                 }
             }
         },
+        "/events/{eventID}/analytics/flow": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a nodes/links graph of attendee movement through the event: event check-in, session check-ins in chronological order, and early drop-off. Each node is a stage (check_in, a session, or drop_off) and each link is a directed transition weighted by attendee count. Caller must be the event owner or a team member.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Get attendee flow (Sankey) graph for an event",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data contains nodes and links",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.GetEventAttendeeFlowSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: missing_path_param | invalid_path_param",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: not_event_owner",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: event_not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/events/{eventID}/attendee-schedule": {
             "get": {
                 "security": [
@@ -7539,6 +7603,17 @@
                 }
             }
         },
+        "controllers.GetEventAttendeeFlowSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/domain.AttendeeFlow"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
         "controllers.GetEventByIDResponse": {
             "type": "object",
             "properties": {
@@ -8559,6 +8634,48 @@
                     "type": "boolean"
                 },
                 "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.AttendeeFlow": {
+            "type": "object",
+            "properties": {
+                "links": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.AttendeeFlowLink"
+                    }
+                },
+                "nodes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.AttendeeFlowNode"
+                    }
+                }
+            }
+        },
+        "domain.AttendeeFlowLink": {
+            "type": "object",
+            "properties": {
+                "source": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.AttendeeFlowNode": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 }
             }

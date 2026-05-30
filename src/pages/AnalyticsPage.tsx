@@ -1,8 +1,10 @@
 import * as React from "react"
+import { EventAttendeeFlowChart } from "@/components/EventAttendeeFlowChart"
 import { EventCheckInTimelineChart } from "@/components/EventCheckInTimelineChart"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useEventAnalytics } from "@/hooks/useEventAnalytics"
+import { useEventAttendeeFlow } from "@/hooks/useEventAttendeeFlow"
 import { useEventCheckInTimeline } from "@/hooks/useEventCheckInTimeline"
 import { useEventSchedule } from "@/hooks/useEvents"
 import {
@@ -98,6 +100,13 @@ export function AnalyticsPage(): React.ReactElement {
     error: checkInTimelineErrorObj,
     refetch: refetchCheckInTimeline,
   } = useEventCheckInTimeline(activeEventId, ended)
+  const {
+    data: attendeeFlow,
+    isLoading: attendeeFlowLoading,
+    isError: attendeeFlowError,
+    error: attendeeFlowErrorObj,
+    refetch: refetchAttendeeFlow,
+  } = useEventAttendeeFlow(activeEventId, ended)
 
   if (!activeEventId) {
     return (
@@ -231,6 +240,27 @@ export function AnalyticsPage(): React.ReactElement {
           rangeLabel={checkInTimelineRangeLabel}
           totalCheckIns={checkInTimeline?.total_check_in_count}
           onRetry={() => void refetchCheckInTimeline()}
+        />
+      </section>
+
+      <section className="space-y-3">
+        <div>
+          <h3 className="text-lg font-semibold tracking-tight">Attendee flow</h3>
+          <p className="text-sm text-muted-foreground">
+            How attendees moved through check-in and sessions
+          </p>
+        </div>
+        <EventAttendeeFlowChart
+          data={attendeeFlow}
+          isLoading={attendeeFlowLoading}
+          isError={attendeeFlowError}
+          error={attendeeFlowErrorObj}
+          errorMessage={
+            attendeeFlowError
+              ? analyticsErrorMessage(attendeeFlowErrorObj ?? new Error("Unknown error"))
+              : undefined
+          }
+          onRetry={() => void refetchAttendeeFlow()}
         />
       </section>
 
