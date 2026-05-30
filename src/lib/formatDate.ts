@@ -1,13 +1,19 @@
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 
+export function parseCalendarDate(value: string): Date | null {
+  const trimmed = value.trim()
+  if (!DATE_ONLY_PATTERN.test(trimmed)) return null
+  const [year, month, day] = trimmed.split("-").map(Number)
+  const date = new Date(year, month - 1, day)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
 function parseDate(value: string): Date | null {
   const trimmed = value.trim()
   if (!trimmed) return null
 
-  if (DATE_ONLY_PATTERN.test(trimmed)) {
-    const date = new Date(`${trimmed}T00:00:00Z`)
-    return Number.isNaN(date.getTime()) ? null : date
-  }
+  const calendarDate = parseCalendarDate(trimmed)
+  if (calendarDate) return calendarDate
 
   const date = new Date(trimmed)
   return Number.isNaN(date.getTime()) ? null : date

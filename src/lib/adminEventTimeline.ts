@@ -1,4 +1,4 @@
-import { formatDateOnly } from "@/lib/formatDate"
+import { formatDateOnly, parseCalendarDate } from "@/lib/formatDate"
 import type {
   AdminEventTimelineBucket,
   AdminEventTimelineResult,
@@ -14,8 +14,8 @@ export interface AdminEventTimelineChartPoint {
 }
 
 function bucketAxisLabel(bucketStart: string): string {
-  const date = new Date(`${bucketStart}T00:00:00Z`)
-  if (Number.isNaN(date.getTime())) return bucketStart
+  const date = parseCalendarDate(bucketStart)
+  if (!date) return bucketStart
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" })
 }
 
