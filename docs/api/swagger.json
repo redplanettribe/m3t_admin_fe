@@ -8672,13 +8672,44 @@
         "domain.AttendeeFlowNode": {
             "type": "object",
             "properties": {
+                "depth": {
+                    "type": "integer"
+                },
+                "end_time": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
+                "kind": {
+                    "$ref": "#/definitions/domain.AttendeeFlowNodeKind"
+                },
                 "name": {
+                    "type": "string"
+                },
+                "session_id": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "start_time": {
                     "type": "string"
                 }
             }
+        },
+        "domain.AttendeeFlowNodeKind": {
+            "type": "string",
+            "enum": [
+                "check_in",
+                "session",
+                "drop_off"
+            ],
+            "x-enum-varnames": [
+                "AttendeeFlowNodeKindCheckIn",
+                "AttendeeFlowNodeKindSession",
+                "AttendeeFlowNodeKindDropOff"
+            ]
         },
         "domain.Event": {
             "type": "object",

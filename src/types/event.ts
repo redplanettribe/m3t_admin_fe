@@ -425,10 +425,21 @@ export interface EventAnalytics {
   sessions: EventAnalyticsSession[]
 }
 
+/** Stage type for an attendee flow node */
+export type EventAttendeeFlowNodeKind = "check_in" | "session" | "drop_off"
+
 /** Node in the attendee flow graph from GET /events/{eventID}/analytics/flow */
 export interface EventAttendeeFlowNode {
   id: string
   name: string
+  kind?: EventAttendeeFlowNodeKind
+  /** Sankey column index; 0 = event check-in (left). */
+  depth?: number
+  /** Vertical order within the same depth column. */
+  sort_order?: number
+  start_time?: string
+  end_time?: string
+  session_id?: string
 }
 
 /** Directed transition between two flow nodes, weighted by attendee count */

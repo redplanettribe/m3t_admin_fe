@@ -1,5 +1,4 @@
 import * as React from "react"
-import { Sankey, Tooltip } from "recharts"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -8,15 +7,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { ChartContainer, type ChartConfig } from "@/components/ui/chart"
 import { Skeleton } from "@/components/ui/skeleton"
-import { cn } from "@/lib/utils"
+import {
+  layoutAttendeeFlowSankey,
+  linkControlX,
+  type FlowLayoutLink,
+  type FlowLayoutNode,
+} from "@/lib/attendeeFlowSankey"
 import type { EventAttendeeFlow } from "@/types/event"
 
 const MIN_CHART_HEIGHT = 360
 const MAX_CHART_HEIGHT = 720
 const ROW_HEIGHT = 46
 const LABEL_MAX_CHARS = 22
+const NODE_WIDTH = 14
+const NODE_PADDING = 28
+const CHART_MARGIN = { top: 16, right: 16, bottom: 16, left: 16 }
 
 const NODE_COLORS = [
   "var(--chart-1)",
@@ -47,103 +53,93 @@ const LABEL_HALO_STYLE: React.CSSProperties = {
   strokeLinejoin: "round",
 }
 
-const chartConfig = {} satisfies ChartConfig
+/** Tracks the container width so the static Sankey layout can fill it. */
+function useMeasuredWidth(): [React.RefObject<HTMLDivElement | null>, number] {
+  const ref = React.useRef<HTMLDivElement | null>(null)
+  const [width, setWidth] = React.useState(0)
 
-interface SankeyNodeDatum {
-  name: string
+  React.useLayoutEffect(() => {
+    const element = ref.current
+    if (!element) return
+    const update = () => setWidth(element.clientWidth)
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+
+  return [ref, width]
 }
 
-interface SankeyLinkDatum {
-  source: number
-  target: number
+interface ActiveTooltip {
+  label: string
   value: number
-}
-
-interface SankeyChartData {
-  nodes: SankeyNodeDatum[]
-  links: SankeyLinkDatum[]
-}
-
-/** Recharts Sankey requires links keyed by numeric node index, not by id. */
-function toSankeyData(data: EventAttendeeFlow | undefined): SankeyChartData {
-  const nodes = data?.nodes ?? []
-  const links = data?.links ?? []
-  const indexById = new Map<string, number>()
-  nodes.forEach((node, index) => indexById.set(node.id, index))
-
-  const mappedLinks: SankeyLinkDatum[] = []
-  for (const link of links) {
-    const source = indexById.get(link.source)
-    const target = indexById.get(link.target)
-    if (source == null || target == null) continue
-    if (!Number.isFinite(link.value) || link.value <= 0) continue
-    mappedLinks.push({ source, target, value: link.value })
-  }
-
-  return {
-    nodes: nodes.map((node) => ({ name: node.name })),
-    links: mappedLinks,
-  }
-}
-
-interface FlowNodeProps {
   x: number
   y: number
-  width: number
-  height: number
-  index: number
-  payload: {
-    name: string
-    value: number
-    sourceLinks?: number[]
-    targetLinks?: number[]
-  }
 }
 
-function FlowNode(
-  props: FlowNodeProps & {
-    onActivate: (links: number[] | null) => void
-  }
-): React.ReactElement {
-  const { x, y, width, height, index, payload, onActivate } = props
-  const incoming = payload.targetLinks?.length ?? 0
-  const outgoing = payload.sourceLinks?.length ?? 0
-  const isFirst = incoming === 0
-  const isLast = outgoing === 0
+function FlowNode(props: {
+  node: FlowLayoutNode
+  index: number
+  onActivate: (links: number[] | null) => void
+  onTooltip: (tooltip: ActiveTooltip | null) => void
+  connectedLinks: number[]
+}): React.ReactElement {
+  const { node, index, onActivate, onTooltip, connectedLinks } = props
+  const isFirst = node.kind === "check_in" || node.isFirst
+  const isLast = node.kind === "drop_off" || node.isLast
   const isMiddle = !isFirst && !isLast
   const color = nodeColor(index)
-  const centerY = y + height / 2
-  const label = truncateLabel(payload.name)
+  const height = Math.max(node.y1 - node.y0, 1)
+  const centerY = node.y0 + height / 2
+  const label = truncateLabel(node.name)
 
   let labelX: number
   let anchor: "start" | "middle" | "end"
   let nameY: number
   if (isLast) {
-    labelX = x - 8
+    labelX = node.x0 - 8
     anchor = "end"
     nameY = centerY
   } else if (isFirst) {
-    labelX = x + width + 8
+    labelX = node.x1 + 8
     anchor = "start"
     nameY = centerY
   } else {
-    labelX = x + width / 2
+    labelX = node.x0 + (node.x1 - node.x0) / 2
     anchor = "middle"
-    nameY = y - 6
+    nameY = node.y0 - 6
   }
-
-  const connectedLinks = [...(payload.sourceLinks ?? []), ...(payload.targetLinks ?? [])]
 
   return (
     <g
-      onMouseEnter={() => onActivate(connectedLinks)}
-      onMouseLeave={() => onActivate(null)}
+      onMouseEnter={(event) => {
+        onActivate(connectedLinks)
+        onTooltip({
+          label: node.name,
+          value: node.value,
+          x: event.nativeEvent.offsetX,
+          y: event.nativeEvent.offsetY,
+        })
+      }}
+      onMouseMove={(event) =>
+        onTooltip({
+          label: node.name,
+          value: node.value,
+          x: event.nativeEvent.offsetX,
+          y: event.nativeEvent.offsetY,
+        })
+      }
+      onMouseLeave={() => {
+        onActivate(null)
+        onTooltip(null)
+      }}
     >
       <rect
-        x={x}
-        y={y}
-        width={width}
-        height={Math.max(height, 1)}
+        x={node.x0}
+        y={node.y0}
+        width={node.x1 - node.x0}
+        height={height}
         rx={3}
         fill={color}
         fillOpacity={0.95}
@@ -170,89 +166,65 @@ function FlowNode(
           fontSize={11}
           style={LABEL_HALO_STYLE}
         >
-          {payload.value.toLocaleString()}
+          {node.value.toLocaleString()}
         </text>
       ) : null}
     </g>
   )
 }
 
-interface FlowLinkProps {
-  sourceX: number
-  targetX: number
-  sourceY: number
-  targetY: number
-  sourceControlX: number
-  targetControlX: number
-  linkWidth: number
-  index: number
-}
-
-function FlowLink(
-  props: FlowLinkProps & {
-    highlightedLinks: number[] | null
-    onActivate: (links: number[] | null) => void
-  }
-): React.ReactElement {
-  const {
-    sourceX,
-    targetX,
-    sourceY,
-    targetY,
-    sourceControlX,
-    targetControlX,
-    linkWidth,
-    index,
-    highlightedLinks,
-    onActivate,
-  } = props
-  const isActive = highlightedLinks?.includes(index) ?? false
+function FlowLink(props: {
+  link: FlowLayoutLink
+  highlightedLinks: number[] | null
+  onActivate: (links: number[] | null) => void
+  onTooltip: (tooltip: ActiveTooltip | null) => void
+}): React.ReactElement {
+  const { link, highlightedLinks, onActivate, onTooltip } = props
+  const isActive = highlightedLinks?.includes(link.index) ?? false
   const isDimmed = highlightedLinks != null && !isActive
   const strokeOpacity = isActive ? 0.7 : isDimmed ? 0.15 : 0.4
+  const sourceControlX = linkControlX(link.sourceX, link.targetX)
+  const targetControlX = linkControlX(link.targetX, link.sourceX)
+
+  const showTooltip = (event: React.MouseEvent) =>
+    onTooltip({
+      label: `${link.sourceName} → ${link.targetName}`,
+      value: link.value,
+      x: event.nativeEvent.offsetX,
+      y: event.nativeEvent.offsetY,
+    })
 
   return (
     <path
-      d={`M${sourceX},${sourceY}C${sourceControlX},${sourceY} ${targetControlX},${targetY} ${targetX},${targetY}`}
+      d={`M${link.sourceX},${link.sourceY}C${sourceControlX},${link.sourceY} ${targetControlX},${link.targetY} ${link.targetX},${link.targetY}`}
       fill="none"
-      stroke={`url(#flowLinkGradient-${index})`}
-      strokeWidth={Math.max(linkWidth, 1)}
+      stroke={`url(#flowLinkGradient-${link.index})`}
+      strokeWidth={Math.max(link.width, 1)}
       strokeOpacity={strokeOpacity}
-      onMouseEnter={() => onActivate([index])}
-      onMouseLeave={() => onActivate(null)}
+      onMouseEnter={(event) => {
+        onActivate([link.index])
+        showTooltip(event)
+      }}
+      onMouseMove={showTooltip}
+      onMouseLeave={() => {
+        onActivate(null)
+        onTooltip(null)
+      }}
       style={{ transition: "stroke-opacity 150ms ease" }}
     />
   )
 }
 
-interface FlowTooltipPayloadItem {
-  payload?: {
-    name?: string
-    value?: number
-    source?: { name?: string }
-    target?: { name?: string }
-  }
-}
-
-function FlowTooltipContent(props: {
-  active?: boolean
-  payload?: FlowTooltipPayloadItem[]
-}): React.ReactElement | null {
-  const { active, payload } = props
-  if (!active || !payload?.length) return null
-  const datum = payload[0]?.payload
-  if (!datum) return null
-
-  const isLink = datum.source != null && datum.target != null
-  const label = isLink
-    ? `${datum.source?.name ?? "?"} → ${datum.target?.name ?? "?"}`
-    : (datum.name ?? "")
-  const value = datum.value ?? 0
-
+function FlowTooltip(props: { tooltip: ActiveTooltip }): React.ReactElement {
+  const { tooltip } = props
   return (
-    <div className="rounded-lg border bg-background px-3 py-2 text-xs shadow-xl">
-      <p className="font-medium text-foreground">{label}</p>
+    <div
+      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg border bg-background px-3 py-2 text-xs shadow-xl"
+      style={{ left: tooltip.x, top: tooltip.y - 8 }}
+    >
+      <p className="font-medium text-foreground">{tooltip.label}</p>
       <p className="text-muted-foreground">
-        {value.toLocaleString()} attendee{value === 1 ? "" : "s"}
+        {tooltip.value.toLocaleString()} attendee{tooltip.value === 1 ? "" : "s"}
       </p>
     </div>
   )
@@ -289,10 +261,34 @@ export function EventAttendeeFlowChart(props: {
 }): React.ReactElement {
   const { data, isLoading, isError, error, errorMessage, onRetry } = props
   const [highlightedLinks, setHighlightedLinks] = React.useState<number[] | null>(null)
+  const [tooltip, setTooltip] = React.useState<ActiveTooltip | null>(null)
+  const [containerRef, width] = useMeasuredWidth()
 
-  const sankeyData = React.useMemo(() => toSankeyData(data), [data])
-  const hasData = sankeyData.nodes.length > 0 && sankeyData.links.length > 0
-  const chartHeight = chartHeightForNodes(sankeyData.nodes.length)
+  const nodeCount = data?.nodes?.length ?? 0
+  const chartHeight = chartHeightForNodes(nodeCount)
+  const hasData = nodeCount > 0 && (data?.links?.length ?? 0) > 0
+
+  const layout = React.useMemo(() => {
+    if (!hasData || width <= 0) return null
+    return layoutAttendeeFlowSankey(data, {
+      width,
+      height: chartHeight,
+      nodeWidth: NODE_WIDTH,
+      nodePadding: NODE_PADDING,
+      margin: CHART_MARGIN,
+    })
+  }, [data, hasData, width, chartHeight])
+
+  const connectedLinksByNode = React.useMemo(() => {
+    const map = new Map<number, number[]>()
+    if (!layout) return map
+    layout.nodes.forEach((_, index) => map.set(index, []))
+    for (const link of layout.links) {
+      map.get(link.source)?.push(link.index)
+      map.get(link.target)?.push(link.index)
+    }
+    return map
+  }, [layout])
 
   const displayErrorMessage =
     errorMessage ??
@@ -321,47 +317,63 @@ export function EventAttendeeFlowChart(props: {
             height={chartHeight}
           />
         ) : (
-          <ChartContainer
-            config={chartConfig}
-            className={cn("aspect-auto w-full")}
+          <div
+            ref={containerRef}
+            className="relative w-full"
             style={{ height: chartHeight }}
           >
-            <Sankey
-              data={sankeyData}
-              nodePadding={28}
-              nodeWidth={14}
-              linkCurvature={0.5}
-              iterations={64}
-              margin={{ top: 16, right: 16, bottom: 16, left: 16 }}
-              node={(nodeProps: FlowNodeProps) => (
-                <FlowNode {...nodeProps} onActivate={setHighlightedLinks} />
-              )}
-              link={(linkProps: FlowLinkProps) => (
-                <FlowLink
-                  {...linkProps}
-                  highlightedLinks={highlightedLinks}
-                  onActivate={setHighlightedLinks}
-                />
-              )}
-            >
-              <defs>
-                {sankeyData.links.map((link, index) => (
-                  <linearGradient
-                    key={index}
-                    id={`flowLinkGradient-${index}`}
-                    x1="0"
-                    y1="0"
-                    x2="1"
-                    y2="0"
-                  >
-                    <stop offset="0%" stopColor={nodeColor(link.source)} />
-                    <stop offset="100%" stopColor={nodeColor(link.target)} />
-                  </linearGradient>
-                ))}
-              </defs>
-              <Tooltip content={<FlowTooltipContent />} />
-            </Sankey>
-          </ChartContainer>
+            {layout ? (
+              <svg
+                width={width}
+                height={chartHeight}
+                className="overflow-visible"
+                onMouseLeave={() => {
+                  setHighlightedLinks(null)
+                  setTooltip(null)
+                }}
+              >
+                <defs>
+                  {layout.links.map((link) => (
+                    <linearGradient
+                      key={link.index}
+                      id={`flowLinkGradient-${link.index}`}
+                      x1="0"
+                      y1="0"
+                      x2="1"
+                      y2="0"
+                    >
+                      <stop offset="0%" stopColor={nodeColor(link.source)} />
+                      <stop offset="100%" stopColor={nodeColor(link.target)} />
+                    </linearGradient>
+                  ))}
+                </defs>
+                <g>
+                  {layout.links.map((link) => (
+                    <FlowLink
+                      key={link.index}
+                      link={link}
+                      highlightedLinks={highlightedLinks}
+                      onActivate={setHighlightedLinks}
+                      onTooltip={setTooltip}
+                    />
+                  ))}
+                </g>
+                <g>
+                  {layout.nodes.map((node, index) => (
+                    <FlowNode
+                      key={node.id}
+                      node={node}
+                      index={index}
+                      connectedLinks={connectedLinksByNode.get(index) ?? []}
+                      onActivate={setHighlightedLinks}
+                      onTooltip={setTooltip}
+                    />
+                  ))}
+                </g>
+              </svg>
+            ) : null}
+            {tooltip ? <FlowTooltip tooltip={tooltip} /> : null}
+          </div>
         )}
       </CardContent>
     </Card>
