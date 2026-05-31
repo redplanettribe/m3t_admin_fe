@@ -9,12 +9,19 @@ import {
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
+  buildAttendeeFlowRoomContext,
+  flowNodeColor,
+  roomColor,
+  roomIdsInFlow,
+  type AttendeeFlowRoomContext,
+} from "@/lib/attendeeFlowRoomColors"
+import {
   layoutAttendeeFlowSankey,
   linkControlX,
   type FlowLayoutLink,
   type FlowLayoutNode,
 } from "@/lib/attendeeFlowSankey"
-import type { EventAttendeeFlow } from "@/types/event"
+import type { EventAttendeeFlow, EventSchedule } from "@/types/event"
 
 const MIN_CHART_HEIGHT = 360
 const MAX_CHART_HEIGHT = 720
@@ -23,18 +30,6 @@ const LABEL_MAX_CHARS = 22
 const NODE_WIDTH = 14
 const NODE_PADDING = 28
 const CHART_MARGIN = { top: 16, right: 16, bottom: 16, left: 16 }
-
-const NODE_COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-] as const
-
-function nodeColor(index: number): string {
-  return NODE_COLORS[index % NODE_COLORS.length]
-}
 
 function chartHeightForNodes(nodeCount: number): number {
   return Math.min(MAX_CHART_HEIGHT, Math.max(MIN_CHART_HEIGHT, nodeCount * ROW_HEIGHT))
@@ -80,16 +75,16 @@ interface ActiveTooltip {
 
 function FlowNode(props: {
   node: FlowLayoutNode
-  index: number
+  roomContext: AttendeeFlowRoomContext | undefined
   onActivate: (links: number[] | null) => void
   onTooltip: (tooltip: ActiveTooltip | null) => void
   connectedLinks: number[]
 }): React.ReactElement {
-  const { node, index, onActivate, onTooltip, connectedLinks } = props
+  const { node, roomContext, onActivate, onTooltip, connectedLinks } = props
   const isFirst = node.kind === "check_in" || node.isFirst
   const isLast = node.kind === "drop_off" || node.isLast
   const isMiddle = !isFirst && !isLast
-  const color = nodeColor(index)
+  const color = flowNodeColor(node, roomContext)
   const height = Math.max(node.y1 - node.y0, 1)
   const centerY = node.y0 + height / 2
   const label = truncateLabel(node.name)
@@ -173,6 +168,28 @@ function FlowNode(props: {
   )
 }
 
+function FlowRoomLegend(props: {
+  roomIds: string[]
+  roomContext: AttendeeFlowRoomContext
+}): React.ReactElement {
+  const { roomIds, roomContext } = props
+  if (roomIds.length === 0) return <></>
+  return (
+    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
+      {roomIds.map((roomId) => (
+        <span key={roomId} className="inline-flex items-center gap-1.5">
+          <span
+            className="size-2.5 shrink-0 rounded-sm"
+            style={{ backgroundColor: roomColor(roomId) }}
+            aria-hidden
+          />
+          {roomContext.roomNameById.get(roomId) ?? roomId}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 function FlowLink(props: {
   link: FlowLayoutLink
   highlightedLinks: number[] | null
@@ -253,13 +270,18 @@ function ChartStatePanel(props: {
 
 export function EventAttendeeFlowChart(props: {
   data: EventAttendeeFlow | undefined
+  schedule?: EventSchedule
   isLoading: boolean
   isError: boolean
   error: Error | null
   errorMessage?: string
   onRetry?: () => void
 }): React.ReactElement {
-  const { data, isLoading, isError, error, errorMessage, onRetry } = props
+  const { data, schedule, isLoading, isError, error, errorMessage, onRetry } = props
+  const roomContext = React.useMemo(
+    () => buildAttendeeFlowRoomContext(schedule),
+    [schedule]
+  )
   const [highlightedLinks, setHighlightedLinks] = React.useState<number[] | null>(null)
   const [tooltip, setTooltip] = React.useState<ActiveTooltip | null>(null)
   const [containerRef, width] = useMeasuredWidth()
@@ -289,6 +311,16 @@ export function EventAttendeeFlowChart(props: {
     }
     return map
   }, [layout])
+
+  const legendRoomIds = React.useMemo(
+    () => (layout ? roomIdsInFlow(layout.nodes, roomContext) : []),
+    [layout, roomContext]
+  )
+
+  const nodeColorByIndex = React.useMemo(() => {
+    if (!layout) return []
+    return layout.nodes.map((node) => flowNodeColor(node, roomContext))
+  }, [layout, roomContext])
 
   const displayErrorMessage =
     errorMessage ??
@@ -342,8 +374,8 @@ export function EventAttendeeFlowChart(props: {
                       x2="1"
                       y2="0"
                     >
-                      <stop offset="0%" stopColor={nodeColor(link.source)} />
-                      <stop offset="100%" stopColor={nodeColor(link.target)} />
+                      <stop offset="0%" stopColor={nodeColorByIndex[link.source]} />
+                      <stop offset="100%" stopColor={nodeColorByIndex[link.target]} />
                     </linearGradient>
                   ))}
                 </defs>
@@ -363,7 +395,7 @@ export function EventAttendeeFlowChart(props: {
                     <FlowNode
                       key={node.id}
                       node={node}
-                      index={index}
+                      roomContext={roomContext}
                       connectedLinks={connectedLinksByNode.get(index) ?? []}
                       onActivate={setHighlightedLinks}
                       onTooltip={setTooltip}
@@ -371,6 +403,9 @@ export function EventAttendeeFlowChart(props: {
                   ))}
                 </g>
               </svg>
+            ) : null}
+            {legendRoomIds.length > 0 ? (
+              <FlowRoomLegend roomIds={legendRoomIds} roomContext={roomContext} />
             ) : null}
             {tooltip ? <FlowTooltip tooltip={tooltip} /> : null}
           </div>

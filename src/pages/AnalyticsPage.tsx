@@ -252,6 +252,7 @@ export function AnalyticsPage(): React.ReactElement {
         </div>
         <EventAttendeeFlowChart
           data={attendeeFlow}
+          schedule={schedule}
           isLoading={attendeeFlowLoading}
           isError={attendeeFlowError}
           error={attendeeFlowErrorObj}

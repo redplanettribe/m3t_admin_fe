@@ -16,6 +16,7 @@ export interface FlowLayoutNode {
   id: string
   name: string
   kind?: EventAttendeeFlowNodeKind
+  session_id?: string
   value: number
   depth: number
   isFirst: boolean
@@ -166,6 +167,7 @@ export function layoutAttendeeFlowSankey(
     id: node.id,
     name: node.name,
     kind: node.kind,
+    session_id: node.session_id,
     value: Math.max(incomingSum[index], outgoingSum[index]),
     depth: node.resolvedDepth,
     isFirst: incomingSum[index] === 0,
