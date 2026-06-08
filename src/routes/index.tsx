@@ -23,6 +23,8 @@ import { TiersPage } from "@/pages/TiersPage"
 import { DeliverablesPage } from "@/pages/DeliverablesPage"
 import { LiveDashboardPage } from "@/pages/LiveDashboardPage"
 import { LiveRedirectPage } from "@/pages/LiveRedirectPage"
+import { EventChatPage } from "@/pages/EventChatPage"
+import { ChatRedirectPage } from "@/pages/ChatRedirectPage"
 import { AnalyticsPage } from "@/pages/AnalyticsPage"
 import { SystemAdminPage } from "@/pages/SystemAdminPage"
 import { SystemEventsPage } from "@/pages/SystemEventsPage"
@@ -112,6 +114,10 @@ const routes: RouteObject[] = [
         element: <LiveRedirectPage />,
       },
       {
+        path: "chat",
+        element: <ChatRedirectPage />,
+      },
+      {
         path: "analytics",
         element: <AnalyticsPage />,
       },
@@ -120,6 +126,14 @@ const routes: RouteObject[] = [
         element: (
           <RequireEventNotEnded>
             <LiveDashboardPage />
+          </RequireEventNotEnded>
+        ),
+      },
+      {
+        path: "events/:eventId/chat",
+        element: (
+          <RequireEventNotEnded>
+            <EventChatPage />
           </RequireEventNotEnded>
         ),
       },

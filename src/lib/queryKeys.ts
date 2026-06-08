@@ -63,5 +63,6 @@ export const queryKeys = {
       ["events", eventId, "analytics", "check-ins", "timeline", granularity] as const,
     attendeeFlow: (eventId: string) =>
       ["events", eventId, "analytics", "flow"] as const,
+    chatGeneral: (eventId: string) => ["events", eventId, "chat", "general"] as const,
   },
 } as const

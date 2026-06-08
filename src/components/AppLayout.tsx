@@ -10,6 +10,7 @@ import {
   Home,
   Layers,
   LayoutGrid,
+  MessageSquare,
   Mic2,
   Package,
   Settings,
@@ -85,6 +86,11 @@ const navMain: NavItem[] = [
     icon: Activity,
   },
   {
+    title: "Chat",
+    url: "/chat",
+    icon: MessageSquare,
+  },
+  {
     title: "Analytics",
     url: "/analytics",
     icon: BarChart3,
@@ -154,7 +160,7 @@ function AppLayoutInner(): React.ReactElement {
     const ended = activeEvent ? isEventEnded(activeEvent) : false
 
     const baseNav = ended
-      ? navMain.filter((item) => item.url !== "/live")
+      ? navMain.filter((item) => item.url !== "/live" && item.url !== "/chat")
       : navMain.filter((item) => item.url !== "/analytics")
 
     if (isAdminPingSuccess && adminPing?.ok) {
