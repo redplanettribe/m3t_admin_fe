@@ -47,3 +47,14 @@ export type SendChatMessageRequest = {
   body: string
   client_msg_id?: string
 }
+
+export type DMConversationPreview = {
+  conversation_id: string
+  other_user_id: string
+  last_message: EventChatMessage
+}
+
+export type DMConversationsListResponse = {
+  items: DMConversationPreview[]
+  next_cursor?: string
+}

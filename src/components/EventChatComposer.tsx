@@ -14,6 +14,7 @@ type EventChatComposerProps = {
   isSending: boolean
   canSend: boolean
   sendError: string | null
+  placeholder?: string
 }
 
 export function EventChatComposer({
@@ -25,6 +26,7 @@ export function EventChatComposer({
   isSending,
   canSend,
   sendError,
+  placeholder = "Message general chat…",
 }: EventChatComposerProps): React.ReactElement {
   const showCount = draft.length > SHOW_COUNT_THRESHOLD
 
@@ -42,7 +44,7 @@ export function EventChatComposer({
             onKeyDown={onKeyDown}
             disabled={disabled || isSending}
             maxLength={MAX_MESSAGE_LENGTH}
-            placeholder="Message general chat…"
+            placeholder={placeholder}
             rows={1}
             className={cn(
               "max-h-32 min-h-[44px] w-full resize-none border-0 bg-transparent text-sm",

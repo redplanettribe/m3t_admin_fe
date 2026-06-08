@@ -64,5 +64,13 @@ export const queryKeys = {
     attendeeFlow: (eventId: string) =>
       ["events", eventId, "analytics", "flow"] as const,
     chatGeneral: (eventId: string) => ["events", eventId, "chat", "general"] as const,
+    chatDmConversations: (eventId: string) =>
+      ["events", eventId, "chat", "dm", "conversations"] as const,
+    chatDmThread: (eventId: string, recipientUserId: string) =>
+      ["events", eventId, "chat", "dm", recipientUserId] as const,
+    publicProfiles: (eventId: string, page: number, pageSize: number) =>
+      ["events", eventId, "public-profiles", page, pageSize] as const,
+    publicProfile: (eventId: string, userId: string) =>
+      ["events", eventId, "public-profiles", userId] as const,
   },
 } as const

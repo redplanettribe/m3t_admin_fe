@@ -11,12 +11,14 @@ import type {
   EventChatMessage,
 } from "@/types/chat"
 
-type UseEventGeneralChatStreamOptions = {
+type UseEventChatStreamOptions = {
   eventId: string | null
-  onMessage: (message: EventChatMessage) => void
+  generalEnabled: boolean
+  onGeneralMessage?: (message: EventChatMessage) => void
+  onDmMessage?: (message: EventChatMessage) => void
 }
 
-type UseEventGeneralChatStreamResult = {
+type UseEventChatStreamResult = {
   connectionState: ChatConnectionState
   error: ChatStreamError | null
   reconnectNow: () => void
@@ -38,17 +40,29 @@ function generalChatTopic(eventId: string) {
   return `attendee.chat.${eventId.toLowerCase()}.general`
 }
 
+function dmInboxTopic(eventId: string) {
+  return `attendee.chat.${eventId.toLowerCase()}.dm.inbox`
+}
+
 async function fetchTicket(eventId: string): Promise<AgendaWsTicket> {
   return apiClient.postNoBody<AgendaWsTicket>(`/events/${eventId}/agenda/ws/ticket`)
 }
 
-export function useEventGeneralChatStream({
+export function useEventChatStream({
   eventId,
-  onMessage,
-}: UseEventGeneralChatStreamOptions): UseEventGeneralChatStreamResult {
+  generalEnabled,
+  onGeneralMessage,
+  onDmMessage,
+}: UseEventChatStreamOptions): UseEventChatStreamResult {
   const token = useUserStore((s) => s.token)
-  const onMessageRef = React.useRef(onMessage)
-  onMessageRef.current = onMessage
+  const onGeneralMessageRef = React.useRef(onGeneralMessage)
+  onGeneralMessageRef.current = onGeneralMessage
+  const onDmMessageRef = React.useRef(onDmMessage)
+  onDmMessageRef.current = onDmMessage
+  const generalEnabledRef = React.useRef(generalEnabled)
+  generalEnabledRef.current = generalEnabled
+  const wsRef = React.useRef<WebSocket | null>(null)
+  const generalSubscribedRef = React.useRef(false)
 
   const [connectionState, setConnectionState] =
     React.useState<ChatConnectionState>("connecting")
@@ -59,27 +73,57 @@ export function useEventGeneralChatStream({
     setReconnectNonce((n) => n + 1)
   }, [])
 
+  const setGeneralSubscription = React.useCallback(
+    (enabled: boolean) => {
+      const socket = wsRef.current
+      if (!socket || socket.readyState !== WebSocket.OPEN || !eventId) return
+
+      const generalTopic = generalChatTopic(eventId)
+      if (enabled && !generalSubscribedRef.current) {
+        socket.send(JSON.stringify({ type: "subscribe", topic: generalTopic }))
+        generalSubscribedRef.current = true
+      } else if (!enabled && generalSubscribedRef.current) {
+        socket.send(JSON.stringify({ type: "unsubscribe", topic: generalTopic }))
+        generalSubscribedRef.current = false
+      }
+    },
+    [eventId]
+  )
+
+  React.useEffect(() => {
+    setGeneralSubscription(generalEnabled)
+  }, [generalEnabled, setGeneralSubscription])
+
   React.useEffect(() => {
     let closed = false
-    let ws: WebSocket | null = null
     let attempt = 0
 
     const closeSocket = () => {
-      if (ws) {
-        if (ws.readyState === WebSocket.OPEN && eventId) {
+      const socket = wsRef.current
+      if (socket) {
+        if (socket.readyState === WebSocket.OPEN && eventId) {
           try {
-            ws.send(
+            socket.send(
               JSON.stringify({
                 type: "unsubscribe",
-                topic: generalChatTopic(eventId),
+                topic: dmInboxTopic(eventId),
               })
             )
+            if (generalSubscribedRef.current) {
+              socket.send(
+                JSON.stringify({
+                  type: "unsubscribe",
+                  topic: generalChatTopic(eventId),
+                })
+              )
+            }
           } catch {
             // ignore send errors during teardown
           }
         }
-        ws.close()
-        ws = null
+        socket.close()
+        wsRef.current = null
+        generalSubscribedRef.current = false
       }
     }
 
@@ -89,23 +133,29 @@ export function useEventGeneralChatStream({
       return () => {}
     }
 
-    const topic = generalChatTopic(eventId)
+    const generalTopic = generalChatTopic(eventId)
+    const dmTopic = dmInboxTopic(eventId)
 
     const run = async () => {
       while (!closed) {
         try {
           setConnectionState(attempt > 0 ? "reconnecting" : "connecting")
           setError(null)
+          generalSubscribedRef.current = false
 
           const ticketResp = await fetchTicket(eventId)
           if (closed) return
 
           await new Promise<void>((resolve, reject) => {
             const socket = new WebSocket(buildWsUrl(ticketResp.ticket))
-            ws = socket
+            wsRef.current = socket
 
             socket.onopen = () => {
-              socket.send(JSON.stringify({ type: "subscribe", topic }))
+              socket.send(JSON.stringify({ type: "subscribe", topic: dmTopic }))
+              if (generalEnabledRef.current) {
+                socket.send(JSON.stringify({ type: "subscribe", topic: generalTopic }))
+                generalSubscribedRef.current = true
+              }
             }
 
             socket.onmessage = (ev) => {
@@ -126,9 +176,13 @@ export function useEventGeneralChatStream({
                   return
                 }
 
-                if (frame.type === "chat.message" && frame.topic === topic) {
+                if (frame.type === "chat.message") {
                   const msgFrame = frame as ChatMessageEnvelope
-                  onMessageRef.current(msgFrame.data)
+                  if (msgFrame.topic === generalTopic) {
+                    onGeneralMessageRef.current?.(msgFrame.data)
+                  } else if (msgFrame.topic === dmTopic) {
+                    onDmMessageRef.current?.(msgFrame.data)
+                  }
                   setError(null)
                   setConnectionState("live")
                   attempt = 0
@@ -143,6 +197,8 @@ export function useEventGeneralChatStream({
             }
 
             socket.onclose = () => {
+              wsRef.current = null
+              generalSubscribedRef.current = false
               if (closed) {
                 resolve()
               } else {
