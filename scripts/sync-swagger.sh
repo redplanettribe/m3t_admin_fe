@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-SPEC_URL="https://raw.githubusercontent.com/redplanettribe/m3t_admin_fe/refs/heads/main/docs/api/swagger.json"
-OUT_DIR="docs/api"
+SPEC_URL="https://raw.githubusercontent.com/redplanettribe/m3t_admin_fe/refs/heads/main/docs/rest_api/swagger.json"
+OUT_DIR="docs/rest_api"
 OUT_FILE="${OUT_DIR}/swagger.json"
 
 mkdir -p "$OUT_DIR"

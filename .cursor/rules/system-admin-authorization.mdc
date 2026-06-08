@@ -20,7 +20,7 @@ Routes under `/system/*` are **platform** administration for users with the back
 ## Verification (required)
 
 - Authorization is proven only by **`GET /admin/ping`** with the Bearer token from `useUserStore`.
-- Treat access as granted only when the response body has **`data.ok === true`** (see `controllers.AdminPingResponse` in [docs/api/swagger.json](docs/api/swagger.json)).
+- Treat access as granted only when the response body has **`data.ok === true`** (see `controllers.AdminPingResponse` in [docs/rest_api/swagger.json](docs/rest_api/swagger.json)).
 - **401** → unauthenticated (redirect to `/login`).
 - **403** or any other failure → deny (fail closed; redirect `/`).
 

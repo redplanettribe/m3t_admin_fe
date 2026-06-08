@@ -1,0 +1,638 @@
+{
+  "asyncapi": "3.1.0",
+  "info": {
+    "title": "Multi-Track Ticketing WebSocket API",
+    "version": "1.0",
+    "description": "AsyncAPI contract for WebSocket connections.",
+    "contact": {
+      "name": "RPT Backend",
+      "email": "backend@example.com"
+    },
+    "license": {
+      "name": "RedPlanetTribe Community License",
+      "url": "https://raw.githubusercontent.com/redplanettribe/m3t_ber/main/LICENSE"
+    }
+  },
+  "servers": {
+    "default": {
+      "host": "localhost:8080",
+      "protocol": "ws"
+    }
+  },
+  "channels": {
+    "WebSocketMultiplex": {
+      "address": "/ws",
+      "description": "Multiplexed WebSocket endpoint. Clients subscribe/unsubscribe to topics; server pushes agenda.invalidate (attendee), session.status_changed (organizer.agenda.{event_id}), and chat.message (attendee.chat.{event_id}.general or attendee.chat.{event_id}.dm.inbox).",
+      "bindings": {
+        "ws": {
+          "method": "GET"
+        }
+      },
+      "messages": {
+        "agenda_invalidate": {
+          "$ref": "#/components/messages/agenda_invalidate"
+        },
+        "session_checked_in": {
+          "$ref": "#/components/messages/session_checked_in"
+        },
+        "session_status_changed": {
+          "$ref": "#/components/messages/session_status_changed"
+        },
+        "chat_message": {
+          "$ref": "#/components/messages/chat_message"
+        },
+        "pong": {
+          "$ref": "#/components/messages/pong"
+        },
+        "error": {
+          "$ref": "#/components/messages/error"
+        },
+        "subscribe": {
+          "$ref": "#/components/messages/subscribe"
+        },
+        "unsubscribe": {
+          "$ref": "#/components/messages/unsubscribe"
+        },
+        "ping": {
+          "$ref": "#/components/messages/ping"
+        }
+      }
+    }
+  },
+  "operations": {
+    "WebSocketMultiplex_client_send": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/WebSocketMultiplex"
+      },
+      "summary": "Client sends frames to server.",
+      "security": [
+        {
+          "$ref": "#/components/securitySchemes/bearerAuth"
+        },
+        {
+          "$ref": "#/components/securitySchemes/agendaTicket"
+        }
+      ],
+      "messages": [
+        {
+          "$ref": "#/channels/WebSocketMultiplex/messages/subscribe"
+        },
+        {
+          "$ref": "#/channels/WebSocketMultiplex/messages/unsubscribe"
+        },
+        {
+          "$ref": "#/channels/WebSocketMultiplex/messages/ping"
+        }
+      ]
+    },
+    "WebSocketMultiplex_server_receive": {
+      "action": "receive",
+      "channel": {
+        "$ref": "#/channels/WebSocketMultiplex"
+      },
+      "summary": "Server sends frames to client.",
+      "security": [
+        {
+          "$ref": "#/components/securitySchemes/bearerAuth"
+        },
+        {
+          "$ref": "#/components/securitySchemes/agendaTicket"
+        }
+      ],
+      "messages": [
+        {
+          "$ref": "#/channels/WebSocketMultiplex/messages/agenda_invalidate"
+        },
+        {
+          "$ref": "#/channels/WebSocketMultiplex/messages/session_checked_in"
+        },
+        {
+          "$ref": "#/channels/WebSocketMultiplex/messages/session_status_changed"
+        },
+        {
+          "$ref": "#/channels/WebSocketMultiplex/messages/chat_message"
+        },
+        {
+          "$ref": "#/channels/WebSocketMultiplex/messages/pong"
+        },
+        {
+          "$ref": "#/channels/WebSocketMultiplex/messages/error"
+        }
+      ]
+    }
+  },
+  "components": {
+    "schemas": {
+      "realtime.AgendaInvalidateEnvelope": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "description": "Invalidate payload",
+            "properties": {
+              "event_id": {
+                "description": "Event ID (UUID)",
+                "title": "EventID",
+                "type": "string"
+              },
+              "occurred_at": {
+                "description": "UTC timestamp when event occurred",
+                "format": "date-time",
+                "title": "OccurredAt",
+                "type": "string"
+              },
+              "reason": {
+                "description": "Why message emitted (ex: booking_released)",
+                "title": "Reason",
+                "type": "string"
+              },
+              "session_id": {
+                "description": "Session ID (UUID) if applicable",
+                "title": "SessionID",
+                "type": "string"
+              }
+            },
+            "required": [
+              "event_id",
+              "reason",
+              "occurred_at"
+            ],
+            "title": "Data",
+            "type": "object"
+          },
+          "topic": {
+            "description": "Logical subscription topic",
+            "title": "Topic",
+            "type": "string"
+          },
+          "ts": {
+            "description": "Server timestamp (UTC)",
+            "format": "date-time",
+            "title": "TS",
+            "type": "string"
+          },
+          "type": {
+            "description": "Message type (agenda.invalidate)",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "topic",
+          "data"
+        ],
+        "title": "realtime.AgendaInvalidateEnvelope",
+        "type": "object"
+      },
+      "realtime.SessionCheckedInEnvelope": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "description": "Session checked-in payload",
+            "properties": {
+              "event_id": {
+                "description": "Event ID (UUID)",
+                "title": "EventID",
+                "type": "string"
+              },
+              "occurred_at": {
+                "description": "UTC timestamp when check-in occurred",
+                "format": "date-time",
+                "title": "OccurredAt",
+                "type": "string"
+              },
+              "session_id": {
+                "description": "Session ID (UUID)",
+                "title": "SessionID",
+                "type": "string"
+              }
+            },
+            "required": [
+              "event_id",
+              "session_id",
+              "occurred_at"
+            ],
+            "title": "Data",
+            "type": "object"
+          },
+          "topic": {
+            "description": "Logical subscription topic",
+            "title": "Topic",
+            "type": "string"
+          },
+          "ts": {
+            "description": "Server timestamp (UTC)",
+            "format": "date-time",
+            "title": "TS",
+            "type": "string"
+          },
+          "type": {
+            "description": "Message type (session.checked_in)",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "topic",
+          "data"
+        ],
+        "title": "realtime.SessionCheckedInEnvelope",
+        "type": "object"
+      },
+      "realtime.OrganizerSessionStatusEnvelope": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "description": "Session status payload",
+            "properties": {
+              "event_id": {
+                "description": "Event ID (UUID)",
+                "title": "EventID",
+                "type": "string"
+              },
+              "new_status": {
+                "description": "New session lifecycle status",
+                "title": "NewStatus",
+                "type": "string"
+              },
+              "occurred_at": {
+                "description": "UTC timestamp when status changed",
+                "format": "date-time",
+                "title": "OccurredAt",
+                "type": "string"
+              },
+              "old_status": {
+                "description": "Previous session lifecycle status",
+                "title": "OldStatus",
+                "type": "string"
+              },
+              "session_id": {
+                "description": "Session ID (UUID)",
+                "title": "SessionID",
+                "type": "string"
+              },
+              "title": {
+                "description": "Session title if known",
+                "title": "Title",
+                "type": "string"
+              }
+            },
+            "required": [
+              "event_id",
+              "session_id",
+              "old_status",
+              "new_status",
+              "occurred_at"
+            ],
+            "title": "Data",
+            "type": "object"
+          },
+          "topic": {
+            "description": "Logical subscription topic",
+            "title": "Topic",
+            "type": "string"
+          },
+          "ts": {
+            "description": "Server timestamp (UTC)",
+            "format": "date-time",
+            "title": "TS",
+            "type": "string"
+          },
+          "type": {
+            "description": "Message type (session.status_changed)",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "topic",
+          "data"
+        ],
+        "title": "realtime.OrganizerSessionStatusEnvelope",
+        "type": "object"
+      },
+      "realtime.ChatMessageEnvelope": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "channel_type": {
+                "type": "string"
+              },
+              "conversation_id": {
+                "type": "string"
+              },
+              "created_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "event_id": {
+                "type": "string"
+              },
+              "message_id": {
+                "type": "string"
+              },
+              "recipient_user_id": {
+                "type": "string"
+              },
+              "sender_last_name": {
+                "type": "string"
+              },
+              "sender_name": {
+                "type": "string"
+              },
+              "sender_profile_picture_url": {
+                "type": "string"
+              },
+              "sender_user_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "message_id",
+              "event_id",
+              "channel_type",
+              "conversation_id",
+              "sender_user_id",
+              "sender_name",
+              "sender_last_name",
+              "recipient_user_id",
+              "body",
+              "created_at"
+            ],
+            "type": "object"
+          },
+          "topic": {
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "topic",
+          "data"
+        ],
+        "title": "realtime.ChatMessageEnvelope",
+        "type": "object"
+      },
+      "realtime.SubscribeEnvelope": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "description": "Optional subscribe data",
+            "properties": {
+              "event_id": {
+                "description": "Event ID (UUID) if subscribing to attendee.agenda.{event_id} or organizer.agenda.{event_id}",
+                "title": "EventID",
+                "type": "string"
+              }
+            },
+            "title": "Data",
+            "type": "object"
+          },
+          "id": {
+            "description": "Client-generated message id for tracing",
+            "title": "ID",
+            "type": "string"
+          },
+          "topic": {
+            "description": "Topic to subscribe to",
+            "title": "Topic",
+            "type": "string"
+          },
+          "type": {
+            "description": "Control message type (subscribe)",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "topic"
+        ],
+        "title": "realtime.SubscribeEnvelope",
+        "type": "object"
+      },
+      "realtime.UnsubscribeEnvelope": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Client-generated message id for tracing",
+            "title": "ID",
+            "type": "string"
+          },
+          "topic": {
+            "description": "Topic to unsubscribe from",
+            "title": "Topic",
+            "type": "string"
+          },
+          "type": {
+            "description": "Control message type (unsubscribe)",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "topic"
+        ],
+        "title": "realtime.UnsubscribeEnvelope",
+        "type": "object"
+      },
+      "realtime.PingEnvelope": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Client-generated message id for tracing",
+            "title": "ID",
+            "type": "string"
+          },
+          "type": {
+            "description": "Control message type (ping)",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "realtime.PingEnvelope",
+        "type": "object"
+      },
+      "realtime.PongEnvelope": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Echo of ping id (if present)",
+            "title": "ID",
+            "type": "string"
+          },
+          "ts": {
+            "description": "Server timestamp (UTC)",
+            "format": "date-time",
+            "title": "TS",
+            "type": "string"
+          },
+          "type": {
+            "description": "Control message type (pong)",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "realtime.PongEnvelope",
+        "type": "object"
+      },
+      "realtime.ErrorEnvelope": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "description": "Error payload",
+            "properties": {
+              "code": {
+                "description": "Stable error code",
+                "title": "Code",
+                "type": "string"
+              },
+              "message": {
+                "description": "Human-readable message",
+                "title": "Message",
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "title": "Data",
+            "type": "object"
+          },
+          "id": {
+            "description": "Client-generated message id for tracing",
+            "title": "ID",
+            "type": "string"
+          },
+          "topic": {
+            "description": "Topic related to error (if any)",
+            "title": "Topic",
+            "type": "string"
+          },
+          "ts": {
+            "description": "Server timestamp (UTC)",
+            "format": "date-time",
+            "title": "TS",
+            "type": "string"
+          },
+          "type": {
+            "description": "Error message type (error)",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "data"
+        ],
+        "title": "realtime.ErrorEnvelope",
+        "type": "object"
+      }
+    },
+    "messages": {
+      "agenda_invalidate": {
+        "name": "agenda.invalidate",
+        "description": "Invalidate attendee agenda; client refetches REST schedule-simple.",
+        "payload": {
+          "$ref": "#/components/schemas/realtime.AgendaInvalidateEnvelope"
+        }
+      },
+      "session_checked_in": {
+        "name": "session.checked_in",
+        "description": "Attendee session checked-in; topic attendee.agenda.{event_id}.",
+        "payload": {
+          "$ref": "#/components/schemas/realtime.SessionCheckedInEnvelope"
+        }
+      },
+      "session_status_changed": {
+        "name": "session.status_changed",
+        "description": "Session lifecycle status changed; topic organizer.agenda.{event_id}. Event managers only.",
+        "payload": {
+          "$ref": "#/components/schemas/realtime.OrganizerSessionStatusEnvelope"
+        }
+      },
+      "chat_message": {
+        "name": "chat.message",
+        "description": "Chat message delivered on attendee.chat.{event_id}.general or attendee.chat.{event_id}.dm.inbox (DM inbox; server routes to authenticated user).",
+        "payload": {
+          "$ref": "#/components/schemas/realtime.ChatMessageEnvelope"
+        }
+      },
+      "subscribe": {
+        "name": "subscribe",
+        "description": "Client control: subscribe to a topic.",
+        "payload": {
+          "$ref": "#/components/schemas/realtime.SubscribeEnvelope"
+        }
+      },
+      "unsubscribe": {
+        "name": "unsubscribe",
+        "description": "Client control: unsubscribe from a topic.",
+        "payload": {
+          "$ref": "#/components/schemas/realtime.UnsubscribeEnvelope"
+        }
+      },
+      "ping": {
+        "name": "ping",
+        "description": "Client control: ping (server replies pong).",
+        "payload": {
+          "$ref": "#/components/schemas/realtime.PingEnvelope"
+        }
+      },
+      "pong": {
+        "name": "pong",
+        "description": "Server control: pong response.",
+        "payload": {
+          "$ref": "#/components/schemas/realtime.PongEnvelope"
+        }
+      },
+      "error": {
+        "name": "error",
+        "description": "Server error frame.",
+        "payload": {
+          "$ref": "#/components/schemas/realtime.ErrorEnvelope"
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "agendaTicket": {
+        "type": "httpApiKey",
+        "in": "query",
+        "name": "ticket"
+      }
+    }
+  }
+}

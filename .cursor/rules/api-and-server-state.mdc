@@ -9,5 +9,7 @@ alwaysApply: false
 - **All server state** goes through **TanStack Query** (`useQuery`, `useMutation`). Do not use ad-hoc `useState` + `useEffect` for API data.
 - **Query keys**: Define in a central module (e.g. `src/lib/queryKeys.ts`) and use a factory pattern (e.g. `events: { list: [...], detail: (id) => [...] }`).
 - **Mutations**: Invalidate or update relevant query keys after success so the UI stays in sync.
-- **Types**: Type request bodies and response shapes; align with backend DTOs or API spec. For API contract (endpoints, request/response shapes, definitions), use [docs/api/swagger.json](docs/api/swagger.json). Reference it as `@docs/api/swagger.json` when implementing or updating hooks.
+- **Types**: Type request bodies and response shapes; align with backend DTOs or API spec.
+- **REST contract**: [docs/rest_api/swagger.json](docs/rest_api/swagger.json) — endpoints, request/response shapes, definitions. Reference as `@docs/rest_api/swagger.json` when implementing or updating hooks.
+- **WebSocket contract**: [docs/ws_api/asyncapi.json](docs/ws_api/asyncapi.json) — channels, messages, subscribe/unsubscribe. Reference as `@docs/ws_api/asyncapi.json` when implementing or updating WebSocket clients.
 - **Errors**: Handle loading and error states in the UI; use TanStack Query’s `isLoading`, `isError`, `error` where appropriate.

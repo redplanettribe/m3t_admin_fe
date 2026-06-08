@@ -23,3 +23,4 @@ This is an event-admin SPA. SEO and SSR are not required; do not introduce Next.
 - **Files**: camelCase for non-components (e.g. `queryKeys.ts`, `useEvents.ts`)
 - **Paths**: Use `@/` alias for `src/` (e.g. `@/components/ui`, `@/hooks`)
 - **Layout**: `src/components/`, `src/hooks/`, `src/pages/`, `src/lib/`, `src/routes/`, `src/components/ui/` for shadcn
+- **API docs**: REST spec in `docs/rest_api/swagger.json`; WebSocket spec in `docs/ws_api/asyncapi.json`

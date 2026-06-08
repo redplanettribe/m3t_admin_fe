@@ -16,7 +16,7 @@ The app uses **passwordless** login only. There is no signup flow; users go stra
 
 ## Conventions
 
-- **Types**: Use `RequestLoginCodeRequest`, `VerifyLoginCodeRequest`, and `LoginResponse` from `@/types/auth`. Align with [docs/api/swagger.json](docs/api/swagger.json) auth definitions.
+- **Types**: Use `RequestLoginCodeRequest`, `VerifyLoginCodeRequest`, and `LoginResponse` from `@/types/auth`. Align with [docs/rest_api/swagger.json](docs/rest_api/swagger.json) auth definitions.
 - **Hooks**: `useRequestLoginCode()` and `useVerifyLoginCode()` in `src/hooks/`. Mutation keys live under `queryKeys.auth` in `src/lib/queryKeys.ts`.
 - **Token**: Stored in Zustand via `useUserStore` (persisted as `m3t-admin-user`). The API client in `src/lib/api.ts` reads the token and sends `Authorization: Bearer <token>` on requests.
 - **Protected routes**: Wrap authenticated routes with `RequireAuth`; it redirects to `/login` when `user` is null.

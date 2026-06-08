@@ -15,7 +15,7 @@ Add a page under `/system` for platform (system_admin) users. Follow [system-adm
 
 3. **Navigation** — Add the page to `systemNavMain` in [src/components/SystemAdminLayout.tsx](src/components/SystemAdminLayout.tsx). For cross-link from event admin, optional entry in [AppLayout.tsx](src/components/AppLayout.tsx) inside the `useAdminPing()` success block only. Nav visibility is not security.
 
-4. **API data** — For new endpoints under `/admin/*`: read [docs/api/swagger.json](docs/api/swagger.json), add types, extend `queryKeys.admin`, add a hook in `src/hooks/` using `apiClient`. Expect 403 for non-admins; handle errors in UI.
+4. **API data** — For new endpoints under `/admin/*`: read [docs/rest_api/swagger.json](docs/rest_api/swagger.json), add types, extend `queryKeys.admin`, add a hook in `src/hooks/` using `apiClient`. Expect 403 for non-admins; handle errors in UI.
 
 5. **Review** — Re-read [system-admin-authorization.mdc](.cursor/rules/system-admin-authorization.mdc) before shipping.
 
