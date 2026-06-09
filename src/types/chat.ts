@@ -1,3 +1,5 @@
+import type { PaginationMeta } from "@/types/event"
+
 export type EventChatMessage = {
   message_id: string
   event_id: string
@@ -72,4 +74,19 @@ export type DMConversationPreview = {
 export type DMConversationsListResponse = {
   items: DMConversationPreview[]
   next_cursor?: string
+}
+
+export type EventChatBan = {
+  user_id: string
+  user_name: string
+  user_last_name: string
+  banned_at: string
+  banned_by_user_id: string
+  banned_by_name: string
+  banned_by_last_name: string
+}
+
+export type EventChatBansListResponse = {
+  items: EventChatBan[]
+  pagination: PaginationMeta
 }

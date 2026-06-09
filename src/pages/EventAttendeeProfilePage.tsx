@@ -10,15 +10,38 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useEventSchedule } from "@/hooks/useEvents"
+import {
+  useBanChatUser,
+  useEventChatBans,
+  useUnbanChatUser,
+} from "@/hooks/useEventChatBans"
 import { useEventPublicProfile } from "@/hooks/useEventPublicProfiles"
 import { useReturnNavigation } from "@/hooks/useReturnNavigation"
+import { useTeamMembers } from "@/hooks/useTeamMembers"
 import { ApiError } from "@/lib/api"
 import { isNotRegisteredError, profileDisplayName } from "@/lib/chatUtils"
 import type { AttendeeProfileNavigateState } from "@/lib/returnNavigation"
+import { cn } from "@/lib/utils"
 import { getInitials } from "@/lib/user"
 import { useEventStore } from "@/store/eventStore"
+import { useUserStore } from "@/store/userStore"
 import type { PublicAttendeeProfile } from "@/types/profile"
+
+function formatBanDate(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  return date.toLocaleString()
+}
 
 function ProfileTagList({
   label,
@@ -130,6 +153,229 @@ function ProfileContent({
   )
 }
 
+type ChatModerationCardProps = {
+  eventId: string
+  userId: string
+  attendeeName: string
+}
+
+function ChatModerationCard({
+  eventId,
+  userId,
+  attendeeName,
+}: ChatModerationCardProps): React.ReactElement {
+  const { data: bansList } = useEventChatBans(eventId, { enabled: true })
+  const banChatUser = useBanChatUser(eventId)
+  const unbanChatUser = useUnbanChatUser(eventId)
+
+  const [banDialogOpen, setBanDialogOpen] = React.useState(false)
+  const [unbanDialogOpen, setUnbanDialogOpen] = React.useState(false)
+  const [actionError, setActionError] = React.useState<string | null>(null)
+
+  const existingBan = React.useMemo(
+    () => bansList?.items.find((ban) => ban.user_id === userId),
+    [bansList?.items, userId]
+  )
+
+  const isPending = banChatUser.isPending || unbanChatUser.isPending
+
+  const closeBanDialog = () => {
+    setBanDialogOpen(false)
+    setActionError(null)
+    banChatUser.reset()
+  }
+
+  const closeUnbanDialog = () => {
+    setUnbanDialogOpen(false)
+    setActionError(null)
+    unbanChatUser.reset()
+  }
+
+  const handleBanConfirm = () => {
+    setActionError(null)
+    banChatUser.mutate(
+      { userId },
+      {
+        onSuccess: () => closeBanDialog(),
+        onError: (err) => {
+          setActionError(err instanceof Error ? err.message : "Failed to ban user")
+        },
+      }
+    )
+  }
+
+  const handleUnbanConfirm = () => {
+    setActionError(null)
+    unbanChatUser.mutate(
+      { userId },
+      {
+        onSuccess: () => closeUnbanDialog(),
+        onError: (err) => {
+          setActionError(err instanceof Error ? err.message : "Failed to unban user")
+        },
+      }
+    )
+  }
+
+  return (
+    <>
+      <Card className="border-destructive/20">
+        <CardHeader>
+          <CardTitle className="text-base">Chat moderation</CardTitle>
+          <CardDescription>
+            Manage this attendee&apos;s access to event chat.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {existingBan ? (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="bg-destructive/10 text-destructive inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium">
+                  Banned from chat
+                </span>
+                <span className="text-muted-foreground text-sm">
+                  Since {formatBanDate(existingBan.banned_at)}
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setUnbanDialogOpen(true)}
+              >
+                Unban from chat
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => setBanDialogOpen(true)}
+            >
+              Ban from chat
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog
+        open={banDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) closeBanDialog()
+          else setBanDialogOpen(true)
+        }}
+      >
+        <DialogContent showCloseButton>
+          <DialogHeader>
+            <DialogTitle>Ban from chat</DialogTitle>
+            <DialogDescription>
+              Ban {attendeeName} from event chat? They will not be able to send messages,
+              and their profile will be hidden from public attendee lists.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {actionError && banDialogOpen && (
+              <p
+                className={cn(
+                  "rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                )}
+                role="alert"
+              >
+                {actionError}
+              </p>
+            )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeBanDialog}
+                disabled={isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleBanConfirm}
+                disabled={isPending}
+              >
+                {banChatUser.isPending ? "Banning…" : "Ban"}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={unbanDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) closeUnbanDialog()
+          else setUnbanDialogOpen(true)
+        }}
+      >
+        <DialogContent showCloseButton>
+          <DialogHeader>
+            <DialogTitle>Unban from chat</DialogTitle>
+            <DialogDescription>
+              Restore {attendeeName}&apos;s access to event chat and public profile
+              visibility?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {actionError && unbanDialogOpen && (
+              <p
+                className={cn(
+                  "rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                )}
+                role="alert"
+              >
+                {actionError}
+              </p>
+            )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeUnbanDialog}
+                disabled={isPending}
+              >
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleUnbanConfirm} disabled={isPending}>
+                {unbanChatUser.isPending ? "Unbanning…" : "Unban"}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
+type ProfilePageLayoutProps = {
+  returnPath: string
+  returnLabel: string
+  children: React.ReactNode
+  moderation?: React.ReactNode
+}
+
+function ProfilePageLayout({
+  returnPath,
+  returnLabel,
+  children,
+  moderation,
+}: ProfilePageLayoutProps): React.ReactElement {
+  return (
+    <div className="max-w-2xl space-y-6">
+      <Button asChild variant="outline" size="sm">
+        <Link to={returnPath}>{returnLabel}</Link>
+      </Button>
+      {children}
+      {moderation}
+    </div>
+  )
+}
+
 export function EventAttendeeProfilePage(): React.ReactElement {
   const location = useLocation()
   const { eventId = null, userId = null } = useParams<{
@@ -137,20 +383,46 @@ export function EventAttendeeProfilePage(): React.ReactElement {
     userId: string
   }>()
   const setActiveEventId = useEventStore((s) => s.setActiveEventId)
+  const currentUserId = useUserStore((s) => s.user?.id)
   const fallbackPath = eventId ? `/events/${eventId}/chat` : "/chat"
   const { returnPath, returnLabel } = useReturnNavigation(fallbackPath)
 
   const navState = location.state as AttendeeProfileNavigateState | null
   const fallbackProfile = navState?.fallbackProfile
 
+  const { data: schedule } = useEventSchedule(eventId)
+  const { data: teamMembers = [] } = useTeamMembers(eventId)
+
   const { data: profile, isLoading, isError, error } = useEventPublicProfile(
     eventId,
     userId
   )
 
+  const canModerate = React.useMemo(() => {
+    if (!currentUserId || !eventId || !userId) return false
+    if (currentUserId === userId) return false
+    if (schedule?.event?.owner_id === currentUserId) return true
+    return teamMembers.some((member) => member.user_id === currentUserId)
+  }, [currentUserId, eventId, userId, schedule?.event?.owner_id, teamMembers])
+
   React.useEffect(() => {
     if (eventId) setActiveEventId(eventId)
   }, [eventId, setActiveEventId])
+
+  const attendeeName = React.useMemo(() => {
+    if (profile) return profileDisplayName(profile)
+    if (fallbackProfile) return profileDisplayName(fallbackProfile)
+    return "this attendee"
+  }, [profile, fallbackProfile])
+
+  const moderationCard =
+    canModerate && eventId && userId ? (
+      <ChatModerationCard
+        eventId={eventId}
+        userId={userId}
+        attendeeName={attendeeName}
+      />
+    ) : null
 
   if (!eventId || !userId) {
     return (
@@ -211,49 +483,49 @@ export function EventAttendeeProfilePage(): React.ReactElement {
 
   if (isPrivateProfile && fallbackProfile) {
     return (
-      <div className="max-w-2xl space-y-6">
-        <Button asChild variant="outline" size="sm">
-          <Link to={returnPath}>{returnLabel}</Link>
-        </Button>
+      <ProfilePageLayout
+        returnPath={returnPath}
+        returnLabel={returnLabel}
+        moderation={moderationCard}
+      >
         <ProfileContent profile={fallbackProfile} isPrivate />
-      </div>
+      </ProfilePageLayout>
     )
   }
 
   if (isPrivateProfile) {
     return (
-      <div className="max-w-2xl space-y-4">
-        <Button asChild variant="outline" size="sm">
-          <Link to={returnPath}>{returnLabel}</Link>
-        </Button>
+      <ProfilePageLayout
+        returnPath={returnPath}
+        returnLabel={returnLabel}
+        moderation={moderationCard}
+      >
         <h2 className="text-2xl font-semibold tracking-tight">Attendee profile</h2>
         <p className="text-muted-foreground">
           This attendee&apos;s profile is not available.
         </p>
-      </div>
+      </ProfilePageLayout>
     )
   }
 
   if (isError || !profile) {
     return (
-      <div className="max-w-2xl space-y-4">
-        <Button asChild variant="outline" size="sm">
-          <Link to={returnPath}>{returnLabel}</Link>
-        </Button>
+      <ProfilePageLayout returnPath={returnPath} returnLabel={returnLabel}>
         <h2 className="text-2xl font-semibold tracking-tight">Attendee profile</h2>
         <p className="text-destructive text-muted-foreground">
           {error instanceof Error ? error.message : "Failed to load profile."}
         </p>
-      </div>
+      </ProfilePageLayout>
     )
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <Button asChild variant="outline" size="sm">
-        <Link to={returnPath}>{returnLabel}</Link>
-      </Button>
+    <ProfilePageLayout
+      returnPath={returnPath}
+      returnLabel={returnLabel}
+      moderation={moderationCard}
+    >
       <ProfileContent profile={profile as PublicAttendeeProfile} />
-    </div>
+    </ProfilePageLayout>
   )
 }

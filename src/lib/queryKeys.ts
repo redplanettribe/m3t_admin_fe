@@ -68,6 +68,8 @@ export const queryKeys = {
       ["events", eventId, "chat", "dm", "conversations"] as const,
     chatDmThread: (eventId: string, recipientUserId: string) =>
       ["events", eventId, "chat", "dm", recipientUserId] as const,
+    chatBans: (eventId: string, page: number, pageSize: number) =>
+      ["events", eventId, "chat", "bans", page, pageSize] as const,
     publicProfiles: (eventId: string, page: number, pageSize: number) =>
       ["events", eventId, "public-profiles", page, pageSize] as const,
     publicProfile: (eventId: string, userId: string) =>
