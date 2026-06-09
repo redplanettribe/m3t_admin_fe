@@ -1,3 +1,4 @@
+import * as React from "react"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
@@ -44,7 +45,10 @@ export function useEventDmConversations(eventId: string | null) {
     enabled: !!eventId,
   })
 
-  const conversations = query.data ? flattenConversations(query.data.pages) : []
+  const conversations = React.useMemo(
+    () => (query.data ? flattenConversations(query.data.pages) : []),
+    [query.data]
+  )
 
   return {
     ...query,

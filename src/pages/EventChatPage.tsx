@@ -1,5 +1,11 @@
 import * as React from "react"
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom"
 import { ArrowLeft, RefreshCw } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { EventChatComposer } from "@/components/EventChatComposer"
@@ -42,6 +48,7 @@ import {
   removeMessageFromChatInfiniteCache,
 } from "@/lib/chatUtils"
 import { dmConversationId } from "@/lib/dmConversationId"
+import type { AttendeeProfileFallback } from "@/lib/returnNavigation"
 import { queryKeys } from "@/lib/queryKeys"
 import { getInitials } from "@/lib/user"
 import { cn } from "@/lib/utils"
@@ -55,6 +62,19 @@ type ChatTab = "general" | "messages"
 function messageSenderDisplayName(message: EventChatMessage): string {
   const parts = [message.sender_name, message.sender_last_name].filter(Boolean)
   return parts.join(" ").trim() || "Unknown"
+}
+
+function isSameCachedProfile(
+  existing: PublicAttendeeProfile,
+  incoming: PublicAttendeeProfile
+): boolean {
+  return (
+    existing.name === incoming.name &&
+    existing.last_name === incoming.last_name &&
+    existing.profile_picture_url === incoming.profile_picture_url &&
+    existing.headline === incoming.headline &&
+    existing.company === incoming.company
+  )
 }
 
 function profileFromLastMessage(
@@ -74,6 +94,7 @@ function profileFromLastMessage(
 
 export function EventChatPage(): React.ReactElement {
   const navigate = useNavigate()
+  const location = useLocation()
   const queryClient = useQueryClient()
   const { eventId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -173,6 +194,8 @@ export function EventChatPage(): React.ReactElement {
 
   const cacheProfile = React.useCallback((profile: PublicAttendeeProfile) => {
     setProfileCache((prev) => {
+      const existing = prev.get(profile.user_id)
+      if (existing && isSameCachedProfile(existing, profile)) return prev
       const next = new Map(prev)
       next.set(profile.user_id, profile)
       return next
@@ -611,6 +634,34 @@ export function EventChatPage(): React.ReactElement {
     openThread(profile.user_id)
   }
 
+  const handleViewUserProfile = React.useCallback(
+    (userId: string, fallback?: AttendeeProfileFallback) => {
+      if (!effectiveEventId) return
+      if (currentUserId && userId === currentUserId) {
+        navigate("/account")
+        return
+      }
+      navigate(`/events/${effectiveEventId}/attendees/${userId}`, {
+        state: {
+          from: `${location.pathname}${location.search}`,
+          fallbackProfile: fallback,
+        },
+      })
+    },
+    [currentUserId, effectiveEventId, location.pathname, location.search, navigate]
+  )
+
+  const handleSenderClick = React.useCallback(
+    (userId: string, message: EventChatMessage) => {
+      handleViewUserProfile(userId, {
+        name: message.sender_name,
+        last_name: message.sender_last_name,
+        profile_picture_url: message.sender_profile_picture_url,
+      })
+    },
+    [handleViewUserProfile]
+  )
+
   const selectedProfile =
     (selectedRecipientId ? profileCache.get(selectedRecipientId) : undefined) ??
     selectedProfileFromApi
@@ -743,6 +794,7 @@ export function EventChatPage(): React.ReactElement {
               onDeleteMessage={handleDeleteGeneral}
               deletingMessageId={deletingMessageId}
               canModerateMessages={canModerateGeneralChat}
+              onSenderClick={handleSenderClick}
             />
             <EventChatComposer
               draft={generalDraft}
@@ -774,27 +826,42 @@ export function EventChatPage(): React.ReactElement {
                   >
                     <ArrowLeft />
                   </Button>
-                  <Avatar className="size-8 shrink-0">
-                    {selectedProfile?.profile_picture_url ? (
-                      <AvatarImage
-                        src={selectedProfile.profile_picture_url}
-                        alt={selectedRecipientName}
-                      />
-                    ) : null}
-                    <AvatarFallback className="text-xs">
-                      {getInitials(selectedRecipientName)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{selectedRecipientName}</p>
-                    {selectedProfile?.headline || selectedProfile?.company ? (
-                      <p className="text-muted-foreground truncate text-xs">
-                        {[selectedProfile.headline, selectedProfile.company]
-                          .filter(Boolean)
-                          .join(" · ")}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleViewUserProfile(selectedRecipientId, {
+                        name: selectedProfile?.name,
+                        last_name: selectedProfile?.last_name,
+                        profile_picture_url: selectedProfile?.profile_picture_url,
+                      })
+                    }
+                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left hover:opacity-80"
+                    aria-label={`View ${selectedRecipientName}'s profile`}
+                  >
+                    <Avatar className="size-8 shrink-0">
+                      {selectedProfile?.profile_picture_url ? (
+                        <AvatarImage
+                          src={selectedProfile.profile_picture_url}
+                          alt={selectedRecipientName}
+                        />
+                      ) : null}
+                      <AvatarFallback className="text-xs">
+                        {getInitials(selectedRecipientName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium hover:underline">
+                        {selectedRecipientName}
                       </p>
-                    ) : null}
-                  </div>
+                      {selectedProfile?.headline || selectedProfile?.company ? (
+                        <p className="text-muted-foreground truncate text-xs">
+                          {[selectedProfile.headline, selectedProfile.company]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                      ) : null}
+                    </div>
+                  </button>
                 </div>
                 <EventChatMessageList
                   messages={dmMessages}
@@ -808,6 +875,7 @@ export function EventChatPage(): React.ReactElement {
                   isEmpty={dmMessages.length === 0}
                   onDeleteMessage={handleDeleteDm}
                   deletingMessageId={deletingMessageId}
+                  onSenderClick={handleSenderClick}
                 />
                 <EventChatComposer
                   draft={dmDraft}

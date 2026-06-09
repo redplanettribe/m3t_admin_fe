@@ -24,6 +24,7 @@ import { DeliverablesPage } from "@/pages/DeliverablesPage"
 import { LiveDashboardPage } from "@/pages/LiveDashboardPage"
 import { LiveRedirectPage } from "@/pages/LiveRedirectPage"
 import { EventChatPage } from "@/pages/EventChatPage"
+import { EventAttendeeProfilePage } from "@/pages/EventAttendeeProfilePage"
 import { ChatRedirectPage } from "@/pages/ChatRedirectPage"
 import { AnalyticsPage } from "@/pages/AnalyticsPage"
 import { SystemAdminPage } from "@/pages/SystemAdminPage"
@@ -134,6 +135,14 @@ const routes: RouteObject[] = [
         element: (
           <RequireEventNotEnded>
             <EventChatPage />
+          </RequireEventNotEnded>
+        ),
+      },
+      {
+        path: "events/:eventId/attendees/:userId",
+        element: (
+          <RequireEventNotEnded>
+            <EventAttendeeProfilePage />
           </RequireEventNotEnded>
         ),
       },

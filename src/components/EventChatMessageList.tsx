@@ -44,6 +44,7 @@ type EventChatMessageListProps = {
   onDeleteMessage?: (messageId: string) => void
   deletingMessageId?: string | null
   canModerateMessages?: boolean
+  onSenderClick?: (userId: string, message: EventChatMessage) => void
 }
 
 export function EventChatMessageList({
@@ -59,6 +60,7 @@ export function EventChatMessageList({
   onDeleteMessage,
   deletingMessageId,
   canModerateMessages,
+  onSenderClick,
 }: EventChatMessageListProps): React.ReactElement {
   return (
     <div
@@ -133,6 +135,9 @@ export function EventChatMessageList({
 
           const isDeleting = deletingMessageId === message.message_id
           const showModerateDelete = canModerateMessages && onDeleteMessage
+          const handleSenderClick = onSenderClick
+            ? () => onSenderClick(message.sender_user_id, message)
+            : undefined
 
           return (
             <div
@@ -143,18 +148,54 @@ export function EventChatMessageList({
               )}
             >
               {!isContinuation ? (
-                <Avatar className="size-8 shrink-0">
-                  {message.sender_profile_picture_url ? (
-                    <AvatarImage src={message.sender_profile_picture_url} alt={name} />
-                  ) : null}
-                  <AvatarFallback className="text-xs">{getInitials(name)}</AvatarFallback>
-                </Avatar>
+                onSenderClick ? (
+                  <button
+                    type="button"
+                    onClick={handleSenderClick}
+                    className="shrink-0 cursor-pointer rounded-full hover:opacity-80"
+                    aria-label={`View ${name}'s profile`}
+                  >
+                    <Avatar className="size-8">
+                      {message.sender_profile_picture_url ? (
+                        <AvatarImage
+                          src={message.sender_profile_picture_url}
+                          alt={name}
+                        />
+                      ) : null}
+                      <AvatarFallback className="text-xs">
+                        {getInitials(name)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
+                ) : (
+                  <Avatar className="size-8 shrink-0">
+                    {message.sender_profile_picture_url ? (
+                      <AvatarImage
+                        src={message.sender_profile_picture_url}
+                        alt={name}
+                      />
+                    ) : null}
+                    <AvatarFallback className="text-xs">
+                      {getInitials(name)}
+                    </AvatarFallback>
+                  </Avatar>
+                )
               ) : null}
 
               <div className="min-w-0 max-w-[85%] flex-1">
                 {!isContinuation && (
                   <div className="mb-1 flex flex-wrap items-baseline gap-x-2">
-                    <span className="text-sm font-medium">{name}</span>
+                    {onSenderClick ? (
+                      <button
+                        type="button"
+                        onClick={handleSenderClick}
+                        className="cursor-pointer text-sm font-medium hover:underline"
+                      >
+                        {name}
+                      </button>
+                    ) : (
+                      <span className="text-sm font-medium">{name}</span>
+                    )}
                     <span className="text-muted-foreground text-[11px]">
                       {formatMessageTime(message.created_at)}
                     </span>
