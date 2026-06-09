@@ -43,6 +43,7 @@ type EventChatMessageListProps = {
   isEmpty: boolean
   onDeleteMessage?: (messageId: string) => void
   deletingMessageId?: string | null
+  canModerateMessages?: boolean
 }
 
 export function EventChatMessageList({
@@ -57,6 +58,7 @@ export function EventChatMessageList({
   isEmpty,
   onDeleteMessage,
   deletingMessageId,
+  canModerateMessages,
 }: EventChatMessageListProps): React.ReactElement {
   return (
     <div
@@ -129,10 +131,16 @@ export function EventChatMessageList({
             )
           }
 
+          const isDeleting = deletingMessageId === message.message_id
+          const showModerateDelete = canModerateMessages && onDeleteMessage
+
           return (
             <div
               key={message.message_id}
-              className={cn("flex gap-2.5", isContinuation ? "mt-0.5 pl-11" : "mt-3")}
+              className={cn(
+                "group flex gap-2.5",
+                isContinuation ? "mt-0.5 pl-11" : "mt-3"
+              )}
             >
               {!isContinuation ? (
                 <Avatar className="size-8 shrink-0">
@@ -156,6 +164,20 @@ export function EventChatMessageList({
                   {message.body}
                 </div>
               </div>
+
+              {showModerateDelete && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-muted-foreground hover:text-destructive shrink-0 self-end opacity-0 transition-opacity group-hover:opacity-100"
+                  aria-label="Delete message"
+                  disabled={isDeleting}
+                  onClick={() => onDeleteMessage(message.message_id)}
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+              )}
             </div>
           )
         })}

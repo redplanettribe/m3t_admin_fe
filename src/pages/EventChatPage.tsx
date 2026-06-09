@@ -9,8 +9,17 @@ import { EventDmProfileSearch } from "@/components/EventDmProfileSearch"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useDeleteChatMessage } from "@/hooks/useDeleteChatMessage"
+import { useDeleteChatMessageAsOrganizer } from "@/hooks/useDeleteChatMessageAsOrganizer"
 import { useEventChatStream } from "@/hooks/useEventChatStream"
 import { useEventDmConversations } from "@/hooks/useEventDmConversations"
 import { useEventDmMessages } from "@/hooks/useEventDmMessages"
@@ -19,6 +28,7 @@ import { useEventPublicProfile } from "@/hooks/useEventPublicProfiles"
 import { useSendDmMessage } from "@/hooks/useSendDmMessage"
 import { useSendGeneralChatMessage } from "@/hooks/useSendGeneralChatMessage"
 import { useEventSchedule } from "@/hooks/useEvents"
+import { useTeamMembers } from "@/hooks/useTeamMembers"
 import { ApiError } from "@/lib/api"
 import {
   connectionDotClass,
@@ -41,6 +51,11 @@ import type { ChatMessageDeleted, EventChatMessage } from "@/types/chat"
 import type { PublicAttendeeProfile } from "@/types/profile"
 
 type ChatTab = "general" | "messages"
+
+function messageSenderDisplayName(message: EventChatMessage): string {
+  const parts = [message.sender_name, message.sender_last_name].filter(Boolean)
+  return parts.join(" ").trim() || "Unknown"
+}
 
 function profileFromLastMessage(
   userId: string,
@@ -99,6 +114,7 @@ export function EventChatPage(): React.ReactElement {
 
   const effectiveEventId = eventId ?? activeEventId ?? null
   const { data: schedule } = useEventSchedule(effectiveEventId)
+  const { data: teamMembers = [] } = useTeamMembers(effectiveEventId)
 
   const {
     messages: restGeneralMessages,
@@ -144,6 +160,8 @@ export function EventChatPage(): React.ReactElement {
   const [generalSendError, setGeneralSendError] = React.useState<string | null>(null)
   const [dmSendError, setDmSendError] = React.useState<string | null>(null)
   const [deleteError, setDeleteError] = React.useState<string | null>(null)
+  const [deleteConfirmTarget, setDeleteConfirmTarget] =
+    React.useState<EventChatMessage | null>(null)
   const [deletingMessageId, setDeletingMessageId] = React.useState<string | null>(
     null
   )
@@ -239,6 +257,13 @@ export function EventChatPage(): React.ReactElement {
   const sendGeneralMessage = useSendGeneralChatMessage(effectiveEventId)
   const sendDmMessage = useSendDmMessage(effectiveEventId)
   const deleteChatMessage = useDeleteChatMessage(effectiveEventId)
+  const deleteChatMessageAsOrganizer = useDeleteChatMessageAsOrganizer(effectiveEventId)
+
+  const canModerateGeneralChat = React.useMemo(() => {
+    if (!currentUserId) return false
+    if (schedule?.event?.owner_id === currentUserId) return true
+    return teamMembers.some((member) => member.user_id === currentUserId)
+  }, [currentUserId, schedule?.event?.owner_id, teamMembers])
 
   const removeMessage = React.useCallback(
     (messageId: string, channel: "general" | "dm") => {
@@ -297,16 +322,30 @@ export function EventChatPage(): React.ReactElement {
   )
 
   const handleDeleteMessage = React.useCallback(
-    async (messageId: string, channel: "general" | "dm") => {
+    async (
+      messageId: string,
+      channel: "general" | "dm",
+      options?: { asOrganizer?: boolean }
+    ) => {
       setDeleteError(null)
       setDeletingMessageId(messageId)
 
       try {
-        await deleteChatMessage.mutateAsync({ messageId })
+        if (options?.asOrganizer) {
+          await deleteChatMessageAsOrganizer.mutateAsync({ messageId })
+        } else {
+          await deleteChatMessage.mutateAsync({ messageId })
+        }
         removeMessage(messageId, channel)
+        if (channel === "general") {
+          setDeleteConfirmTarget(null)
+        }
       } catch (e) {
         if (e instanceof ApiError && e.status === 404) {
           removeMessage(messageId, channel)
+          if (channel === "general") {
+            setDeleteConfirmTarget(null)
+          }
           return
         }
         setDeleteError(e instanceof Error ? e.message : "Failed to delete message")
@@ -314,12 +353,7 @@ export function EventChatPage(): React.ReactElement {
         setDeletingMessageId(null)
       }
     },
-    [deleteChatMessage, removeMessage]
-  )
-
-  const handleDeleteGeneral = React.useCallback(
-    (messageId: string) => void handleDeleteMessage(messageId, "general"),
-    [handleDeleteMessage]
+    [deleteChatMessage, deleteChatMessageAsOrganizer, removeMessage]
   )
 
   const handleDeleteDm = React.useCallback(
@@ -346,6 +380,39 @@ export function EventChatPage(): React.ReactElement {
     [restDmMessages, dmLiveMessages]
   )
 
+  const handleDeleteGeneral = React.useCallback(
+    (messageId: string) => {
+      const message = generalMessages.find((m) => m.message_id === messageId)
+      if (!message) return
+      setDeleteError(null)
+      setDeleteConfirmTarget(message)
+    },
+    [generalMessages]
+  )
+
+  const handleDeleteConfirm = React.useCallback(() => {
+    if (!deleteConfirmTarget) return
+    const isOwn =
+      !!currentUserId && deleteConfirmTarget.sender_user_id === currentUserId
+    const asOrganizer = !isOwn && canModerateGeneralChat
+    void handleDeleteMessage(deleteConfirmTarget.message_id, "general", {
+      asOrganizer,
+    })
+  }, [
+    canModerateGeneralChat,
+    currentUserId,
+    deleteConfirmTarget,
+    handleDeleteMessage,
+  ])
+
+  const isDeletePending =
+    deleteChatMessage.isPending || deleteChatMessageAsOrganizer.isPending
+
+  const deleteConfirmIsOwn =
+    !!deleteConfirmTarget &&
+    !!currentUserId &&
+    deleteConfirmTarget.sender_user_id === currentUserId
+
   const prevEventIdRef = React.useRef<string | null>(null)
 
   React.useEffect(() => {
@@ -361,6 +428,7 @@ export function EventChatPage(): React.ReactElement {
     setGeneralSendError(null)
     setDmSendError(null)
     setDeleteError(null)
+    setDeleteConfirmTarget(null)
     setDeletingMessageId(null)
     setRegistrationRequired(false)
     setSelectedRecipientId(null)
@@ -633,7 +701,7 @@ export function EventChatPage(): React.ReactElement {
         </Card>
       )}
 
-      {!notRegistered && deleteError && (
+      {!notRegistered && deleteError && !deleteConfirmTarget && (
         <Card className="border-destructive/40 shrink-0">
           <CardHeader>
             <CardTitle className="text-base text-destructive">
@@ -674,6 +742,7 @@ export function EventChatPage(): React.ReactElement {
               isEmpty={generalMessages.length === 0}
               onDeleteMessage={handleDeleteGeneral}
               deletingMessageId={deletingMessageId}
+              canModerateMessages={canModerateGeneralChat}
             />
             <EventChatComposer
               draft={generalDraft}
@@ -782,6 +851,61 @@ export function EventChatPage(): React.ReactElement {
           </TabsContent>
         </Tabs>
       )}
+
+      <Dialog
+        open={!!deleteConfirmTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteConfirmTarget(null)
+            setDeleteError(null)
+            deleteChatMessage.reset()
+            deleteChatMessageAsOrganizer.reset()
+          }
+        }}
+      >
+        <DialogContent showCloseButton>
+          <DialogHeader>
+            <DialogTitle>Delete message</DialogTitle>
+            <DialogDescription>
+              {deleteConfirmIsOwn
+                ? "Delete your message? This cannot be undone."
+                : deleteConfirmTarget
+                  ? `Delete message from ${messageSenderDisplayName(deleteConfirmTarget)}? This removes it for all attendees.`
+                  : null}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {deleteError && (
+              <p
+                className={cn(
+                  "rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                )}
+                role="alert"
+              >
+                {deleteError}
+              </p>
+            )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDeleteConfirmTarget(null)}
+                disabled={isDeletePending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleDeleteConfirm}
+                disabled={isDeletePending}
+              >
+                {isDeletePending ? "Deleting…" : "Delete"}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
