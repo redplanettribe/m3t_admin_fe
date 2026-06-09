@@ -6,7 +6,7 @@ Chat is **not** available outside an event. There is no global or cross-event me
 
 **Related docs**
 
-- REST details: Swagger (`/swagger/`) — search tag `attendee`, paths under `/attendee/events/{eventID}/chat/...`
+- REST details: Swagger (`/swagger/`) — tag `attendee` for attendee chat; tag `events` for organizer moderation (`DELETE /events/{eventID}/chat/messages/{messageID}`)
 - WebSocket multiplexing (shared with agenda realtime): [agenda-realtime-websocket-architecture.md](./agenda-realtime-websocket-architecture.md)
 - WebSocket message schemas: `GET /ws/asyncapi.json`
 
@@ -18,7 +18,9 @@ Chat is **not** available outside an event. There is no global or cross-event me
 |--------|-----------|-------|
 | Send message | REST `POST` | Source of truth; always persists before push |
 | Load history | REST `GET` | Cursor-based pagination |
-| Live delivery | WebSocket `GET /ws` | `chat.message` on subscribed topics |
+| Live delivery | WebSocket `GET /ws` | `chat.message` and `chat.message.deleted` on subscribed topics |
+| Delete message (attendee) | REST `DELETE` | Sender soft-deletes own general or DM message; broadcasts `chat.message.deleted` |
+| Delete message (organizer) | REST `DELETE` | Event owner/team member soft-deletes **general** messages only; same WS event |
 | Offline / reconnect | REST history | WS is best-effort notification |
 
 Use **one shared WebSocket connection** per app session and multiplex chat with agenda and other topics (see agenda doc).
@@ -216,6 +218,44 @@ Items are ordered by **most recent activity first**. For inbox pagination, curso
 
 ---
 
+### Delete message (attendee)
+
+Sender may delete their own general or DM message. Caller must be **registered** for the event.
+
+```
+DELETE /attendee/events/{eventID}/chat/messages/{messageID}
+Authorization: Bearer <token>
+```
+
+| Status | Meaning |
+|--------|---------|
+| `204` | Deleted (or already deleted by same sender — idempotent) |
+| `403` | Not registered for event |
+| `404` | Message not found or caller is not the sender |
+| `401` | Missing or invalid token |
+
+No response body on success. Only the **sender** may delete via this route. Deleted messages disappear from REST history and inbox previews.
+
+### Delete message (organizer — general only)
+
+**Event organizers** (event **owner** or **team member**) may delete **any general chat message**, including messages sent by other attendees. This route does **not** require the organizer to be registered for the event. **DM messages cannot be deleted** via this endpoint — use the attendee sender-only route for own DMs.
+
+```
+DELETE /events/{eventID}/chat/messages/{messageID}
+Authorization: Bearer <token>
+```
+
+| Status | Meaning |
+|--------|---------|
+| `204` | Deleted (or already deleted — idempotent) |
+| `403` | Caller is not event owner/team member, or message is a DM |
+| `404` | Message not found |
+| `401` | Missing or invalid token |
+
+No response body on success. All clients subscribed to `attendee.chat.{event_id}.general` receive `chat.message.deleted` immediately — **no client WS changes** beyond handling that event on the general topic (same as attendee self-delete).
+
+---
+
 ## WebSocket (live updates)
 
 Chat uses the **same** multiplexed socket as agenda realtime.
@@ -346,6 +386,46 @@ When any attendee sends a message (including the current user), subscribers on t
 
 `data` matches the REST message object shape. DM pushes are delivered to **both** sender and recipient inbox subscriptions (multi-device sync).
 
+### Server push: `chat.message.deleted`
+
+When a sender or organizer deletes a message, subscribers on the matching topic receive:
+
+**General chat example:**
+
+```json
+{
+  "type": "chat.message.deleted",
+  "topic": "attendee.chat.550e8400-e29b-41d4-a716-446655440000.general",
+  "data": {
+    "message_id": "...",
+    "event_id": "...",
+    "channel_type": "general",
+    "conversation_id": null,
+    "deleted_at": "2026-06-09T12:00:00Z"
+  },
+  "ts": "2026-06-09T12:00:00Z"
+}
+```
+
+**DM inbox example:**
+
+```json
+{
+  "type": "chat.message.deleted",
+  "topic": "attendee.chat.550e8400-e29b-41d4-a716-446655440000.dm.inbox",
+  "data": {
+    "message_id": "...",
+    "event_id": "...",
+    "channel_type": "dm",
+    "conversation_id": "dm:550e8400-...:user-a:user-b",
+    "deleted_at": "2026-06-09T12:00:00Z"
+  },
+  "ts": "2026-06-09T12:00:00Z"
+}
+```
+
+Remove the message from UI by `message_id`. For DM, filter by `data.conversation_id` like `chat.message`. Repeat delete does **not** re-broadcast.
+
 ### Subscribe errors
 
 ```json
@@ -373,10 +453,20 @@ Common codes: `forbidden`, `invalid_topic`, `invalid_message`.
 1. `subscribe` → `attendee.chat.{event_id}.general`
 2. `GET .../chat/general/messages` (no cursor) → render latest page.
 3. On `chat.message` for general topic → append if `message_id` not already in list.
-4. On send → `POST .../chat/general/messages` with optional `client_msg_id`.
+4. On `chat.message.deleted` for general topic → remove by `message_id`.
+5. On send → `POST .../chat/general/messages` with optional `client_msg_id`.
    - On `201`/`200`, you may append from response **or** wait for WS push — **dedupe by `message_id`**.
-5. On scroll up → `GET` with `next_cursor` to load older messages.
-6. On leave screen → `unsubscribe` general topic (keep DM inbox subscription).
+6. On delete → `DELETE .../chat/messages/{messageID}`; remove locally on `204` or when `chat.message.deleted` arrives.
+7. On scroll up → `GET` with `next_cursor` to load older messages.
+8. On leave screen → `unsubscribe` general topic (keep DM inbox subscription).
+
+### Organizer general chat moderation
+
+1. Organizer app obtains `message_id` from its own general-chat view (e.g. moderation UI backed by attendee history or live WS).
+2. `DELETE /events/{event_id}/chat/messages/{messageID}` — no registration required.
+3. On `204`, remove locally; other clients remove on `chat.message.deleted` (general topic).
+4. On `403` → caller is not owner/team member, or target is a DM message.
+5. On `404` → message already gone or invalid id.
 
 ### DM thread screen
 
@@ -384,14 +474,16 @@ Common codes: `forbidden`, `invalid_topic`, `invalid_message`.
 2. `GET .../chat/dm/{recipientUserID}/messages` for initial history.
 3. Send via `POST .../chat/dm/{recipientUserID}/messages`.
 4. On `chat.message` where `topic` is DM inbox and `data.conversation_id` matches the open thread → append (dedupe by `message_id`).
-5. No extra WebSocket subscribe/unsubscribe when opening or leaving the thread.
+5. On `chat.message.deleted` with matching `conversation_id` → remove by `message_id`.
+6. No extra WebSocket subscribe/unsubscribe when opening or leaving the thread.
 
 ### DM inbox screen
 
 1. `GET .../chat/dm/conversations` (paginate with `next_cursor`).
 2. Display `other_user_id`, `last_message` preview, sort as returned (recent first).
 3. On `chat.message` where `channel_type` is `"dm"` → update conversation row / unread badge.
-4. Tap row → open DM thread flow above.
+4. On `chat.message.deleted` where `channel_type` is `"dm"` → remove preview if `last_message.message_id` matches, or refetch conversations.
+5. Tap row → open DM thread flow above.
 
 ### App startup / reconnect
 
@@ -414,7 +506,8 @@ Common codes: `forbidden`, `invalid_topic`, `invalid_message`.
 | HTTP | `error.code` (typical) | Client action |
 |------|------------------------|---------------|
 | `401` | `unauthorized` | Re-authenticate |
-| `403` | `not_registered_for_event` | Prompt registration or hide chat |
+| `403` | `not_registered_for_event` | Prompt registration or hide chat (attendee routes) |
+| `403` | `forbidden` | Not event organizer, or organizer delete on DM (organizer route) |
 | `404` | `not_found` | Event missing or DM recipient not in event |
 | `400` | `invalid_request_body` | Fix validation (body length, cursor, etc.) |
 
@@ -427,9 +520,12 @@ Common codes: `forbidden`, `invalid_topic`, `invalid_message`.
 | Attachments | Not supported — text only |
 | Typing indicators | Not supported |
 | Read receipts | Not supported |
-| Message edit/delete | Not supported |
+| Message edit | Not supported |
+| Message delete (attendee) | Sender only (general + DM); `DELETE /attendee/...` + `chat.message.deleted` WS |
+| Message delete (organizer) | Owner/team member; **general only**; `DELETE /events/...`; no registration required |
+| DM moderation by organizers | Not supported |
 | Push notifications (APNs/FCM) | Not supported — in-app WS + REST only |
-| Organizers without registration | Must be registered like any attendee |
+| Organizers using attendee chat | Must be registered like any attendee (send/list/subscribe) |
 | Per-conversation WebSocket topic | Not supported — use DM inbox + `conversation_id` filter |
 
 ---
@@ -456,6 +552,14 @@ res = POST("/attendee/events/" + eventId + "/chat/general/messages", {
 
 // 5. On WS frame
 onMessage(frame):
+  if frame.type == "chat.message.deleted":
+    if frame.data.channel_type == "dm":
+      removeFromInbox(frame.data)
+      if openThreadId == frame.data.conversation_id:
+        removeFromThreadUI(frame.data.message_id)
+    else if frame.topic.endsWith(".general"):
+      removeFromGeneralUI(frame.data.message_id)
+    return
   if frame.type != "chat.message" || seen.has(frame.data.message_id):
     return
   seen.add(frame.data.message_id)
@@ -471,10 +575,10 @@ onMessage(frame):
 
 ## Topic reference
 
-| Channel | WebSocket subscribe topic | Server push `topic` |
-|---------|---------------------------|---------------------|
-| General | `attendee.chat.{event_id}.general` | same |
-| DM inbox | `attendee.chat.{event_id}.dm.inbox` | `attendee.chat.{event_id}.dm.inbox` |
+| Channel | WebSocket subscribe topic | Server push `topic` | Delete WS `type` |
+|---------|---------------------------|---------------------|------------------|
+| General | `attendee.chat.{event_id}.general` | same | `chat.message.deleted` |
+| DM inbox | `attendee.chat.{event_id}.dm.inbox` | `attendee.chat.{event_id}.dm.inbox` | `chat.message.deleted` |
 
 `{event_id}`: lowercase UUID of the event.
 

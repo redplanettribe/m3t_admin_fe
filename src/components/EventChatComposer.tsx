@@ -28,6 +28,7 @@ export function EventChatComposer({
   sendError,
   placeholder = "Message general chat…",
 }: EventChatComposerProps): React.ReactElement {
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null)
   const showCount = draft.length > SHOW_COUNT_THRESHOLD
 
   return (
@@ -38,11 +39,12 @@ export function EventChatComposer({
         </label>
         <div className="bg-muted/50 flex min-w-0 flex-1 items-end rounded-xl px-3 py-2">
           <textarea
+            ref={textareaRef}
             id="chat-message"
             value={draft}
             onChange={(e) => onDraftChange(e.target.value)}
             onKeyDown={onKeyDown}
-            disabled={disabled || isSending}
+            disabled={disabled}
             maxLength={MAX_MESSAGE_LENGTH}
             placeholder={placeholder}
             rows={1}
@@ -54,7 +56,12 @@ export function EventChatComposer({
           />
         </div>
         <Button
-          onClick={onSend}
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            onSend()
+            textareaRef.current?.focus()
+          }}
           disabled={!canSend}
           className="shrink-0"
         >

@@ -1,4 +1,5 @@
 import * as React from "react"
+import { Trash2 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { getInitials } from "@/lib/user"
@@ -40,6 +41,8 @@ type EventChatMessageListProps = {
   onLoadOlder: () => void
   isLoading: boolean
   isEmpty: boolean
+  onDeleteMessage?: (messageId: string) => void
+  deletingMessageId?: string | null
 }
 
 export function EventChatMessageList({
@@ -52,6 +55,8 @@ export function EventChatMessageList({
   onLoadOlder,
   isLoading,
   isEmpty,
+  onDeleteMessage,
+  deletingMessageId,
 }: EventChatMessageListProps): React.ReactElement {
   return (
     <div
@@ -88,11 +93,28 @@ export function EventChatMessageList({
           const name = senderDisplayName(message)
 
           if (isOwn) {
+            const isDeleting = deletingMessageId === message.message_id
             return (
               <div
                 key={message.message_id}
-                className={cn("flex justify-end", isContinuation ? "mt-0.5" : "mt-3")}
+                className={cn(
+                  "group flex justify-end gap-1",
+                  isContinuation ? "mt-0.5" : "mt-3"
+                )}
               >
+                {onDeleteMessage && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="text-muted-foreground hover:text-destructive shrink-0 self-end opacity-0 transition-opacity group-hover:opacity-100"
+                    aria-label="Delete message"
+                    disabled={isDeleting}
+                    onClick={() => onDeleteMessage(message.message_id)}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                )}
                 <div className="flex max-w-[85%] flex-col items-end gap-1">
                   {!isContinuation && (
                     <span className="text-muted-foreground text-[11px]">

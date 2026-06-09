@@ -1,5 +1,10 @@
+import type { QueryClient, InfiniteData } from "@tanstack/react-query"
 import { ApiError } from "@/lib/api"
-import type { ChatConnectionState, EventChatMessage } from "@/types/chat"
+import type {
+  ChatConnectionState,
+  ChatMessagesListResponse,
+  EventChatMessage,
+} from "@/types/chat"
 
 export const MAX_MESSAGE_LENGTH = 2000
 
@@ -47,4 +52,31 @@ export function profileDisplayName(profile: {
 }): string {
   const parts = [profile.name, profile.last_name].filter(Boolean)
   return parts.join(" ").trim() || "Unknown"
+}
+
+export function filterOutMessage(
+  messages: EventChatMessage[],
+  messageId: string
+): EventChatMessage[] {
+  return messages.filter((m) => m.message_id !== messageId)
+}
+
+export function removeMessageFromChatInfiniteCache(
+  queryClient: QueryClient,
+  queryKey: readonly unknown[],
+  messageId: string
+): void {
+  queryClient.setQueryData<InfiniteData<ChatMessagesListResponse>>(
+    queryKey,
+    (old) => {
+      if (!old) return old
+      return {
+        ...old,
+        pages: old.pages.map((page) => ({
+          ...page,
+          items: page.items.filter((m) => m.message_id !== messageId),
+        })),
+      }
+    }
+  )
 }

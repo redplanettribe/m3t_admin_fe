@@ -24,6 +24,21 @@ export type ChatMessageEnvelope = {
   ts?: string
 }
 
+export type ChatMessageDeleted = {
+  message_id: string
+  event_id: string
+  channel_type: string
+  conversation_id: string | null
+  deleted_at: string
+}
+
+export type ChatMessageDeletedEnvelope = {
+  type: string
+  topic: string
+  data: ChatMessageDeleted
+  ts?: string
+}
+
 export type ChatWsErrorEnvelope = {
   type: "error"
   topic?: string

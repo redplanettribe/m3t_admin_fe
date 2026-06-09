@@ -22,7 +22,7 @@
   "channels": {
     "WebSocketMultiplex": {
       "address": "/ws",
-      "description": "Multiplexed WebSocket endpoint. Clients subscribe/unsubscribe to topics; server pushes agenda.invalidate (attendee), session.status_changed (organizer.agenda.{event_id}), and chat.message (attendee.chat.{event_id}.general or attendee.chat.{event_id}.dm.inbox).",
+      "description": "Multiplexed WebSocket endpoint. Clients subscribe/unsubscribe to topics; server pushes agenda.invalidate (attendee), session.status_changed (organizer.agenda.{event_id}), chat.message, and chat.message.deleted (attendee.chat.{event_id}.general or attendee.chat.{event_id}.dm.inbox).",
       "bindings": {
         "ws": {
           "method": "GET"
@@ -40,6 +40,9 @@
         },
         "chat_message": {
           "$ref": "#/components/messages/chat_message"
+        },
+        "chat_message_deleted": {
+          "$ref": "#/components/messages/chat_message_deleted"
         },
         "pong": {
           "$ref": "#/components/messages/pong"
@@ -112,6 +115,9 @@
         },
         {
           "$ref": "#/channels/WebSocketMultiplex/messages/chat_message"
+        },
+        {
+          "$ref": "#/channels/WebSocketMultiplex/messages/chat_message_deleted"
         },
         {
           "$ref": "#/channels/WebSocketMultiplex/messages/pong"
@@ -391,6 +397,57 @@
         "title": "realtime.ChatMessageEnvelope",
         "type": "object"
       },
+      "realtime.ChatMessageDeletedEnvelope": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "channel_type": {
+                "type": "string"
+              },
+              "conversation_id": {
+                "type": "string"
+              },
+              "deleted_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "event_id": {
+                "type": "string"
+              },
+              "message_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "message_id",
+              "event_id",
+              "channel_type",
+              "conversation_id",
+              "deleted_at"
+            ],
+            "type": "object"
+          },
+          "topic": {
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "topic",
+          "data"
+        ],
+        "title": "realtime.ChatMessageDeletedEnvelope",
+        "type": "object"
+      },
       "realtime.SubscribeEnvelope": {
         "additionalProperties": false,
         "properties": {
@@ -584,6 +641,13 @@
         "description": "Chat message delivered on attendee.chat.{event_id}.general or attendee.chat.{event_id}.dm.inbox (DM inbox; server routes to authenticated user).",
         "payload": {
           "$ref": "#/components/schemas/realtime.ChatMessageEnvelope"
+        }
+      },
+      "chat_message_deleted": {
+        "name": "chat.message.deleted",
+        "description": "Chat message deleted by sender or organizer (general only) on attendee.chat.{event_id}.general or by sender on attendee.chat.{event_id}.dm.inbox.",
+        "payload": {
+          "$ref": "#/components/schemas/realtime.ChatMessageDeletedEnvelope"
         }
       },
       "subscribe": {

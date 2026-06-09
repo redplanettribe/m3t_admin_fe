@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useDeleteChatMessage } from "@/hooks/useDeleteChatMessage"
 import { useEventChatStream } from "@/hooks/useEventChatStream"
 import { useEventDmConversations } from "@/hooks/useEventDmConversations"
 import { useEventDmMessages } from "@/hooks/useEventDmMessages"
@@ -25,8 +26,10 @@ import {
   isForbiddenStreamError,
   isNotRegisteredError,
   MAX_MESSAGE_LENGTH,
+  filterOutMessage,
   mergeMessages,
   profileDisplayName,
+  removeMessageFromChatInfiniteCache,
 } from "@/lib/chatUtils"
 import { dmConversationId } from "@/lib/dmConversationId"
 import { queryKeys } from "@/lib/queryKeys"
@@ -34,7 +37,7 @@ import { getInitials } from "@/lib/user"
 import { cn } from "@/lib/utils"
 import { useEventStore } from "@/store/eventStore"
 import { useUserStore } from "@/store/userStore"
-import type { EventChatMessage } from "@/types/chat"
+import type { ChatMessageDeleted, EventChatMessage } from "@/types/chat"
 import type { PublicAttendeeProfile } from "@/types/profile"
 
 type ChatTab = "general" | "messages"
@@ -140,6 +143,10 @@ export function EventChatPage(): React.ReactElement {
   const [dmDraft, setDmDraft] = React.useState("")
   const [generalSendError, setGeneralSendError] = React.useState<string | null>(null)
   const [dmSendError, setDmSendError] = React.useState<string | null>(null)
+  const [deleteError, setDeleteError] = React.useState<string | null>(null)
+  const [deletingMessageId, setDeletingMessageId] = React.useState<string | null>(
+    null
+  )
   const [registrationRequired, setRegistrationRequired] = React.useState(false)
   const generalListRef = React.useRef<HTMLDivElement>(null)
   const dmListRef = React.useRef<HTMLDivElement>(null)
@@ -231,12 +238,102 @@ export function EventChatPage(): React.ReactElement {
 
   const sendGeneralMessage = useSendGeneralChatMessage(effectiveEventId)
   const sendDmMessage = useSendDmMessage(effectiveEventId)
+  const deleteChatMessage = useDeleteChatMessage(effectiveEventId)
+
+  const removeMessage = React.useCallback(
+    (messageId: string, channel: "general" | "dm") => {
+      if (channel === "general") {
+        setGeneralLiveMessages((prev) => filterOutMessage(prev, messageId))
+        if (effectiveEventId) {
+          removeMessageFromChatInfiniteCache(
+            queryClient,
+            queryKeys.events.chatGeneral(effectiveEventId),
+            messageId
+          )
+        }
+        return
+      }
+
+      setDmLiveMessages((prev) => filterOutMessage(prev, messageId))
+      if (effectiveEventId && selectedRecipientId) {
+        removeMessageFromChatInfiniteCache(
+          queryClient,
+          queryKeys.events.chatDmThread(effectiveEventId, selectedRecipientId),
+          messageId
+        )
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.events.chatDmConversations(effectiveEventId),
+        })
+      }
+    },
+    [effectiveEventId, queryClient, selectedRecipientId]
+  )
+
+  const handleGeneralMessageDeleted = React.useCallback(
+    (data: ChatMessageDeleted) => {
+      removeMessage(data.message_id, "general")
+    },
+    [removeMessage]
+  )
+
+  const handleDmMessageDeleted = React.useCallback(
+    (data: ChatMessageDeleted) => {
+      if (data.channel_type === "dm" && effectiveEventId) {
+        if (
+          selectedRecipientId &&
+          currentUserId &&
+          data.conversation_id ===
+            dmConversationId(effectiveEventId, currentUserId, selectedRecipientId)
+        ) {
+          removeMessage(data.message_id, "dm")
+        } else {
+          void queryClient.invalidateQueries({
+            queryKey: queryKeys.events.chatDmConversations(effectiveEventId),
+          })
+        }
+      }
+    },
+    [currentUserId, effectiveEventId, queryClient, removeMessage, selectedRecipientId]
+  )
+
+  const handleDeleteMessage = React.useCallback(
+    async (messageId: string, channel: "general" | "dm") => {
+      setDeleteError(null)
+      setDeletingMessageId(messageId)
+
+      try {
+        await deleteChatMessage.mutateAsync({ messageId })
+        removeMessage(messageId, channel)
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 404) {
+          removeMessage(messageId, channel)
+          return
+        }
+        setDeleteError(e instanceof Error ? e.message : "Failed to delete message")
+      } finally {
+        setDeletingMessageId(null)
+      }
+    },
+    [deleteChatMessage, removeMessage]
+  )
+
+  const handleDeleteGeneral = React.useCallback(
+    (messageId: string) => void handleDeleteMessage(messageId, "general"),
+    [handleDeleteMessage]
+  )
+
+  const handleDeleteDm = React.useCallback(
+    (messageId: string) => void handleDeleteMessage(messageId, "dm"),
+    [handleDeleteMessage]
+  )
 
   const { connectionState, error: streamError, reconnectNow } = useEventChatStream({
     eventId: effectiveEventId,
     generalEnabled: activeTab === "general",
     onGeneralMessage: handleGeneralLiveMessage,
     onDmMessage: handleInboxDmMessage,
+    onGeneralMessageDeleted: handleGeneralMessageDeleted,
+    onDmMessageDeleted: handleDmMessageDeleted,
   })
 
   const generalMessages = React.useMemo(
@@ -263,6 +360,8 @@ export function EventChatPage(): React.ReactElement {
     setDmDraft("")
     setGeneralSendError(null)
     setDmSendError(null)
+    setDeleteError(null)
+    setDeletingMessageId(null)
     setRegistrationRequired(false)
     setSelectedRecipientId(null)
     setProfileCache(new Map())
@@ -534,6 +633,17 @@ export function EventChatPage(): React.ReactElement {
         </Card>
       )}
 
+      {!notRegistered && deleteError && (
+        <Card className="border-destructive/40 shrink-0">
+          <CardHeader>
+            <CardTitle className="text-base text-destructive">
+              Failed to delete message
+            </CardTitle>
+            <CardDescription className="text-destructive">{deleteError}</CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
       {showChatPanel && (
         <Tabs
           value={activeTab}
@@ -562,6 +672,8 @@ export function EventChatPage(): React.ReactElement {
               onLoadOlder={() => fetchNextGeneralPage()}
               isLoading={isGeneralLoading}
               isEmpty={generalMessages.length === 0}
+              onDeleteMessage={handleDeleteGeneral}
+              deletingMessageId={deletingMessageId}
             />
             <EventChatComposer
               draft={generalDraft}
@@ -625,6 +737,8 @@ export function EventChatPage(): React.ReactElement {
                   onLoadOlder={() => fetchNextDmPage()}
                   isLoading={isDmLoading}
                   isEmpty={dmMessages.length === 0}
+                  onDeleteMessage={handleDeleteDm}
+                  deletingMessageId={deletingMessageId}
                 />
                 <EventChatComposer
                   draft={dmDraft}
