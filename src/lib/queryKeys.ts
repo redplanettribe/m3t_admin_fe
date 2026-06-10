@@ -1,4 +1,8 @@
-import type { AdminEventTimelineParams, ListAdminEventsParams } from "@/types/admin"
+import type {
+  AdminEventTimelineParams,
+  ListAdminEventsParams,
+  ListAdminUgcSocialNetworksParams,
+} from "@/types/admin"
 import type { EventCheckInTimelineGranularity } from "@/types/event"
 
 /**
@@ -13,6 +17,8 @@ export const queryKeys = {
     eventTimeline: (params: AdminEventTimelineParams) =>
       ["admin", "events", "timeline", params] as const,
     eventDetail: (eventId: string) => ["admin", "events", eventId] as const,
+    ugcSocialNetworks: (params: ListAdminUgcSocialNetworksParams) =>
+      ["admin", "ugc", "social-networks", params] as const,
   },
   auth: {
     requestLoginCode: ["auth", "requestLoginCode"] as const,

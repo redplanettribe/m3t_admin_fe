@@ -29,6 +29,7 @@ import { ChatRedirectPage } from "@/pages/ChatRedirectPage"
 import { AnalyticsPage } from "@/pages/AnalyticsPage"
 import { SystemAdminPage } from "@/pages/SystemAdminPage"
 import { SystemEventsPage } from "@/pages/SystemEventsPage"
+import { SystemUgcSocialNetworksPage } from "@/pages/SystemUgcSocialNetworksPage"
 import { RequireEventNotEnded } from "@/components/RequireEventNotEnded"
 
 const routes: RouteObject[] = [
@@ -169,6 +170,10 @@ const routes: RouteObject[] = [
       {
         path: "events",
         element: <SystemEventsPage />,
+      },
+      {
+        path: "ugc/social-networks",
+        element: <SystemUgcSocialNetworksPage />,
       },
     ],
   },

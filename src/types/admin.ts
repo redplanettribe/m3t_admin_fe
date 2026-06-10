@@ -116,3 +116,25 @@ export interface AdminEventTimelineResult {
   granularity?: string
   timezone?: string
 }
+
+export interface UGCSocialNetwork {
+  id: string
+  code: string
+  display_name: string
+  created_at?: string
+}
+
+export interface ListAdminUgcSocialNetworksParams {
+  page?: number
+  page_size?: number
+}
+
+export interface ListAdminUgcSocialNetworksResult {
+  items: UGCSocialNetwork[]
+  pagination: PaginationMeta
+}
+
+export interface CreateAdminUgcSocialNetworkRequest {
+  code: string
+  display_name: string
+}

@@ -1,6 +1,6 @@
 import * as React from "react"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
-import { ArrowLeft, CalendarDays, LayoutDashboard, Shield } from "lucide-react"
+import { ArrowLeft, CalendarDays, LayoutDashboard, Share2, Shield } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Sidebar,
@@ -47,6 +47,11 @@ const systemNavMain: SystemNavItem[] = [
     title: "Events",
     url: "/system/events",
     icon: CalendarDays,
+  },
+  {
+    title: "UGC networks",
+    url: "/system/ugc/social-networks",
+    icon: Share2,
   },
 ]
 
