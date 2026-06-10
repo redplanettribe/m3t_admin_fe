@@ -472,3 +472,32 @@ export interface EventCheckInTimeline {
   timezone?: string
   total_check_in_count?: number
 }
+
+/** Platform social network entry (same shape as domain.UGCSocialNetwork). */
+export interface EventUgcSocialNetwork {
+  id: string
+  code: string
+  display_name: string
+  created_at?: string
+}
+
+/** From GET /events/{eventID}/ugc */
+export interface EventUGCConfig {
+  enabled: boolean
+  social_networks: EventUgcSocialNetwork[]
+}
+
+export interface UpdateEventUGCConfigRequest {
+  enabled: boolean
+  social_network_codes: string[]
+}
+
+export interface ListEventUgcSocialNetworksParams {
+  page?: number
+  page_size?: number
+}
+
+export interface ListEventUgcSocialNetworksResult {
+  items: EventUgcSocialNetwork[]
+  pagination: PaginationMeta
+}

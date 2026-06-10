@@ -10,6 +10,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { EventUgcSettingsSection } from "@/components/EventUgcSettingsSection"
+import { featureFlags } from "@/lib/featureFlags"
 import { useEventStore } from "@/store/eventStore"
 import { useDeleteEvent } from "@/hooks/useEvents"
 import { cn } from "@/lib/utils"
@@ -42,6 +44,10 @@ export function SettingsPage(): React.ReactElement {
           <p className="text-muted-foreground">
             Manage settings for the selected event.
           </p>
+
+          {featureFlags.ugcSettings && (
+            <EventUgcSettingsSection eventId={activeEventId} />
+          )}
 
           <section className="space-y-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
             <h3 className="font-medium text-destructive">Danger zone</h3>

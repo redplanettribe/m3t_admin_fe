@@ -3,7 +3,10 @@ import type {
   ListAdminEventsParams,
   ListAdminUgcSocialNetworksParams,
 } from "@/types/admin"
-import type { EventCheckInTimelineGranularity } from "@/types/event"
+import type {
+  EventCheckInTimelineGranularity,
+  ListEventUgcSocialNetworksParams,
+} from "@/types/event"
 
 /**
  * Central TanStack Query key factory.
@@ -80,5 +83,8 @@ export const queryKeys = {
       ["events", eventId, "public-profiles", page, pageSize] as const,
     publicProfile: (eventId: string, userId: string) =>
       ["events", eventId, "public-profiles", userId] as const,
+    ugcConfig: (eventId: string) => ["events", eventId, "ugc"] as const,
+    ugcSocialNetworks: (eventId: string, params: ListEventUgcSocialNetworksParams) =>
+      ["events", eventId, "ugc", "social-networks", params] as const,
   },
 } as const
