@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
-import type { EventTeamMember } from "@/types/event"
+import type { AddTeamMembersResult, EventTeamMember } from "@/types/event"
 
 export function useTeamMembers(eventId: string | null) {
   return useQuery({
@@ -15,11 +15,11 @@ export function useTeamMembers(eventId: string | null) {
 export function useAddTeamMember(eventId: string | null) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ email }: { email: string }) => {
+    mutationFn: ({ emails }: { emails: string }) => {
       if (!eventId) throw new Error("No event selected")
-      return apiClient.post<EventTeamMember>(
+      return apiClient.post<AddTeamMembersResult>(
         `/events/${eventId}/team-members`,
-        { email }
+        { emails }
       )
     },
     onSuccess: () => {

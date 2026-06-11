@@ -7028,7 +7028,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Add a user as a team member of the event by email. Only the event owner can add. Returns 404 with a message if no user exists with that email. Requires authentication.",
+                "description": "Add users as team members of the event by email. Body contains a string of emails separated by commas or spaces. Only the event owner can add. Creates attendee accounts for unknown emails when possible. Returns count of newly added members and list of failed addresses (owner, already member, or error).",
                 "consumes": [
                     "application/json"
                 ],
@@ -7038,7 +7038,7 @@
                 "tags": [
                     "events"
                 ],
-                "summary": "Add a team member to an event",
+                "summary": "Add team members to an event by email",
                 "parameters": [
                     {
                         "type": "string",
@@ -7048,7 +7048,7 @@
                         "required": true
                     },
                     {
-                        "description": "Email of the user to add",
+                        "description": "Emails string (comma or space separated)",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -7058,8 +7058,8 @@
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "data contains the added team member",
+                    "200": {
+                        "description": "data contains added count and failed list",
                         "schema": {
                             "$ref": "#/definitions/controllers.AddEventTeamMemberSuccessResponse"
                         }
@@ -7083,13 +7083,7 @@
                         }
                     },
                     "404": {
-                        "description": "error.code: user_not_found | event_not_found",
-                        "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
-                        }
-                    },
-                    "409": {
-                        "description": "error.code: already_team_member",
+                        "description": "error.code: event_not_found",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -8437,7 +8431,7 @@
         "controllers.AddEventTeamMemberRequest": {
             "type": "object",
             "properties": {
-                "email": {
+                "emails": {
                     "type": "string"
                 }
             }
@@ -8446,10 +8440,24 @@
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/domain.EventTeamMember"
+                    "$ref": "#/definitions/controllers.AddEventTeamMembersResponse"
                 },
                 "error": {
                     "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
+        "controllers.AddEventTeamMembersResponse": {
+            "type": "object",
+            "properties": {
+                "added": {
+                    "type": "integer"
+                },
+                "failed": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },

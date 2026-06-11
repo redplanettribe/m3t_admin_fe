@@ -238,6 +238,12 @@ export interface AssignTierUsersResult {
   failed: string[]
 }
 
+/** Response from POST /events/{eventID}/team-members */
+export interface AddTeamMembersResult {
+  added: number
+  failed: string[]
+}
+
 export interface EventDeliverable {
   id: string
   event_id: string
