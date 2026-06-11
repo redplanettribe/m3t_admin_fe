@@ -6315,7 +6315,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Creates a new speaker for the event (manual create). Only the event owner can create. Requires authentication.",
+                "description": "Creates a new speaker for the event (manual create). Only the event owner can create. Optional profile_picture accepts an S3 object key from POST .../speakers/profile-picture/upload-url; responses return a public URL. Requires authentication.",
                 "consumes": [
                     "application/json"
                 ],
@@ -6353,6 +6353,70 @@
                     },
                     "400": {
                         "description": "error.code: missing_path_param | invalid_request_body",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: not_event_owner",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: event_not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/events/{eventID}/speakers/profile-picture/upload-url": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a presigned URL and object key that the client can use to upload a speaker profile picture directly to storage before creating or updating a speaker. Pass the returned key in profile_picture on POST/PATCH speaker. Requires Bearer token. Only the event owner can call this.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Get presigned upload URL for speaker profile picture",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data contains upload_url and key",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.RequestSpeakerProfilePictureUploadResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: missing_path_param",
                         "schema": {
                             "$ref": "#/definitions/helpers.APIResponse"
                         }
@@ -6526,7 +6590,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Updates speaker details. Only the event owner can update. Optional fields omitted from body are unchanged. Requires authentication.",
+                "description": "Updates speaker details. Only the event owner can update. Optional fields omitted from body are unchanged. profile_picture accepts an S3 object key from POST .../speakers/profile-picture/upload-url; responses return a public URL. Requires authentication.",
                 "consumes": [
                     "application/json"
                 ],
@@ -8978,6 +9042,7 @@
                     "type": "string"
                 },
                 "profile_picture": {
+                    "description": "ProfilePicture is the S3 object key from POST .../speakers/profile-picture/upload-url (optional). Responses return a public URL.",
                     "type": "string"
                 },
                 "tag_line": {
@@ -10000,6 +10065,17 @@
                 }
             }
         },
+        "controllers.RequestSpeakerProfilePictureUploadResponse": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "upload_url": {
+                    "type": "string"
+                }
+            }
+        },
         "controllers.RequestThumbnailUploadResponse": {
             "type": "object",
             "properties": {
@@ -10372,6 +10448,7 @@
                     "type": "string"
                 },
                 "profile_picture": {
+                    "description": "ProfilePicture is the S3 object key from POST .../speakers/profile-picture/upload-url (optional). Responses return a public URL.",
                     "type": "string"
                 },
                 "tag_line": {

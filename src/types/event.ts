@@ -34,6 +34,11 @@ export interface ConfirmThumbnailRequest {
   key: string
 }
 
+export interface RequestSpeakerProfilePictureUploadResult {
+  key: string
+  upload_url: string
+}
+
 export interface Room {
   id: string
   name?: string

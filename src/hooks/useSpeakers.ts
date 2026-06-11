@@ -4,6 +4,7 @@ import { queryKeys } from "@/lib/queryKeys"
 import type {
   CreateSpeakerRequest,
   GetEventSpeakerResponse,
+  RequestSpeakerProfilePictureUploadResult,
   Speaker,
   UpdateSpeakerRequest,
 } from "@/types/event"
@@ -96,6 +97,18 @@ export function useAddSessionSpeaker(eventId: string | null, sessionId: string |
       queryClient.invalidateQueries({
         queryKey: queryKeys.events.speaker(eventId, variables.speakerId),
       })
+    },
+  })
+}
+
+export function useRequestSpeakerProfilePictureUpload(eventId: string | null) {
+  return useMutation({
+    mutationFn: () => {
+      if (!eventId) throw new Error("No event selected")
+      return apiClient.post<RequestSpeakerProfilePictureUploadResult>(
+        `/events/${eventId}/speakers/profile-picture/upload-url`,
+        {}
+      )
     },
   })
 }

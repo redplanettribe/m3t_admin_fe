@@ -22,6 +22,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
+import { SpeakerProfilePictureUpload } from "@/components/SpeakerProfilePictureUpload"
 import { useSpeaker, useUpdateSpeaker } from "@/hooks/useSpeakers"
 import {
   createSpeakerSchema,
@@ -58,7 +59,7 @@ function formValuesFromSpeaker(speaker: Speaker): CreateSpeakerFormValues {
     bio: speaker.bio ?? "",
     tag_line: speaker.tag_line ?? "",
     phone_number: speaker.phone_number ?? "",
-    profile_picture: speaker.profile_picture ?? "",
+    profile_picture: "",
     is_top_speaker: speaker.is_top_speaker ?? false,
   }
 }
@@ -70,7 +71,9 @@ function toUpdateSpeakerRequest(values: CreateSpeakerFormValues): UpdateSpeakerR
   req.bio = values.bio?.trim() || ""
   req.tag_line = values.tag_line?.trim() || ""
   req.phone_number = values.phone_number?.trim() || ""
-  req.profile_picture = values.profile_picture?.trim() || ""
+  if (values.profile_picture?.trim()) {
+    req.profile_picture = values.profile_picture.trim()
+  }
   req.is_top_speaker = values.is_top_speaker ?? false
   return req
 }
@@ -86,6 +89,7 @@ export function SpeakerDetailPage(): React.ReactElement {
   const setActiveEventId = useEventStore((s) => s.setActiveEventId)
   const { data, isLoading, isError } = useSpeaker(eventId, speakerId)
   const updateSpeaker = useUpdateSpeaker(eventId, speakerId)
+  const [isUploadingPicture, setIsUploadingPicture] = React.useState(false)
   const form = useForm<CreateSpeakerFormValues>({
     resolver: zodResolver(createSpeakerSchema),
     defaultValues: {
@@ -300,9 +304,17 @@ export function SpeakerDetailPage(): React.ReactElement {
                 name="profile_picture"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Profile picture URL</FormLabel>
+                    <FormLabel>Profile picture</FormLabel>
                     <FormControl>
-                      <Input type="url" placeholder="https://..." {...field} />
+                      <SpeakerProfilePictureUpload
+                        eventId={eventId}
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        existingImageUrl={speaker.profile_picture}
+                        disabled={updateSpeaker.isPending}
+                        onUploadingChange={setIsUploadingPicture}
+                        fallbackInitials={initials}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -337,7 +349,10 @@ export function SpeakerDetailPage(): React.ReactElement {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={updateSpeaker.isPending}>
+                <Button
+                  type="submit"
+                  disabled={updateSpeaker.isPending || isUploadingPicture}
+                >
                   {updateSpeaker.isPending ? "Saving..." : "Save changes"}
                 </Button>
               </div>

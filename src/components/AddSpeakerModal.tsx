@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
+import { SpeakerProfilePictureUpload } from "@/components/SpeakerProfilePictureUpload"
 import { useCreateSpeaker } from "@/hooks/useSpeakers"
 import {
   createSpeakerSchema,
@@ -63,6 +64,7 @@ export function AddSpeakerModal({
   eventId,
 }: AddSpeakerModalProps): React.ReactElement {
   const createSpeaker = useCreateSpeaker(eventId)
+  const [isUploadingPicture, setIsUploadingPicture] = React.useState(false)
 
   const form = useForm<CreateSpeakerFormValues>({
     resolver: zodResolver(createSpeakerSchema),
@@ -180,12 +182,22 @@ export function AddSpeakerModal({
               name="profile_picture"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Profile picture URL</FormLabel>
+                  <FormLabel>Profile picture</FormLabel>
                   <FormControl>
-                    <Input
-                      type="url"
-                      placeholder="https://..."
-                      {...field}
+                    <SpeakerProfilePictureUpload
+                      eventId={eventId}
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      disabled={createSpeaker.isPending}
+                      onUploadingChange={setIsUploadingPicture}
+                      fallbackInitials={
+                        [form.watch("first_name"), form.watch("last_name")]
+                          .filter(Boolean)
+                          .map((n) => n?.trim()[0])
+                          .join("")
+                          .slice(0, 2)
+                          .toUpperCase() || "?"
+                      }
                     />
                   </FormControl>
                   <FormMessage />
@@ -221,7 +233,10 @@ export function AddSpeakerModal({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={createSpeaker.isPending}>
+              <Button
+                type="submit"
+                disabled={createSpeaker.isPending || isUploadingPicture}
+              >
                 {createSpeaker.isPending ? "Adding…" : "Add"}
               </Button>
             </DialogFooter>
