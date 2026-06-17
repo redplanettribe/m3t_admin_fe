@@ -83,7 +83,7 @@ export const queryKeys = {
       ["events", eventId, "public-profiles", page, pageSize] as const,
     publicProfile: (eventId: string, userId: string) =>
       ["events", eventId, "public-profiles", userId] as const,
-    ugcConfig: (eventId: string) => ["events", eventId, "ugc"] as const,
+    settings: (eventId: string) => ["events", eventId, "settings"] as const,
     ugcSocialNetworks: (eventId: string, params: ListEventUgcSocialNetworksParams) =>
       ["events", eventId, "ugc", "social-networks", params] as const,
   },

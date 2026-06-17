@@ -1199,6 +1199,70 @@
                 }
             }
         },
+        "/attendee/events/{eventID}/features": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns read-only feature toggles for a registered attendee.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "attendee"
+                ],
+                "summary": "Get event features for attendees",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data contains feature toggles",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.GetEventFeaturesSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: missing_path_param",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: not_registered_for_event",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: event_not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/attendee/events/{eventID}/public-profiles": {
             "get": {
                 "security": [
@@ -6246,6 +6310,144 @@
                 }
             }
         },
+        "/events/{eventID}/settings": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns event feature toggles and UGC configuration for organizers.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Get event settings",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data contains event settings",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.GetEventSettingsSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: missing_path_param",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: not_event_owner",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: event_not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Partially updates event feature toggles and UGC social network selection. Only provided fields are changed.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Update event settings",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Settings fields to update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.PatchEventSettingsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data contains updated event settings",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.PatchEventSettingsSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: missing_path_param | invalid_request_body",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: not_event_owner",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: event_not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/events/{eventID}/speakers": {
             "get": {
                 "security": [
@@ -6966,7 +7168,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns the list of team members for the event. Only the event owner can list. Requires authentication.",
+                "description": "Returns the list of team members for the event. Only the event owner or team members can list. Requires authentication.",
                 "produces": [
                     "application/json"
                 ],
@@ -7697,7 +7899,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns UGC enabled state and selected social networks for the event. Only event managers (owner or team members) can read.",
+                "description": "Deprecated: use GET /events/{eventID}/settings instead. Returns UGC enabled state and selected social networks for the event. Only event managers (owner or team members) can read.",
                 "produces": [
                     "application/json"
                 ],
@@ -7705,6 +7907,7 @@
                     "events"
                 ],
                 "summary": "Get event UGC configuration",
+                "deprecated": true,
                 "parameters": [
                     {
                         "type": "string",
@@ -7759,7 +7962,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Sets whether UGC is enabled for the event and which platform social networks are active. social_network_codes must be provided (may be empty). Only event managers can update.",
+                "description": "Deprecated: use PATCH /events/{eventID}/settings instead. Sets whether UGC is enabled for the event and which platform social networks are active. social_network_codes must be provided (may be empty). Only event managers can update.",
                 "consumes": [
                     "application/json"
                 ],
@@ -7770,6 +7973,7 @@
                     "events"
                 ],
                 "summary": "Update event UGC configuration",
+                "deprecated": true,
                 "parameters": [
                     {
                         "type": "string",
@@ -8254,6 +8458,124 @@
                         "description": "data contains upload_url and key",
                         "schema": {
                             "$ref": "#/definitions/controllers.RequestAvatarUploadResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/device-tokens": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upserts the caller's FCM registration token for a device and app. Call after login and on token refresh. Requires Bearer token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Register or refresh a device push token",
+                "parameters": [
+                    {
+                        "description": "Device token registration",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.RegisterDevicePushTokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "data is null",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: invalid_request_body",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: user_not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes the caller's stored push token for a device and app. Call on logout. Requires Bearer token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Unregister a device push token",
+                "parameters": [
+                    {
+                        "description": "Device token unregistration",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.UnregisterDevicePushTokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "data is null",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: invalid_request_body",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
                         }
                     },
                     "401": {
@@ -9399,6 +9721,17 @@
                 }
             }
         },
+        "controllers.GetEventFeaturesSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/domain.EventAttendeeFeatures"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
         "controllers.GetEventPublicProfileFilterOptionsSuccessResponse": {
             "type": "object",
             "properties": {
@@ -9437,6 +9770,17 @@
             "properties": {
                 "data": {
                     "$ref": "#/definitions/domain.EventSchedule"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
+        "controllers.GetEventSettingsSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/domain.EventSettings"
                 },
                 "error": {
                     "$ref": "#/definitions/helpers.APIError"
@@ -9997,6 +10341,94 @@
                 }
             }
         },
+        "controllers.PatchEventSettingsFeatureChatRequest": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "controllers.PatchEventSettingsFeatureRegistrationRequest": {
+            "type": "object",
+            "properties": {
+                "require_invitation": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "controllers.PatchEventSettingsFeatureUGCRequest": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "controllers.PatchEventSettingsFeaturesRequest": {
+            "type": "object",
+            "properties": {
+                "chat": {
+                    "$ref": "#/definitions/controllers.PatchEventSettingsFeatureChatRequest"
+                },
+                "registration": {
+                    "$ref": "#/definitions/controllers.PatchEventSettingsFeatureRegistrationRequest"
+                },
+                "ugc": {
+                    "$ref": "#/definitions/controllers.PatchEventSettingsFeatureUGCRequest"
+                }
+            }
+        },
+        "controllers.PatchEventSettingsRequest": {
+            "type": "object",
+            "properties": {
+                "features": {
+                    "$ref": "#/definitions/controllers.PatchEventSettingsFeaturesRequest"
+                },
+                "ugc": {
+                    "$ref": "#/definitions/controllers.PatchEventSettingsUGCRequest"
+                }
+            }
+        },
+        "controllers.PatchEventSettingsSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/domain.EventSettings"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
+        "controllers.PatchEventSettingsUGCRequest": {
+            "type": "object",
+            "properties": {
+                "social_network_codes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "controllers.RegisterDevicePushTokenRequest": {
+            "type": "object",
+            "properties": {
+                "app": {
+                    "type": "string"
+                },
+                "device_id": {
+                    "type": "string"
+                },
+                "platform": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
         "controllers.RegisterForEventByCodeRequest": {
             "type": "object",
             "properties": {
@@ -10194,6 +10626,17 @@
                 },
                 "error": {
                     "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
+        "controllers.UnregisterDevicePushTokenRequest": {
+            "type": "object",
+            "properties": {
+                "app": {
+                    "type": "string"
+                },
+                "device_id": {
+                    "type": "string"
                 }
             }
         },
@@ -10718,6 +11161,20 @@
                 }
             }
         },
+        "domain.EventAttendeeFeatures": {
+            "type": "object",
+            "properties": {
+                "chat": {
+                    "$ref": "#/definitions/domain.EventFeatureChat"
+                },
+                "registration": {
+                    "$ref": "#/definitions/domain.EventFeatureRegistration"
+                },
+                "ugc": {
+                    "$ref": "#/definitions/domain.EventFeatureUGC"
+                }
+            }
+        },
         "domain.EventAttendeeProfile": {
             "type": "object",
             "properties": {
@@ -10883,6 +11340,44 @@
                 }
             }
         },
+        "domain.EventFeatureChat": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "domain.EventFeatureFlags": {
+            "type": "object",
+            "properties": {
+                "chat": {
+                    "$ref": "#/definitions/domain.EventFeatureChat"
+                },
+                "registration": {
+                    "$ref": "#/definitions/domain.EventFeatureRegistration"
+                },
+                "ugc": {
+                    "$ref": "#/definitions/domain.EventFeatureUGC"
+                }
+            }
+        },
+        "domain.EventFeatureRegistration": {
+            "type": "object",
+            "properties": {
+                "require_invitation": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "domain.EventFeatureUGC": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                }
+            }
+        },
         "domain.EventInvitation": {
             "type": "object",
             "properties": {
@@ -10947,6 +11442,17 @@
                     "items": {
                         "$ref": "#/definitions/domain.RoomWithSessions"
                     }
+                }
+            }
+        },
+        "domain.EventSettings": {
+            "type": "object",
+            "properties": {
+                "features": {
+                    "$ref": "#/definitions/domain.EventFeatureFlags"
+                },
+                "ugc": {
+                    "$ref": "#/definitions/domain.EventUGCConfig"
                 }
             }
         },

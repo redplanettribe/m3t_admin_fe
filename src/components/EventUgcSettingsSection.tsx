@@ -4,10 +4,10 @@ import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Label } from "@/components/ui/label"
 import {
-  useEventUgcConfig,
+  useEventSettings,
   useEventUgcSocialNetworks,
-  useUpdateEventUgcConfig,
-} from "@/hooks/useEventUgc"
+  usePatchEventSettings,
+} from "@/hooks/useEventSettings"
 import { cn } from "@/lib/utils"
 
 const CATALOG_PARAMS = { page: 1, page_size: 100 } as const
@@ -19,27 +19,24 @@ type EventUgcSettingsSectionProps = {
 export function EventUgcSettingsSection({
   eventId,
 }: EventUgcSettingsSectionProps): React.ReactElement {
-  const config = useEventUgcConfig(eventId)
+  const settings = useEventSettings(eventId)
   const catalog = useEventUgcSocialNetworks(eventId, CATALOG_PARAMS)
-  const updateConfig = useUpdateEventUgcConfig(eventId)
+  const patchSettings = usePatchEventSettings(eventId)
 
-  const isLoading = config.isLoading || catalog.isLoading
-  const isError = config.isError || catalog.isError
+  const isLoading = settings.isLoading || catalog.isLoading
+  const isError = settings.isError || catalog.isError
   const errorMessage =
-    (config.error instanceof Error ? config.error.message : null) ??
+    (settings.error instanceof Error ? settings.error.message : null) ??
     (catalog.error instanceof Error ? catalog.error.message : null) ??
     "Failed to load UGC settings"
 
-  const enabled = config.data?.enabled ?? false
-  const selectedCodes = (config.data?.social_networks ?? []).map((n) => n.code)
+  const enabled =
+    settings.data?.features?.ugc?.enabled ?? settings.data?.ugc?.enabled ?? false
+  const selectedCodes = (settings.data?.ugc?.social_networks ?? []).map((n) => n.code)
   const catalogItems = catalog.data?.items ?? []
 
-  const saveConfig = (next: { enabled: boolean; social_network_codes: string[] }) => {
-    updateConfig.mutate(next)
-  }
-
   const handleEnabledChange = (checked: boolean) => {
-    saveConfig({ enabled: checked, social_network_codes: selectedCodes })
+    patchSettings.mutate({ features: { ugc: { enabled: checked } } })
   }
 
   const handleNetworkChange = (code: string, checked: boolean) => {
@@ -48,11 +45,11 @@ export function EventUgcSettingsSection({
         ? selectedCodes
         : [...selectedCodes, code]
       : selectedCodes.filter((c) => c !== code)
-    saveConfig({ enabled, social_network_codes: nextCodes })
+    patchSettings.mutate({ ugc: { social_network_codes: nextCodes } })
   }
 
   const handleRetry = () => {
-    void config.refetch()
+    void settings.refetch()
     void catalog.refetch()
   }
 
@@ -98,7 +95,7 @@ export function EventUgcSettingsSection({
               <Switch
                 checked={enabled}
                 onCheckedChange={handleEnabledChange}
-                disabled={updateConfig.isPending}
+                disabled={patchSettings.isPending}
               />
             </div>
 
@@ -133,7 +130,7 @@ export function EventUgcSettingsSection({
                           onCheckedChange={(checked) =>
                             handleNetworkChange(network.code, checked)
                           }
-                          disabled={!enabled || updateConfig.isPending}
+                          disabled={!enabled || patchSettings.isPending}
                           aria-label={`Enable ${network.display_name}`}
                         />
                       </li>
@@ -144,15 +141,15 @@ export function EventUgcSettingsSection({
             </div>
           </div>
 
-          {updateConfig.isError && (
+          {patchSettings.isError && (
             <p
               className={cn(
                 "rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
               )}
               role="alert"
             >
-              {updateConfig.error instanceof Error
-                ? updateConfig.error.message
+              {patchSettings.error instanceof Error
+                ? patchSettings.error.message
                 : "Failed to save UGC settings"}
             </p>
           )}

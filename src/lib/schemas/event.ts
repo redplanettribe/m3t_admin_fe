@@ -124,10 +124,3 @@ export type CreateDeliverableFormValues = z.infer<typeof createDeliverableSchema
 export const editDeliverableSchema = createDeliverableSchema
 
 export type EditDeliverableFormValues = z.infer<typeof editDeliverableSchema>
-
-export const updateEventUgcConfigSchema = z.object({
-  enabled: z.boolean(),
-  social_network_codes: z.array(z.string()),
-})
-
-export type UpdateEventUgcConfigFormValues = z.infer<typeof updateEventUgcConfigSchema>

@@ -492,15 +492,61 @@ export interface EventUgcSocialNetwork {
   created_at?: string
 }
 
-/** From GET /events/{eventID}/ugc */
+/** UGC config nested in GET /events/{eventID}/settings */
 export interface EventUGCConfig {
   enabled: boolean
   social_networks: EventUgcSocialNetwork[]
 }
 
-export interface UpdateEventUGCConfigRequest {
+export interface EventFeatureChat {
   enabled: boolean
-  social_network_codes: string[]
+}
+
+export interface EventFeatureRegistration {
+  require_invitation: boolean
+}
+
+export interface EventFeatureUGC {
+  enabled: boolean
+}
+
+export interface EventFeatureFlags {
+  chat?: EventFeatureChat
+  registration?: EventFeatureRegistration
+  ugc?: EventFeatureUGC
+}
+
+/** From GET /events/{eventID}/settings */
+export interface EventSettings {
+  features?: EventFeatureFlags
+  ugc?: EventUGCConfig
+}
+
+export interface PatchEventSettingsFeatureChatRequest {
+  enabled?: boolean
+}
+
+export interface PatchEventSettingsFeatureRegistrationRequest {
+  require_invitation?: boolean
+}
+
+export interface PatchEventSettingsFeatureUGCRequest {
+  enabled?: boolean
+}
+
+export interface PatchEventSettingsFeaturesRequest {
+  chat?: PatchEventSettingsFeatureChatRequest
+  registration?: PatchEventSettingsFeatureRegistrationRequest
+  ugc?: PatchEventSettingsFeatureUGCRequest
+}
+
+export interface PatchEventSettingsUGCRequest {
+  social_network_codes?: string[]
+}
+
+export interface PatchEventSettingsRequest {
+  features?: PatchEventSettingsFeaturesRequest
+  ugc?: PatchEventSettingsUGCRequest
 }
 
 export interface ListEventUgcSocialNetworksParams {

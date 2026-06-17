@@ -34,6 +34,7 @@ import { useEventPublicProfile } from "@/hooks/useEventPublicProfiles"
 import { useSendDmMessage } from "@/hooks/useSendDmMessage"
 import { useSendGeneralChatMessage } from "@/hooks/useSendGeneralChatMessage"
 import { useEventSchedule } from "@/hooks/useEvents"
+import { useEventSettings } from "@/hooks/useEventSettings"
 import { useTeamMembers } from "@/hooks/useTeamMembers"
 import { ApiError } from "@/lib/api"
 import {
@@ -135,6 +136,7 @@ export function EventChatPage(): React.ReactElement {
 
   const effectiveEventId = eventId ?? activeEventId ?? null
   const { data: schedule } = useEventSchedule(effectiveEventId)
+  const chatSettings = useEventSettings(effectiveEventId)
   const { data: teamMembers = [] } = useTeamMembers(effectiveEventId)
 
   const {
@@ -507,6 +509,9 @@ export function EventChatPage(): React.ReactElement {
         : inboxRestError
 
   const eventName = schedule?.event?.name
+  const chatEnabled = chatSettings.data?.features?.chat?.enabled ?? false
+  const chatDisabled =
+    !chatSettings.isLoading && !chatSettings.isError && !chatEnabled
   const notRegistered =
     registrationRequired ||
     isNotRegisteredError(generalRestError) ||
@@ -669,7 +674,7 @@ export function EventChatPage(): React.ReactElement {
     ? profileDisplayName(selectedProfile)
     : "Direct message"
 
-  const showChatPanel = !notRegistered
+  const showChatPanel = !notRegistered && !chatDisabled
 
   return (
     <div className="mx-auto flex h-[min(100dvh-7rem,900px)] max-w-3xl flex-col gap-3">
@@ -702,6 +707,23 @@ export function EventChatPage(): React.ReactElement {
         </div>
       </div>
 
+      {chatDisabled && (
+        <Card className="shrink-0">
+          <CardHeader>
+            <CardTitle className="text-base">Chat is disabled</CardTitle>
+            <CardDescription>
+              Chat is turned off for this event. Enable it in event settings to view
+              and send messages.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" asChild>
+              <Link to="/settings">Enable chat in Settings</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {notRegistered && (
         <Card className="border-destructive/40 shrink-0">
           <CardHeader>
@@ -721,7 +743,7 @@ export function EventChatPage(): React.ReactElement {
         </Card>
       )}
 
-      {!notRegistered && isRestError && displayRestError && (
+      {!notRegistered && !chatDisabled && isRestError && displayRestError && (
         <Card className="border-destructive/40 shrink-0">
           <CardHeader>
             <CardTitle className="text-base text-destructive">
@@ -739,7 +761,7 @@ export function EventChatPage(): React.ReactElement {
         </Card>
       )}
 
-      {!notRegistered && streamError && !isForbiddenStreamError(streamError.code) && (
+      {!notRegistered && !chatDisabled && streamError && !isForbiddenStreamError(streamError.code) && (
         <Card className="border-destructive/40 shrink-0">
           <CardHeader>
             <CardTitle className="text-base text-destructive">
@@ -752,7 +774,7 @@ export function EventChatPage(): React.ReactElement {
         </Card>
       )}
 
-      {!notRegistered && deleteError && !deleteConfirmTarget && (
+      {!notRegistered && !chatDisabled && deleteError && !deleteConfirmTarget && (
         <Card className="border-destructive/40 shrink-0">
           <CardHeader>
             <CardTitle className="text-base text-destructive">

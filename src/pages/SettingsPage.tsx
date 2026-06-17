@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { EventFeatureSettingsSection } from "@/components/EventFeatureSettingsSection"
 import { EventUgcSettingsSection } from "@/components/EventUgcSettingsSection"
 import { featureFlags } from "@/lib/featureFlags"
 import { useEventStore } from "@/store/eventStore"
@@ -45,6 +46,7 @@ export function SettingsPage(): React.ReactElement {
             Manage settings for the selected event.
           </p>
 
+          <EventFeatureSettingsSection eventId={activeEventId} />
           {featureFlags.ugcSettings && (
             <EventUgcSettingsSection eventId={activeEventId} />
           )}
