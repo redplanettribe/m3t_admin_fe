@@ -46,6 +46,14 @@ export function SettingsPage(): React.ReactElement {
             Manage settings for the selected event.
           </p>
 
+          <div
+            className="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground"
+            role="status"
+          >
+            Settings are cached for performance. Changes may take up to a minute
+            to propagate to client apps.
+          </div>
+
           <EventFeatureSettingsSection eventId={activeEventId} />
           {featureFlags.ugcSettings && (
             <EventUgcSettingsSection eventId={activeEventId} />
