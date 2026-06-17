@@ -21,6 +21,7 @@ import { SpeakerDetailPage } from "@/pages/SpeakerDetailPage"
 import { SpeakersPage } from "@/pages/SpeakersPage"
 import { TiersPage } from "@/pages/TiersPage"
 import { DeliverablesPage } from "@/pages/DeliverablesPage"
+import { AnnouncementsPage } from "@/pages/AnnouncementsPage"
 import { LiveDashboardPage } from "@/pages/LiveDashboardPage"
 import { LiveRedirectPage } from "@/pages/LiveRedirectPage"
 import { EventChatPage } from "@/pages/EventChatPage"
@@ -102,6 +103,10 @@ const routes: RouteObject[] = [
       {
         path: "attendees",
         element: <AttendeesPage />,
+      },
+      {
+        path: "announcements",
+        element: <AnnouncementsPage />,
       },
       {
         path: "tiers",

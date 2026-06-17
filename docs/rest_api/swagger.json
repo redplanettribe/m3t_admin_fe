@@ -2939,6 +2939,156 @@
                 }
             }
         },
+        "/events/{eventID}/announcements": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a paginated list of announcements sent for the event. Only the event owner or team members can list. Use page and page_size query params.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "List event announcements",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size (default 20, max 100)",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data contains items and pagination",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.ListEventAnnouncementsSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: missing_path_param",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: not_event_owner",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: event_not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates an announcement and sends push notifications to all attendees checked in to the event. Only the event owner or team members can send. Push delivery is best-effort per recipient; the announcement is always persisted. Actions: info (no navigation), open_event, open_session (requires session_id), open_agenda, open_url (requires https url).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Send a push announcement to checked-in attendees",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Announcement content and action",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.SendEventAnnouncementRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "data contains the created announcement",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.SendEventAnnouncementSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: missing_path_param | invalid_request_body",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: not_event_owner",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: event_not_found | session_not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/events/{eventID}/attendee-schedule": {
             "get": {
                 "security": [
@@ -9947,6 +10097,31 @@
                 }
             }
         },
+        "controllers.ListEventAnnouncementsResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.EventAnnouncement"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/helpers.PaginationMeta"
+                }
+            }
+        },
+        "controllers.ListEventAnnouncementsSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/controllers.ListEventAnnouncementsResponse"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
         "controllers.ListEventDeliverablesResponse": {
             "type": "object",
             "properties": {
@@ -10574,6 +10749,34 @@
                 }
             }
         },
+        "controllers.SendEventAnnouncementRequest": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "action_payload": {
+                    "$ref": "#/definitions/domain.AnnouncementActionPayload"
+                },
+                "body": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.SendEventAnnouncementSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/domain.EventAnnouncement"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
         "controllers.SendEventInvitationsRequest": {
             "type": "object",
             "properties": {
@@ -11012,6 +11215,34 @@
                 }
             }
         },
+        "domain.AnnouncementAction": {
+            "type": "string",
+            "enum": [
+                "info",
+                "open_event",
+                "open_session",
+                "open_agenda",
+                "open_url"
+            ],
+            "x-enum-varnames": [
+                "AnnouncementActionInfo",
+                "AnnouncementActionOpenEvent",
+                "AnnouncementActionOpenSession",
+                "AnnouncementActionOpenAgenda",
+                "AnnouncementActionOpenURL"
+            ]
+        },
+        "domain.AnnouncementActionPayload": {
+            "type": "object",
+            "properties": {
+                "session_id": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.AttendeeFlow": {
             "type": "object",
             "properties": {
@@ -11143,6 +11374,41 @@
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.EventAnnouncement": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "$ref": "#/definitions/domain.AnnouncementAction"
+                },
+                "action_payload": {
+                    "$ref": "#/definitions/domain.AnnouncementActionPayload"
+                },
+                "body": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "event_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "push_sent_count": {
+                    "type": "integer"
+                },
+                "recipient_count": {
+                    "type": "integer"
+                },
+                "sent_by": {
+                    "type": "string"
+                },
+                "title": {
                     "type": "string"
                 }
             }

@@ -3,7 +3,7 @@
   "info": {
     "title": "Multi-Track Ticketing WebSocket API",
     "version": "1.0",
-    "description": "AsyncAPI contract for WebSocket connections.",
+    "description": "AsyncAPI contract for WebSocket connections and related FCM push notification data payloads (see components.x-pushNotifications).",
     "contact": {
       "name": "RPT Backend",
       "email": "backend@example.com"
@@ -22,7 +22,7 @@
   "channels": {
     "WebSocketMultiplex": {
       "address": "/ws",
-      "description": "Multiplexed WebSocket endpoint. Clients subscribe/unsubscribe to topics; server pushes agenda.invalidate (attendee), session.status_changed (organizer.agenda.{event_id}), chat.message, and chat.message.deleted (attendee.chat.{event_id}.general or attendee.chat.{event_id}.dm.inbox).",
+      "description": "Multiplexed WebSocket endpoint. Clients subscribe/unsubscribe to topics; server pushes agenda.invalidate (attendee), session.checked_in (attendee.agenda.{event_id}), session.status_changed (organizer.agenda.{event_id}), chat.message, and chat.message.deleted (attendee.chat.{event_id}.general or attendee.chat.{event_id}.dm.inbox). Organizer event announcements to checked-in attendees are mobile push (FCM data.type event_announcement), not WebSocket — see components.messages.push_event_announcement.",
       "bindings": {
         "ws": {
           "method": "GET"
@@ -612,6 +612,43 @@
         ],
         "title": "realtime.ErrorEnvelope",
         "type": "object"
+      },
+      "wsdocs.PushEventAnnouncementData": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "description": "Deep-link action: info",
+            "type": "string"
+          },
+          "announcement_id": {
+            "description": "Announcement UUID (dedupe key)",
+            "type": "string"
+          },
+          "event_id": {
+            "description": "Event UUID",
+            "type": "string"
+          },
+          "session_id": {
+            "description": "Present when action is open_session",
+            "type": "string"
+          },
+          "type": {
+            "description": "Always event_announcement",
+            "type": "string"
+          },
+          "url": {
+            "description": "HTTPS URL when action is open_url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "event_id",
+          "announcement_id",
+          "action"
+        ],
+        "title": "wsdocs.PushEventAnnouncementData",
+        "type": "object"
       }
     },
     "messages": {
@@ -684,7 +721,22 @@
         "payload": {
           "$ref": "#/components/schemas/realtime.ErrorEnvelope"
         }
+      },
+      "push_event_announcement": {
+        "name": "push.event_announcement",
+        "description": "FCM push to checked-in attendees (attendee app tokens only). Triggered by POST /events/{eventID}/announcements. History: GET /events/{eventID}/announcements. Not delivered on WebSocket.",
+        "payload": {
+          "$ref": "#/components/schemas/wsdocs.PushEventAnnouncementData"
+        }
       }
+    },
+    "x-pushNotifications": {
+      "description": "Mobile push (FCM) data payloads. Delivered when the app is backgrounded or killed; not sent on the WebSocket channel. Register tokens via PUT /users/me/device-tokens.",
+      "messages": [
+        {
+          "$ref": "#/components/messages/push_event_announcement"
+        }
+      ]
     },
     "securitySchemes": {
       "bearerAuth": {

@@ -10,6 +10,7 @@ import {
   Home,
   Layers,
   LayoutGrid,
+  Megaphone,
   MessageSquare,
   Mic2,
   Package,
@@ -124,6 +125,11 @@ const navMain: NavItem[] = [
     title: "Attendees",
     url: "/attendees",
     icon: UserPlus,
+  },
+  {
+    title: "Announcements",
+    url: "/announcements",
+    icon: Megaphone,
   },
   {
     title: "Tiers",

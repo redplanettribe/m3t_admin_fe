@@ -348,6 +348,46 @@ export interface SendEventInvitationsResult {
   rejected: string[]
 }
 
+export type AnnouncementAction =
+  | "info"
+  | "open_event"
+  | "open_session"
+  | "open_agenda"
+  | "open_url"
+
+export interface AnnouncementActionPayload {
+  session_id?: string
+  url?: string
+}
+
+/** Announcement from GET/POST /events/{eventID}/announcements */
+export interface EventAnnouncement {
+  id: string
+  event_id: string
+  title: string
+  body: string
+  action: AnnouncementAction
+  action_payload?: AnnouncementActionPayload
+  sent_by?: string
+  recipient_count?: number
+  push_sent_count?: number
+  created_at?: string
+}
+
+/** Request body for POST /events/{eventID}/announcements */
+export interface SendEventAnnouncementRequest {
+  title: string
+  body: string
+  action: AnnouncementAction
+  action_payload?: AnnouncementActionPayload
+}
+
+/** Unwrapped response from GET /events/{eventID}/announcements */
+export interface ListEventAnnouncementsResult {
+  items: EventAnnouncement[]
+  pagination: PaginationMeta
+}
+
 /** Speaker from GET /events/{eventID}/speakers or get-by-id */
 export interface Speaker {
   id: string
