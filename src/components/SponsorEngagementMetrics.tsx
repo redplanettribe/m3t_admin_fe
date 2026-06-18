@@ -3,11 +3,6 @@ import { Link, useLocation } from "react-router-dom"
 import { ChevronDown, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useEventSponsorAnalytics } from "@/hooks/useSponsors"
@@ -41,10 +36,8 @@ function MetricCell(props: { unique?: number; total?: number }): React.ReactElem
   const { unique, total } = props
   return (
     <div className="tabular-nums">
-      <span className="font-medium">{formatCount(unique)}</span>
-      <span className="ml-1.5 text-xs text-muted-foreground">
-        ({formatCount(total)} total)
-      </span>
+      <div className="font-medium">{formatCount(unique)}</div>
+      <div className="text-xs text-muted-foreground">{formatCount(total)} total</div>
     </div>
   )
 }
@@ -83,97 +76,98 @@ function SponsorAnalyticsRowItem(props: {
   const sponsorName = row.name?.trim() || "—"
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen} disabled={!hasOfferings}>
-      <>
-        <tr className="border-b last:border-0">
-          <td className="px-4 py-3 font-medium">
-            {sponsorId ? (
-              <Link
-                to={`/events/${eventId}/sponsors/${sponsorId}`}
-                state={navigateState}
-                className="text-foreground underline-offset-4 hover:underline"
-              >
-                {sponsorName}
-              </Link>
-            ) : (
-              sponsorName
-            )}
-          </td>
-          <td className="px-4 py-3">
-            <MetricCell
-              unique={row.profile_views_unique}
-              total={row.profile_views_total}
-            />
-          </td>
-          <td className="px-4 py-3">
-            <MetricCell
-              unique={row.offering_clicks_unique}
-              total={row.offering_clicks_total}
-            />
-          </td>
-          <td className="px-4 py-3">
-            {hasOfferings ? (
-              <CollapsibleTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 gap-1 px-2 text-muted-foreground"
-                  aria-expanded={open}
-                >
-                  {open ? (
-                    <ChevronDown className="size-4" />
-                  ) : (
-                    <ChevronRight className="size-4" />
-                  )}
-                  {offerings.length} offering{offerings.length === 1 ? "" : "s"}
-                </Button>
-              </CollapsibleTrigger>
-            ) : (
-              <span className="text-sm text-muted-foreground">—</span>
-            )}
+    <>
+      <tr className="border-b">
+        <td className="px-4 py-3 align-top font-medium">
+          {sponsorId ? (
+            <Link
+              to={`/events/${eventId}/sponsors/${sponsorId}`}
+              state={navigateState}
+              className="text-foreground underline-offset-4 hover:underline"
+            >
+              {sponsorName}
+            </Link>
+          ) : (
+            sponsorName
+          )}
+        </td>
+        <td className="px-4 py-3 align-top">
+          <MetricCell
+            unique={row.profile_views_unique}
+            total={row.profile_views_total}
+          />
+        </td>
+        <td className="px-4 py-3 align-top">
+          <MetricCell
+            unique={row.offering_clicks_unique}
+            total={row.offering_clicks_total}
+          />
+        </td>
+        <td className="px-4 py-3 align-top">
+          {hasOfferings ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1 px-2 text-muted-foreground"
+              aria-expanded={open}
+              onClick={() => setOpen((current) => !current)}
+            >
+              {open ? (
+                <ChevronDown className="size-4 shrink-0" />
+              ) : (
+                <ChevronRight className="size-4 shrink-0" />
+              )}
+              {offerings.length} offering{offerings.length === 1 ? "" : "s"}
+            </Button>
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
+          )}
+        </td>
+      </tr>
+      {hasOfferings && open ? (
+        <tr className="border-b bg-muted/30">
+          <td colSpan={4} className="p-0">
+            <div className="border-t px-4 py-3">
+              <table className="w-full text-sm">
+                <colgroup>
+                  <col className="w-[40%]" />
+                  <col className="w-[20%]" />
+                  <col className="w-[20%]" />
+                  <col className="w-[20%]" />
+                </colgroup>
+                <thead>
+                  <tr className="text-muted-foreground">
+                    <th className="pb-2 text-left font-medium">Offering</th>
+                    <th className="pb-2 text-left font-medium">Unique views</th>
+                    <th className="pb-2 text-left font-medium">Unique clicks</th>
+                    <th className="pb-2 text-left font-medium">CTR</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {offerings.map((offering) => (
+                    <tr key={offering.offering_id ?? offering.title}>
+                      <td className="py-1.5 pr-4 font-medium">
+                        {offering.title?.trim() || "—"}
+                      </td>
+                      <td className="py-1.5 tabular-nums">
+                        {formatCount(offering.views_unique)}
+                      </td>
+                      <td className="py-1.5 tabular-nums">
+                        {formatCount(offering.clicks_unique)}
+                      </td>
+                      <td className="py-1.5 tabular-nums text-muted-foreground">
+                        {formatCtr(offering.clicks_unique, offering.views_unique)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </td>
         </tr>
-        {hasOfferings ? (
-          <tr className="border-b last:border-0 bg-muted/30">
-            <td colSpan={4} className="p-0">
-              <CollapsibleContent>
-                <div className="border-t px-4 py-3">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-muted-foreground">
-                        <th className="pb-2 text-left font-medium">Offering</th>
-                        <th className="pb-2 text-left font-medium">Unique views</th>
-                        <th className="pb-2 text-left font-medium">Unique clicks</th>
-                        <th className="pb-2 text-left font-medium">CTR</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {offerings.map((offering) => (
-                        <tr key={offering.offering_id ?? offering.title}>
-                          <td className="py-1.5 pr-4 font-medium">
-                            {offering.title?.trim() || "—"}
-                          </td>
-                          <td className="py-1.5 tabular-nums">
-                            {formatCount(offering.views_unique)}
-                          </td>
-                          <td className="py-1.5 tabular-nums">
-                            {formatCount(offering.clicks_unique)}
-                          </td>
-                          <td className="py-1.5 tabular-nums text-muted-foreground">
-                            {formatCtr(offering.clicks_unique, offering.views_unique)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CollapsibleContent>
-            </td>
-          </tr>
-        ) : null}
-      </>
-    </Collapsible>
+      ) : null}
+    </>
   )
 }
 
@@ -277,23 +271,33 @@ export function SponsorEngagementMetrics({
           </div>
         ) : (
           <div className="rounded-md border overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[640px] table-fixed text-sm">
+              <colgroup>
+                <col className="w-[38%]" />
+                <col className="w-[22%]" />
+                <col className="w-[22%]" />
+                <col className="w-[18%]" />
+              </colgroup>
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="h-10 px-4 text-left font-medium">Sponsor</th>
-                  <th className="h-10 px-4 text-left font-medium">
+                  <th className="h-auto px-4 py-3 text-left align-top font-medium">
+                    Sponsor
+                  </th>
+                  <th className="h-auto px-4 py-3 text-left align-top font-medium">
                     <div>Profile views</div>
                     <div className="text-xs font-normal text-muted-foreground">
-                      Unique (total)
+                      Unique · total
                     </div>
                   </th>
-                  <th className="h-10 px-4 text-left font-medium">
+                  <th className="h-auto px-4 py-3 text-left align-top font-medium">
                     <div>Offering clicks</div>
                     <div className="text-xs font-normal text-muted-foreground">
-                      Unique (total)
+                      Unique · total
                     </div>
                   </th>
-                  <th className="h-10 px-4 text-left font-medium">Offerings</th>
+                  <th className="h-auto px-4 py-3 text-left align-top font-medium">
+                    Offerings
+                  </th>
                 </tr>
               </thead>
               <tbody>
