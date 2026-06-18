@@ -550,9 +550,14 @@ export interface EventFeatureUGC {
   enabled: boolean
 }
 
+export interface EventFeatureSponsors {
+  enabled: boolean
+}
+
 export interface EventFeatureFlags {
   chat?: EventFeatureChat
   registration?: EventFeatureRegistration
+  sponsors?: EventFeatureSponsors
   ugc?: EventFeatureUGC
 }
 
@@ -574,9 +579,14 @@ export interface PatchEventSettingsFeatureUGCRequest {
   enabled?: boolean
 }
 
+export interface PatchEventSettingsFeatureSponsorsRequest {
+  enabled?: boolean
+}
+
 export interface PatchEventSettingsFeaturesRequest {
   chat?: PatchEventSettingsFeatureChatRequest
   registration?: PatchEventSettingsFeatureRegistrationRequest
+  sponsors?: PatchEventSettingsFeatureSponsorsRequest
   ugc?: PatchEventSettingsFeatureUGCRequest
 }
 
@@ -597,4 +607,157 @@ export interface ListEventUgcSocialNetworksParams {
 export interface ListEventUgcSocialNetworksResult {
   items: EventUgcSocialNetwork[]
   pagination: PaginationMeta
+}
+
+export type EventSponsorStatus = "draft" | "published" | "hidden"
+
+export type OfferingKind = "link" | "coupon" | "resource" | "demo" | "swag"
+
+export interface EventSponsorOffering {
+  id: string
+  sponsor_id?: string
+  title?: string
+  description?: string
+  kind?: OfferingKind
+  cta_label?: string
+  cta_url?: string
+  coupon_code?: string
+  sort_order?: number
+  status?: EventSponsorStatus
+  created_at?: string
+  updated_at?: string
+}
+
+export interface EventSponsor {
+  id: string
+  event_id?: string
+  name?: string
+  tagline?: string
+  description?: string
+  sponsorship_level?: string
+  status?: EventSponsorStatus | string
+  featured?: boolean
+  sort_order?: number
+  booth_label?: string
+  booth_type?: string
+  hall?: string
+  how_to_get_there?: string
+  virtual_booth_url?: string
+  website_url?: string
+  logo_url?: string
+  offerings?: EventSponsorOffering[]
+  created_at?: string
+  updated_at?: string
+}
+
+export interface CreateEventSponsorRequest {
+  name?: string
+  tagline?: string
+  description?: string
+  sponsorship_level?: string
+  status?: string
+  featured?: boolean
+  sort_order?: number
+  booth_label?: string
+  booth_type?: string
+  hall?: string
+  how_to_get_there?: string
+  virtual_booth_url?: string
+  website_url?: string
+}
+
+export interface UpdateEventSponsorRequest {
+  name?: string
+  tagline?: string
+  description?: string
+  sponsorship_level?: string
+  status?: string
+  featured?: boolean
+  sort_order?: number
+  booth_label?: string
+  booth_type?: string
+  hall?: string
+  how_to_get_there?: string
+  virtual_booth_url?: string
+  website_url?: string
+}
+
+export interface CreateEventSponsorOfferingRequest {
+  title: string
+  kind: OfferingKind
+  description?: string
+  cta_label?: string
+  cta_url?: string
+  coupon_code?: string
+  sort_order?: number
+  status?: EventSponsorStatus
+}
+
+export interface UpdateEventSponsorOfferingRequest {
+  title?: string
+  description?: string
+  kind?: OfferingKind
+  cta_label?: string
+  cta_url?: string
+  coupon_code?: string
+  sort_order?: number
+  status?: EventSponsorStatus
+}
+
+export interface ListEventSponsorsParams {
+  search?: string
+  status?: string
+  sponsorship_level?: string
+  booth_type?: string
+  page?: number
+  page_size?: number
+}
+
+export interface ListEventSponsorsResult {
+  items: EventSponsor[]
+  pagination: PaginationMeta
+}
+
+export interface RequestSponsorLogoUploadRequest {
+  content_type: string
+}
+
+export interface RequestSponsorLogoUploadResult {
+  key: string
+  upload_url: string
+}
+
+export interface ConfirmSponsorLogoRequest {
+  key: string
+}
+
+/** Per-offering engagement from GET /events/{eventID}/sponsors/analytics */
+export interface SponsorOfferingAnalyticsRow {
+  offering_id?: string
+  title?: string
+  views_unique?: number
+  clicks_unique?: number
+}
+
+/** Per-sponsor engagement row from GET /events/{eventID}/sponsors/analytics */
+export interface SponsorAnalyticsRow {
+  sponsor_id?: string
+  name?: string
+  profile_views_total?: number
+  profile_views_unique?: number
+  offering_clicks_total?: number
+  offering_clicks_unique?: number
+  offerings?: SponsorOfferingAnalyticsRow[]
+}
+
+/** Event-level sponsor engagement totals from GET /events/{eventID}/sponsors/analytics */
+export interface SponsorAnalyticsTotals {
+  registered_attendees?: number
+  engaged_attendees_unique?: number
+}
+
+/** Sponsor engagement analytics from GET /events/{eventID}/sponsors/analytics */
+export interface SponsorAnalytics {
+  totals?: SponsorAnalyticsTotals
+  sponsors?: SponsorAnalyticsRow[]
 }

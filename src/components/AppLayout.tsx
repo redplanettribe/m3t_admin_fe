@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Clapperboard,
   Home,
+  Handshake,
   Layers,
   LayoutGrid,
   Megaphone,
@@ -59,6 +60,7 @@ import {
 } from "@/components/ui/tooltip"
 import { useQueryClient } from "@tanstack/react-query"
 import { useAdminPing } from "@/hooks/useAdminPing"
+import { useEventSettings } from "@/hooks/useEventSettings"
 import { useEventsMe } from "@/hooks/useEvents"
 import { isEventEnded } from "@/lib/adminEventFilters"
 import { queryKeys } from "@/lib/queryKeys"
@@ -142,6 +144,11 @@ const navMain: NavItem[] = [
     icon: Package,
   },
   {
+    title: "Sponsors",
+    url: "/sponsors",
+    icon: Handshake,
+  },
+  {
     title: "Settings",
     url: "/settings",
     icon: Settings,
@@ -158,6 +165,8 @@ function AppLayoutInner(): React.ReactElement {
   const queryClient = useQueryClient()
   const { data: events = [], isLoading, isError } = useEventsMe()
   const { data: adminPing, isSuccess: isAdminPingSuccess } = useAdminPing()
+  const { data: eventSettings } = useEventSettings(activeEventId)
+  const sponsorsEnabled = eventSettings?.features?.sponsors?.enabled ?? false
   const { state, isMobile } = useSidebar()
   const [createEventOpen, setCreateEventOpen] = useState(false)
 
@@ -165,9 +174,10 @@ function AppLayoutInner(): React.ReactElement {
     const activeEvent = activeEventId ? events.find((e) => e.id === activeEventId) : undefined
     const ended = activeEvent ? isEventEnded(activeEvent) : false
 
-    const baseNav = ended
+    const baseNav = (ended
       ? navMain.filter((item) => item.url !== "/live" && item.url !== "/chat")
       : navMain.filter((item) => item.url !== "/analytics")
+    ).filter((item) => item.url !== "/sponsors" || sponsorsEnabled)
 
     if (isAdminPingSuccess && adminPing?.ok) {
       return [
@@ -176,7 +186,7 @@ function AppLayoutInner(): React.ReactElement {
       ]
     }
     return baseNav
-  }, [activeEventId, adminPing?.ok, events, isAdminPingSuccess])
+  }, [activeEventId, adminPing?.ok, events, isAdminPingSuccess, sponsorsEnabled])
 
   const handleEventSelect = (value: string) => {
     if (value === CREATE_NEW_EVENT_VALUE) {

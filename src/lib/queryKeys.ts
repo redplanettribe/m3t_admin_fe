@@ -5,6 +5,7 @@ import type {
 } from "@/types/admin"
 import type {
   EventCheckInTimelineGranularity,
+  ListEventSponsorsParams,
   ListEventUgcSocialNetworksParams,
 } from "@/types/event"
 
@@ -57,6 +58,27 @@ export const queryKeys = {
       ["events", eventId, "announcements", page, pageSize] as const,
     deliverable: (eventId: string, deliverableId: string) =>
       ["events", eventId, "deliverables", deliverableId] as const,
+    sponsors: (
+      eventId: string,
+      page: number,
+      pageSize: number,
+      filters?: ListEventSponsorsParams
+    ) =>
+      [
+        "events",
+        eventId,
+        "sponsors",
+        page,
+        pageSize,
+        filters?.search ?? "",
+        filters?.status ?? "",
+        filters?.sponsorship_level ?? "",
+        filters?.booth_type ?? "",
+      ] as const,
+    sponsor: (eventId: string, sponsorId: string) =>
+      ["events", eventId, "sponsors", sponsorId] as const,
+    sponsorAnalytics: (eventId: string) =>
+      ["events", eventId, "sponsors", "analytics"] as const,
     invitations: (eventId: string, page: number, pageSize: number, search: string) =>
       ["events", eventId, "invitations", page, pageSize, search ?? ""] as const,
     registrations: (

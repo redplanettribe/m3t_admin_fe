@@ -93,6 +93,13 @@ function applyOptimisticPatch(
     }
   }
 
+  if (body.features?.sponsors?.enabled !== undefined) {
+    next.features = {
+      ...next.features,
+      sponsors: { enabled: body.features.sponsors.enabled },
+    }
+  }
+
   if (body.features?.ugc?.enabled !== undefined) {
     const enabled = body.features.ugc.enabled
     next.features = {

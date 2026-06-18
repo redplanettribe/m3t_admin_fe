@@ -17,11 +17,16 @@ export function EventFeatureSettingsSection({
   const patchSettings = usePatchEventSettings(eventId)
 
   const chatEnabled = settings.data?.features?.chat?.enabled ?? false
+  const sponsorsEnabled = settings.data?.features?.sponsors?.enabled ?? false
   const requireInvitation =
     settings.data?.features?.registration?.require_invitation ?? false
 
   const handleChatChange = (checked: boolean) => {
     patchSettings.mutate({ features: { chat: { enabled: checked } } })
+  }
+
+  const handleSponsorsChange = (checked: boolean) => {
+    patchSettings.mutate({ features: { sponsors: { enabled: checked } } })
   }
 
   const handleRequireInvitationChange = (checked: boolean) => {
@@ -41,6 +46,7 @@ export function EventFeatureSettingsSection({
 
       {settings.isLoading ? (
         <div className="space-y-2">
+          <Skeleton className="h-16 w-full" />
           <Skeleton className="h-16 w-full" />
           <Skeleton className="h-16 w-full" />
         </div>
@@ -75,6 +81,20 @@ export function EventFeatureSettingsSection({
               <Switch
                 checked={chatEnabled}
                 onCheckedChange={handleChatChange}
+                disabled={patchSettings.isPending}
+              />
+            </div>
+
+            <div className="flex flex-row items-center justify-between p-4">
+              <div className="space-y-0.5">
+                <Label className="text-base">Enable sponsors</Label>
+                <p className="text-sm text-muted-foreground">
+                  Allow sponsor profiles and offerings for attendees at this event.
+                </p>
+              </div>
+              <Switch
+                checked={sponsorsEnabled}
+                onCheckedChange={handleSponsorsChange}
                 disabled={patchSettings.isPending}
               />
             </div>
