@@ -375,6 +375,7 @@ export function SessionDetailPage(): React.ReactElement {
             {room?.name || session.room_id
               ? ` · ${room?.name ?? session.room_id}`
               : ""}
+            {session.session_number != null ? ` · #${session.session_number}` : ""}
           </p>
         </div>
         <Button asChild variant="outline" size="sm" className="shrink-0">
@@ -389,6 +390,12 @@ export function SessionDetailPage(): React.ReactElement {
         </CardHeader>
         <CardContent className="space-y-4">
           <dl className="grid gap-3 text-sm">
+            <div>
+              <dt className="font-medium text-muted-foreground">Session number</dt>
+              <dd className="mt-0.5 tabular-nums">
+                {session.session_number ?? "—"}
+              </dd>
+            </div>
             <div>
               <dt className="font-medium text-muted-foreground">Time</dt>
               <dd className="mt-0.5">

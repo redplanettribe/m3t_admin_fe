@@ -1756,6 +1756,158 @@
                 }
             }
         },
+        "/attendee/events/{eventID}/sessions/check-in": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Records the authenticated user's check-in to a live session identified by per-event session_number. User must be registered. Idempotent: returns 201 when a new check-in is created, 200 when already checked in.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "attendee"
+                ],
+                "summary": "Self-check-in to a session by session number",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Session number to check in",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.SelfCheckInToSessionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Already checked in",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.SelfCheckInToSessionSuccessResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Check-in created",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.SelfCheckInToSessionSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: missing_path_param | invalid_path_param | invalid_request_body",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: not_registered_for_event | tier_not_allowed",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: session_not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "error.code: session_full | session_not_live",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/attendee/events/{eventID}/sessions/check-ins": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns session IDs the authenticated attendee has checked into within the specified event. The user must be registered for the event.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "attendee"
+                ],
+                "summary": "List my session check-in IDs for an event",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data contains session IDs ordered by check-in time",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.ListMySessionCheckInsSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: missing_path_param | invalid_path_param",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: not_registered_for_event",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: event_not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/attendee/events/{eventID}/sessions/{sessionID}/bookings": {
             "post": {
                 "security": [
@@ -11851,6 +12003,20 @@
                 }
             }
         },
+        "controllers.ListMySessionCheckInsSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
         "controllers.ListRoomTiersSuccessResponse": {
             "type": "object",
             "properties": {
@@ -12264,6 +12430,25 @@
             "properties": {
                 "data": {
                     "$ref": "#/definitions/controllers.SearchProfileCatalogResponse"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
+        "controllers.SelfCheckInToSessionRequest": {
+            "type": "object",
+            "properties": {
+                "session_number": {
+                    "type": "integer"
+                }
+            }
+        },
+        "controllers.SelfCheckInToSessionSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/domain.SessionSelfCheckInResult"
                 },
                 "error": {
                     "$ref": "#/definitions/helpers.APIError"
@@ -13807,6 +13992,9 @@
                 "room_id": {
                     "type": "string"
                 },
+                "session_number": {
+                    "type": "integer"
+                },
                 "source": {
                     "type": "string"
                 },
@@ -13892,6 +14080,17 @@
                 },
                 "user_id": {
                     "type": "string"
+                }
+            }
+        },
+        "domain.SessionSelfCheckInResult": {
+            "type": "object",
+            "properties": {
+                "check_in": {
+                    "$ref": "#/definitions/domain.SessionCheckIn"
+                },
+                "session_number": {
+                    "type": "integer"
                 }
             }
         },

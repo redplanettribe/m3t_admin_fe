@@ -109,6 +109,8 @@ export const DEFAULT_SESSION_TECHNICAL_DIFFICULTY: SessionTechnicalDifficulty =
  */
 export interface Session {
   id: string
+  /** Per-event session number (used for check-in). */
+  session_number?: number
   room_id?: string
   event_day?: number
   start_time?: string
@@ -172,6 +174,7 @@ export type SessionInput =
   | Session
   | {
     id: string
+    session_number?: number
     room_id?: string
     event_day?: number
     start_time?: string
