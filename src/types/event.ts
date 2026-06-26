@@ -345,6 +345,15 @@ export interface ListEventSessionsScheduleResult {
   pagination: PaginationMeta
 }
 
+/** Query params for GET /events/{eventID}/reviews */
+export interface ListEventSessionReviewsParams {
+  page: number
+  page_size: number
+  session_id?: string
+  rating?: number
+  search?: string
+}
+
 /** Response from POST /events/{eventID}/invitations */
 export interface SendEventInvitationsResult {
   queued: number
@@ -615,6 +624,35 @@ export interface ListEventUgcSocialNetworksParams {
 
 export interface ListEventUgcSocialNetworksResult {
   items: EventUgcSocialNetwork[]
+  pagination: PaginationMeta
+}
+
+/** Item from GET /events/{eventID}/sessions/{sessionID}/reviews */
+export interface EventSessionReviewItem {
+  id: string
+  session_id?: string
+  session_number?: number
+  session_title?: string
+  rating?: number
+  comment?: string
+  created_at?: string
+  updated_at?: string
+  anonymized_at?: string
+  user_id?: string
+  user_name?: string
+  user_email?: string
+}
+
+export interface ListSessionReviewsParams {
+  page: number
+  page_size: number
+  rating?: number
+  search?: string
+}
+
+/** Unwrapped response from GET /events/{eventID}/sessions/{sessionID}/reviews */
+export interface ListSessionReviewsResult {
+  items: EventSessionReviewItem[]
   pagination: PaginationMeta
 }
 

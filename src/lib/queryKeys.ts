@@ -5,6 +5,7 @@ import type {
 } from "@/types/admin"
 import type {
   EventCheckInTimelineGranularity,
+  ListEventSessionReviewsParams,
   ListEventSponsorsParams,
   ListEventUgcSocialNetworksParams,
 } from "@/types/event"
@@ -50,6 +51,22 @@ export const queryKeys = {
       ["events", eventId, "sessions", sessionId, "speakers"] as const,
     sessionTiers: (eventId: string, sessionId: string) =>
       ["events", eventId, "sessions", sessionId, "tiers"] as const,
+    sessionReviews: (
+      eventId: string,
+      sessionId: string,
+      params: { page: number; page_size: number; rating?: number; search?: string }
+    ) =>
+      [
+        "events",
+        eventId,
+        "sessions",
+        sessionId,
+        "reviews",
+        params.page,
+        params.page_size,
+        params.rating ?? "",
+        params.search ?? "",
+      ] as const,
     tags: (eventId: string) => ["events", eventId, "tags"] as const,
     tiers: (eventId: string) => ["events", eventId, "tiers"] as const,
     deliverables: (eventId: string, page: number, pageSize: number) =>
@@ -91,6 +108,8 @@ export const queryKeys = {
       ["events", eventId, "registrations", page, pageSize, search ?? "", tierId ?? ""] as const,
     sessionsSchedule: (eventId: string, page: number, pageSize: number, search: string) =>
       ["events", eventId, "sessions-schedule", page, pageSize, search ?? ""] as const,
+    eventSessionReviews: (eventId: string, params: ListEventSessionReviewsParams) =>
+      ["events", eventId, "event-session-reviews", params] as const,
     analytics: (eventId: string) => ["events", eventId, "analytics"] as const,
     checkInTimeline: (eventId: string, granularity: EventCheckInTimelineGranularity) =>
       ["events", eventId, "analytics", "check-ins", "timeline", granularity] as const,

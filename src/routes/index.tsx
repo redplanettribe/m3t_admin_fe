@@ -24,6 +24,7 @@ import { DeliverablesPage } from "@/pages/DeliverablesPage"
 import { SponsorsPage } from "@/pages/SponsorsPage"
 import { SponsorDetailPage } from "@/pages/SponsorDetailPage"
 import { AnnouncementsPage } from "@/pages/AnnouncementsPage"
+import { SessionReviewsPage } from "@/pages/SessionReviewsPage"
 import { LiveDashboardPage } from "@/pages/LiveDashboardPage"
 import { LiveRedirectPage } from "@/pages/LiveRedirectPage"
 import { EventChatPage } from "@/pages/EventChatPage"
@@ -109,6 +110,10 @@ const routes: RouteObject[] = [
       {
         path: "attendees",
         element: <AttendeesPage />,
+      },
+      {
+        path: "reviews",
+        element: <SessionReviewsPage />,
       },
       {
         path: "announcements",

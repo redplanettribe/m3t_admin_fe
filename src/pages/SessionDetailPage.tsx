@@ -1,6 +1,6 @@
 import * as React from "react"
 import { Link, useLocation, useParams } from "react-router-dom"
-import { ChevronsUpDown, X } from "lucide-react"
+import { ChevronsUpDown, Star, X } from "lucide-react"
 import {
   Card,
   CardContent,
@@ -48,10 +48,12 @@ import {
   useSessionTiers,
 } from "@/hooks/useEvents"
 import { useAddSessionSpeaker, useRemoveSessionSpeaker, useSessionSpeakers, useSpeakers } from "@/hooks/useSpeakers"
+import { useSessionReviews } from "@/hooks/useSessionReviews"
 import { useEventStore } from "@/store/eventStore"
 import {
   SESSION_STATUSES,
   DEFAULT_SESSION_TECHNICAL_DIFFICULTY,
+  type EventSessionReviewItem,
   type Room,
   type Session,
   type SessionStatus,
@@ -62,10 +64,15 @@ import {
   formatSessionTechnicalDifficulty,
   SESSION_TECHNICAL_DIFFICULTY_OPTIONS,
 } from "@/lib/sessionTechnicalDifficulty"
+import { ApiError } from "@/lib/api"
 import { useReturnNavigation } from "@/hooks/useReturnNavigation"
 import { makeNavigateFrom } from "@/lib/returnNavigation"
 import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
+
+const REVIEWS_PAGE_SIZE = 20
+const SEARCH_DEBOUNCE_MS = 400
+const ALL_RATINGS_VALUE = "all"
 
 function speakerDisplayName(s: Speaker): string {
   return [s.first_name, s.last_name].filter(Boolean).join(" ").trim() || "—"
@@ -82,6 +89,43 @@ function speakerInitials(s: Speaker): string {
     return s.last_name.slice(0, 2).toUpperCase()
   }
   return "?"
+}
+
+function formatReviewDate(value?: string): string {
+  if (!value) return "—"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "—"
+  return date.toLocaleString()
+}
+
+function reviewerDisplayName(review: EventSessionReviewItem): string {
+  if (review.anonymized_at) return "Anonymous"
+  const name = review.user_name?.trim()
+  if (name) return name
+  const email = review.user_email?.trim()
+  if (email) return email
+  return "—"
+}
+
+function StarRating({ rating }: { rating?: number }): React.ReactElement {
+  const value = rating ?? 0
+  return (
+    <span className="inline-flex items-center gap-0.5" aria-label={`${value} out of 5 stars`}>
+      {Array.from({ length: 5 }, (_, index) => {
+        const filled = index < value
+        return (
+          <Star
+            key={index}
+            className={cn(
+              "size-3.5",
+              filled ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40"
+            )}
+            aria-hidden
+          />
+        )
+      })}
+    </span>
+  )
 }
 
 function AddSpeakerCombobox({
@@ -202,6 +246,40 @@ export function SessionDetailPage(): React.ReactElement {
     React.useState<SessionTechnicalDifficulty>(DEFAULT_SESSION_TECHNICAL_DIFFICULTY)
   const [isEditingStatus, setIsEditingStatus] = React.useState(false)
   const [editStatus, setEditStatus] = React.useState<SessionStatus>("Scheduled")
+  const [reviewsPage, setReviewsPage] = React.useState(1)
+  const [reviewsRatingFilter, setReviewsRatingFilter] = React.useState(ALL_RATINGS_VALUE)
+  const [reviewsSearchInput, setReviewsSearchInput] = React.useState("")
+  const [debouncedReviewsSearch, setDebouncedReviewsSearch] = React.useState("")
+
+  const reviewsRating =
+    reviewsRatingFilter === ALL_RATINGS_VALUE
+      ? undefined
+      : Number.parseInt(reviewsRatingFilter, 10)
+
+  const sessionReviews = useSessionReviews(eventId, sessionId, {
+    page: reviewsPage,
+    page_size: REVIEWS_PAGE_SIZE,
+    rating: reviewsRating,
+    search: debouncedReviewsSearch || undefined,
+  })
+
+  React.useEffect(() => {
+    const id = window.setTimeout(() => {
+      setDebouncedReviewsSearch(reviewsSearchInput.trim())
+    }, SEARCH_DEBOUNCE_MS)
+    return () => window.clearTimeout(id)
+  }, [reviewsSearchInput])
+
+  React.useEffect(() => {
+    setReviewsPage(1)
+  }, [debouncedReviewsSearch, reviewsRatingFilter])
+
+  React.useEffect(() => {
+    setReviewsPage(1)
+    setReviewsRatingFilter(ALL_RATINGS_VALUE)
+    setReviewsSearchInput("")
+    setDebouncedReviewsSearch("")
+  }, [eventId, sessionId])
 
   React.useEffect(() => {
     if (eventId) setActiveEventId(eventId)
@@ -984,6 +1062,175 @@ export function SessionDetailPage(): React.ReactElement {
                 </dd>
               </div>
             </dl>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Reviews</CardTitle>
+          <CardDescription>
+            Attendee ratings and comments for this session.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Select
+              value={reviewsRatingFilter}
+              onValueChange={setReviewsRatingFilter}
+              disabled={sessionReviews.isFetching}
+            >
+              <SelectTrigger className="w-full sm:max-w-[180px]" size="sm">
+                <SelectValue placeholder="All ratings" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_RATINGS_VALUE}>All ratings</SelectItem>
+                {[5, 4, 3, 2, 1].map((rating) => (
+                  <SelectItem key={rating} value={String(rating)}>
+                    {rating} star{rating === 1 ? "" : "s"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              type="search"
+              placeholder="Search comments…"
+              value={reviewsSearchInput}
+              onChange={(e) => setReviewsSearchInput(e.target.value)}
+              className="w-full sm:max-w-xs"
+              aria-label="Search review comments"
+              disabled={sessionReviews.isFetching}
+            />
+          </div>
+
+          {sessionReviews.isLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : sessionReviews.isError ? (
+            sessionReviews.error instanceof ApiError && sessionReviews.error.status === 403 ? (
+              <p className="text-xs text-muted-foreground">
+                Session reviews are available to event owners and team members.
+              </p>
+            ) : (
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                <p className="text-sm text-destructive">Failed to load reviews.</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => sessionReviews.refetch()}
+                >
+                  Retry
+                </Button>
+              </div>
+            )
+          ) : (
+            <>
+              {(() => {
+                const reviewItems = sessionReviews.data?.items ?? []
+                const reviewsPagination = sessionReviews.data?.pagination
+                const canGoPrev = reviewsPage > 1
+                const canGoNext = reviewsPagination
+                  ? reviewsPage < reviewsPagination.total_pages
+                  : false
+
+                return (
+                  <>
+                    <div className="rounded-md border overflow-x-auto">
+                      <table className="w-full text-sm min-w-[640px]">
+                        <thead>
+                          <tr className="border-b bg-muted/50">
+                            <th className="h-10 px-4 text-left font-medium">Reviewer</th>
+                            <th className="h-10 px-4 text-left font-medium">Rating</th>
+                            <th className="h-10 px-4 text-left font-medium">Comment</th>
+                            <th className="h-10 px-4 text-left font-medium whitespace-nowrap">
+                              Submitted
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {reviewItems.length === 0 ? (
+                            <tr>
+                              <td
+                                colSpan={4}
+                                className="px-4 py-8 text-center text-muted-foreground"
+                              >
+                                No reviews yet.
+                              </td>
+                            </tr>
+                          ) : (
+                            reviewItems.map((review) => {
+                              const reviewerName = reviewerDisplayName(review)
+                              const canLinkReviewer =
+                                !review.anonymized_at && review.user_id?.trim()
+
+                              return (
+                                <tr key={review.id} className="border-b last:border-0">
+                                  <td className="px-4 py-3">
+                                    {canLinkReviewer ? (
+                                      <Link
+                                        to={`/events/${eventId}/attendees/${review.user_id}`}
+                                        state={speakerNavigateState}
+                                        className="text-primary underline underline-offset-2 hover:no-underline"
+                                      >
+                                        {reviewerName}
+                                      </Link>
+                                    ) : (
+                                      reviewerName
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <StarRating rating={review.rating} />
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-pre-wrap">
+                                    {review.comment?.trim() || "—"}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    {formatReviewDate(review.created_at)}
+                                  </td>
+                                </tr>
+                              )
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="text-sm text-muted-foreground">
+                        {reviewsPagination
+                          ? `Page ${reviewsPagination.page} of ${reviewsPagination.total_pages} (${reviewsPagination.total} total)`
+                          : "Page 1"}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setReviewsPage((current) => Math.max(1, current - 1))}
+                          disabled={!canGoPrev || sessionReviews.isFetching}
+                        >
+                          Previous
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setReviewsPage((current) => current + 1)}
+                          disabled={!canGoNext || sessionReviews.isFetching}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )
+              })()}
+            </>
           )}
         </CardContent>
       </Card>

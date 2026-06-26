@@ -17,6 +17,7 @@ import {
   Package,
   Settings,
   Shield,
+  Star,
   UserPlus,
   Users,
 } from "lucide-react"
@@ -127,6 +128,11 @@ const navMain: NavItem[] = [
     title: "Attendees",
     url: "/attendees",
     icon: UserPlus,
+  },
+  {
+    title: "Reviews",
+    url: "/reviews",
+    icon: Star,
   },
   {
     title: "Announcements",
