@@ -3205,7 +3205,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns aggregate metrics (registrations, check-ins, invitation funnel, deliverables, per-session check-ins) for a past event. Caller must be the event owner or a team member. Available only after the event has ended.",
+                "description": "Returns aggregate metrics (registrations, check-ins, invitation funnel, deliverables, per-session occupancy) for a past event. Each session includes check_in_count, booking_count, overflow_count, optional capacity_utilization (check_in_count / room.capacity, may exceed 1.0), and optional overflow_rate (overflow_count / check_in_count). Caller must be the event owner or a team member. Available only after the event has ended.",
                 "produces": [
                     "application/json"
                 ],
@@ -3224,9 +3224,9 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "data contains domain.EventAnalytics",
+                        "description": "data contains aggregate metrics and per-session occupancy",
                         "schema": {
-                            "$ref": "#/definitions/helpers.APIResponse"
+                            "$ref": "#/definitions/controllers.GetEventAnalyticsSuccessResponse"
                         }
                     },
                     "400": {
@@ -4670,7 +4670,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "**Pre-stream errors** use the normal JSON envelope (401/403/404/500) before `Content-Type: text/event-stream` is set.\\n\\n**Auth:** `Authorization: Bearer` or `?ticket=` JWT from `POST /events/{eventID}/live/status/ticket`. When using `ticket`, its `event_id` claim must match `{eventID}` in the path or the server responds 403.\\n\\n**Stream body:** not `APIResponse`. Each frame is `event:` then `data:` (single JSON object) then blank line.\\n\\n**Event types:**\\n- `snapshot` — `data` is `EventStatusLiveSnapshot`: `event_check_in_count` (int), `sessions` (**live-only**; array of `{session_id, title, check_in_count, room: {name, capacity}}`), `deliverables` (array of `{deliverable_id, name, delivered_count}`).\\n- `error` — `data` is `{code, message}`; connection ends after this frame.\\n\\n**Heartbeats:** comment lines `: ping` every ~20s; ignore (no `event`/`data`).\\n\\n**First frame:** immediate `snapshot` after connect (same shape as above).\\n\\n**Reconnect:** clients may reconnect with exponential backoff; server closes stream on shutdown.\\n\\n**Ops:** place stream path behind `proxy_buffering off` and a large `proxy_read_timeout` if using nginx.",
+                "description": "**Pre-stream errors** use the normal JSON envelope (401/403/404/500) before `Content-Type: text/event-stream` is set.\\n\\n**Auth:** `Authorization: Bearer` or `?ticket=` JWT from `POST /events/{eventID}/live/status/ticket`. When using `ticket`, its `event_id` claim must match `{eventID}` in the path or the server responds 403.\\n\\n**Stream body:** not `APIResponse`. Each frame is `event:` then `data:` (single JSON object) then blank line.\\n\\n**Event types:**\\n- `snapshot` — `data` is `EventStatusLiveSnapshotSSEData` (see schema): `event_check_in_count`, `sessions` (**live-only**; each session has `check_in_count`, `booking_count`, `overflow_count`, optional `capacity_utilization`, optional `overflow_rate`, and `room`), `deliverables`.\\n- `error` — `data` is `{code, message}`; connection ends after this frame.\\n\\n**Heartbeats:** comment lines `: ping` every ~20s; ignore (no `event`/`data`).\\n\\n**First frame:** immediate `snapshot` after connect (same shape as above).\\n\\n**Reconnect:** clients may reconnect with exponential backoff; server closes stream on shutdown.\\n\\n**Ops:** place stream path behind `proxy_buffering off` and a large `proxy_read_timeout` if using nginx.",
                 "produces": [
                     "text/event-stream"
                 ],
@@ -4695,9 +4695,9 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "text/event-stream sequence (not JSON envelope)",
+                        "description": "JSON shape of each snapshot event data line (response Content-Type is text/event-stream)",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/controllers.EventStatusLiveSnapshotSSEData"
                         }
                     },
                     "401": {
@@ -6066,7 +6066,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Records check-in of an attendee to a specific session. Caller must be the event owner or a team member. User must be registered for the event. Session must be Live. If the user has no booking and the session has capacity, they are auto-booked then checked in. If the session is not Live or is full and the user has no booking, returns 409. Idempotent: returns 201 when a new check-in is created, 200 when already checked in.",
+                "description": "Records check-in of an attendee to a specific session. Caller must be the event owner or a team member. User must be registered for the event. Session must be Live. If the user has no booking and the session has capacity, they are auto-booked then checked in. When override_capacity is true and the session is full with no booking, records an overflow check-in (overflow=true) without creating a booking. If the session is not Live or is full and the user has no booking and override_capacity is false, returns 409. Idempotent: returns 201 when a new check-in is created, 200 when already checked in.",
                 "consumes": [
                     "application/json"
                 ],
@@ -10650,6 +10650,9 @@
         "controllers.CheckInAttendeeToSessionRequest": {
             "type": "object",
             "properties": {
+                "override_capacity": {
+                    "type": "boolean"
+                },
                 "user_id": {
                     "type": "string"
                 }
@@ -11203,6 +11206,26 @@
                 }
             }
         },
+        "controllers.EventStatusLiveSnapshotSSEData": {
+            "type": "object",
+            "properties": {
+                "deliverables": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.EventStatusLiveDeliverableStat"
+                    }
+                },
+                "event_check_in_count": {
+                    "type": "integer"
+                },
+                "sessions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.EventStatusLiveSessionCheckIn"
+                    }
+                }
+            }
+        },
         "controllers.EventStatusStreamTicketResponse": {
             "type": "object",
             "properties": {
@@ -11322,6 +11345,17 @@
                     "items": {
                         "$ref": "#/definitions/domain.SessionBooking"
                     }
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
+        "controllers.GetEventAnalyticsSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/domain.EventAnalytics"
                 },
                 "error": {
                     "$ref": "#/definitions/helpers.APIError"
@@ -13222,6 +13256,123 @@
                 }
             }
         },
+        "domain.EventAnalytics": {
+            "type": "object",
+            "properties": {
+                "attendees": {
+                    "$ref": "#/definitions/domain.EventAnalyticsAttendees"
+                },
+                "deliverables": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.EventAnalyticsDeliverable"
+                    }
+                },
+                "invitations": {
+                    "$ref": "#/definitions/domain.EventAnalyticsInvitations"
+                },
+                "sessions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.EventAnalyticsSession"
+                    }
+                }
+            }
+        },
+        "domain.EventAnalyticsAttendees": {
+            "type": "object",
+            "properties": {
+                "check_in_count": {
+                    "type": "integer"
+                },
+                "check_in_rate": {
+                    "description": "CheckInRate is check_in_count / registration_count (0.0–1.0). Omitted when registration_count == 0.",
+                    "type": "number"
+                },
+                "check_ins_not_on_sent_invitations_count": {
+                    "description": "CheckInsNotOnSentInvitationsCount is check-ins whose user email has no matching sent invitation.",
+                    "type": "integer"
+                },
+                "check_ins_not_on_sent_invitations_rate": {
+                    "description": "CheckInsNotOnSentInvitationsRate is count / check_in_count (0.0–1.0). Omitted when check_in_count == 0.",
+                    "type": "number"
+                },
+                "registration_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.EventAnalyticsDeliverable": {
+            "type": "object",
+            "properties": {
+                "deliverable_id": {
+                    "type": "string"
+                },
+                "delivered_count": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.EventAnalyticsInvitations": {
+            "type": "object",
+            "properties": {
+                "failed": {
+                    "type": "integer"
+                },
+                "pending": {
+                    "description": "pending + sending",
+                    "type": "integer"
+                },
+                "sent": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.EventAnalyticsSession": {
+            "type": "object",
+            "properties": {
+                "booking_count": {
+                    "type": "integer"
+                },
+                "capacity_utilization": {
+                    "description": "CapacityUtilization is check_in_count / room.capacity; may exceed 1.0 when overflow check-ins occurred. Omitted when capacity is 0.",
+                    "type": "number"
+                },
+                "check_in_count": {
+                    "type": "integer"
+                },
+                "overflow_count": {
+                    "type": "integer"
+                },
+                "overflow_rate": {
+                    "description": "OverflowRate is overflow_count / check_in_count. Omitted when check_in_count is 0.",
+                    "type": "number"
+                },
+                "room": {
+                    "$ref": "#/definitions/domain.EventAnalyticsSessionRoom"
+                },
+                "session_id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.EventAnalyticsSessionRoom": {
+            "type": "object",
+            "properties": {
+                "capacity": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.EventAnnouncement": {
             "type": "object",
             "properties": {
@@ -13724,6 +13875,62 @@
                 }
             }
         },
+        "domain.EventStatusLiveDeliverableStat": {
+            "type": "object",
+            "properties": {
+                "deliverable_id": {
+                    "type": "string"
+                },
+                "delivered_count": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.EventStatusLiveRoom": {
+            "type": "object",
+            "properties": {
+                "capacity": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.EventStatusLiveSessionCheckIn": {
+            "type": "object",
+            "properties": {
+                "booking_count": {
+                    "type": "integer"
+                },
+                "capacity_utilization": {
+                    "description": "CapacityUtilization is check_in_count / room.capacity; may exceed 1.0 when overflow check-ins occurred. Omitted when capacity is 0.",
+                    "type": "number"
+                },
+                "check_in_count": {
+                    "type": "integer"
+                },
+                "overflow_count": {
+                    "type": "integer"
+                },
+                "overflow_rate": {
+                    "description": "OverflowRate is overflow_count / check_in_count. Omitted when check_in_count is 0.",
+                    "type": "number"
+                },
+                "room": {
+                    "$ref": "#/definitions/domain.EventStatusLiveRoom"
+                },
+                "session_id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.EventTeamMember": {
             "type": "object",
             "properties": {
@@ -14074,6 +14281,9 @@
                 },
                 "name": {
                     "type": "string"
+                },
+                "overflow": {
+                    "type": "boolean"
                 },
                 "session_id": {
                     "type": "string"

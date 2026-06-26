@@ -5,7 +5,10 @@ import { Button } from "@/components/ui/button"
 import { useEventSchedule } from "@/hooks/useEvents"
 import { useEventLiveStatusStream } from "@/hooks/useEventLiveStatusStream"
 import { useEventStore } from "@/store/eventStore"
-import type { LiveConnectionState } from "@/types/liveStatus"
+import type {
+  EventStatusLiveSessionCheckIn,
+  LiveConnectionState,
+} from "@/types/liveStatus"
 
 function formatConnectionState(state: LiveConnectionState) {
   if (state === "connecting") return "Connecting"
@@ -17,6 +20,29 @@ function formatConnectionState(state: LiveConnectionState) {
 function clampPct(value: number) {
   if (Number.isNaN(value) || !Number.isFinite(value)) return 0
   return Math.max(0, Math.min(100, value))
+}
+
+function deriveSessionMetrics(s: EventStatusLiveSessionCheckIn) {
+  const capacity = s.room?.capacity ?? 0
+  const count = s.check_in_count ?? 0
+  const overflowCount = s.overflow_count ?? 0
+  const utilRatio =
+    s.capacity_utilization ?? (capacity > 0 ? count / capacity : 0)
+  const utilPct = utilRatio * 100
+  const barPct = clampPct(utilPct)
+  const isOverflow = overflowCount > 0
+  const isFull = capacity > 0 && count >= capacity
+  return { s, capacity, count, overflowCount, utilPct, barPct, isOverflow, isFull }
+}
+
+function sortSessionMetrics(
+  a: ReturnType<typeof deriveSessionMetrics>,
+  b: ReturnType<typeof deriveSessionMetrics>
+) {
+  if (a.isOverflow !== b.isOverflow) return a.isOverflow ? -1 : 1
+  if (a.isFull !== b.isFull) return a.isFull ? -1 : 1
+  if (a.utilPct !== b.utilPct) return b.utilPct - a.utilPct
+  return (a.s.title || "").localeCompare(b.s.title || "")
 }
 
 export function LiveDashboardPage(): React.ReactElement {
@@ -116,7 +142,7 @@ export function LiveDashboardPage(): React.ReactElement {
           <div>
             <h3 className="text-lg font-semibold tracking-tight">Live sessions</h3>
             <p className="text-sm text-muted-foreground">
-              Room capacity utilization and check-ins
+              Room occupancy, check-ins, and overflow
             </p>
           </div>
           <div className="text-sm text-muted-foreground tabular-nums">
@@ -127,26 +153,39 @@ export function LiveDashboardPage(): React.ReactElement {
         {snapshot?.sessions?.length ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[...snapshot.sessions]
-              .map((s) => {
-                const capacity = s.room?.capacity ?? 0
-                const count = s.check_in_count ?? 0
-                const pct = capacity > 0 ? clampPct((count / capacity) * 100) : 0
-                const isFull = capacity > 0 && count >= capacity
-                return { s, capacity, count, pct, isFull }
-              })
-              .sort((a, b) => {
-                if (a.isFull !== b.isFull) return a.isFull ? -1 : 1
-                if (a.pct !== b.pct) return b.pct - a.pct
-                return (a.s.title || "").localeCompare(b.s.title || "")
-              })
-              .map(({ s, capacity, count, pct, isFull }) => (
-                <Card key={s.session_id} className={isFull ? "border-destructive/40" : undefined}>
+              .map(deriveSessionMetrics)
+              .sort(sortSessionMetrics)
+              .map(
+                ({
+                  s,
+                  capacity,
+                  count,
+                  overflowCount,
+                  utilPct,
+                  barPct,
+                  isOverflow,
+                  isFull,
+                }) => (
+                <Card
+                  key={s.session_id}
+                  className={
+                    isOverflow
+                      ? "border-destructive/40"
+                      : isFull
+                        ? "border-destructive/20"
+                        : undefined
+                  }
+                >
                   <CardHeader className="space-y-1">
                     <div className="flex items-start justify-between gap-3">
                       <CardTitle className="text-base leading-snug">
                         <span className="line-clamp-2">{s.title || s.session_id}</span>
                       </CardTitle>
-                      {isFull ? (
+                      {isOverflow ? (
+                        <span className="shrink-0 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+                          OVERFLOW
+                        </span>
+                      ) : isFull ? (
                         <span className="shrink-0 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
                           FULL
                         </span>
@@ -159,8 +198,15 @@ export function LiveDashboardPage(): React.ReactElement {
                   <CardContent className="space-y-3">
                     <div className="flex items-center justify-between gap-3">
                       <div className="text-sm text-muted-foreground">Check-ins</div>
-                      <div className="text-sm font-medium tabular-nums">
-                        {capacity > 0 ? `${count}/${capacity}` : `${count}/—`}
+                      <div className="text-right">
+                        <div className="text-sm font-medium tabular-nums">
+                          {capacity > 0 ? `${count}/${capacity}` : `${count}/—`}
+                        </div>
+                        {overflowCount > 0 ? (
+                          <div className="text-xs font-medium tabular-nums text-destructive">
+                            +{overflowCount} overflow
+                          </div>
+                        ) : null}
                       </div>
                     </div>
 
@@ -171,12 +217,12 @@ export function LiveDashboardPage(): React.ReactElement {
                           aria-hidden
                         >
                           <div
-                            className={`h-full rounded-full ${isFull ? "bg-destructive" : "bg-primary"}`}
-                            style={{ width: `${pct}%` }}
+                            className={`h-full rounded-full ${isOverflow || isFull ? "bg-destructive" : "bg-primary"}`}
+                            style={{ width: `${barPct}%` }}
                           />
                         </div>
                         <div className="text-xs text-muted-foreground tabular-nums">
-                          {Math.round(pct)}%
+                          {Math.round(utilPct)}%
                         </div>
                       </div>
                     ) : (

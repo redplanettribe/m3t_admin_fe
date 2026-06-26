@@ -468,6 +468,12 @@ export interface EventAnalyticsSession {
   session_id: string
   title: string
   check_in_count: number
+  booking_count?: number
+  overflow_count?: number
+  /** 0–1; omitted when check_in_count === 0 */
+  overflow_rate?: number
+  /** may exceed 1.0; omitted when room capacity is 0 */
+  capacity_utilization?: number
   room?: EventAnalyticsSessionRoom
 }
 
