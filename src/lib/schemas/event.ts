@@ -24,6 +24,7 @@ export const createEventSchema = z.object({
     .union([z.number(), z.literal("")])
     .optional()
     .transform((v) => (v === "" ? undefined : v)),
+  organization_id: z.string().optional(),
 })
 
 export type CreateEventFormInput = z.input<typeof createEventSchema>

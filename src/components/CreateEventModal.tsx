@@ -20,11 +20,13 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useCreateEvent } from "@/hooks/useEvents"
+import { useOrganizations } from "@/hooks/useOrganizations"
 import {
   createEventSchema,
   type CreateEventFormInput,
 } from "@/lib/schemas/event"
 import { cn } from "@/lib/utils"
+import { useOrganizationStore } from "@/store/organizationStore"
 
 function getLocalUtcOffsetTimeZone(): string {
   // JS getTimezoneOffset() is minutes *behind* UTC (e.g. UTC+2 -> -120).
@@ -48,6 +50,8 @@ export function CreateEventModal({
   onOpenChange,
 }: CreateEventModalProps): React.ReactElement {
   const createEvent = useCreateEvent()
+  const { data: organizations = [] } = useOrganizations()
+  const activeOrganizationId = useOrganizationStore((s) => s.activeOrganizationId)
 
   const defaultValues: CreateEventFormInput = {
     name: "",
@@ -72,7 +76,11 @@ export function CreateEventModal({
 
   const onSubmit = (values: CreateEventFormInput) => {
     const parsed = createEventSchema.parse(values)
-    createEvent.mutate(parsed, {
+    const payload =
+      organizations.length > 0 && activeOrganizationId
+        ? { ...parsed, organization_id: activeOrganizationId }
+        : parsed
+    createEvent.mutate(payload, {
       onSuccess: () => {
         onOpenChange(false)
         form.reset(defaultValues)

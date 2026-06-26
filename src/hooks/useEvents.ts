@@ -1,12 +1,8 @@
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  type QueryClient,
-} from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
 import { useEventStore } from "@/store/eventStore"
+import { useOrganizationStore } from "@/store/organizationStore"
 import { isSessionTechnicalDifficulty } from "@/lib/sessionTechnicalDifficulty"
 import type { CreateEventFormValues } from "@/lib/schemas/event"
 import type {
@@ -795,7 +791,11 @@ export function useCreateEvent() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.events.list })
       queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(data.id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.organizations.list })
       useEventStore.getState().setActiveEventId(data.id)
+      if (data.organization_id) {
+        useOrganizationStore.getState().setActiveOrganizationId(data.organization_id)
+      }
     },
   })
 }

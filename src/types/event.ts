@@ -2,6 +2,7 @@ export interface Event {
   id: string
   name: string
   event_code?: string
+  organization_id?: string
   owner_id?: string
   created_at?: string
   updated_at?: string

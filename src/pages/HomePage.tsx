@@ -338,13 +338,13 @@ export function HomePage(): React.ReactElement {
     <div className="mx-auto max-w-4xl space-y-6">
       <h2 className="text-2xl font-semibold tracking-tight">Home</h2>
       <p className="text-muted-foreground">
-        Select an event from the dropdown in the sidebar or create a new event to get started.
+        Select an organization and event from the dropdowns in the top bar, or create new ones to get started.
       </p>
       <Card className="max-w-md">
         <CardHeader>
           <CardTitle>Getting started</CardTitle>
           <CardDescription>
-            Select an event from the dropdown in the sidebar or create a new event to get started.
+            Use the organization and event selectors in the top bar. Your first event will create an organization automatically if you do not have one yet.
           </CardDescription>
         </CardHeader>
         <CardContent />

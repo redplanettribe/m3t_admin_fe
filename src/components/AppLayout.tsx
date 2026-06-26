@@ -23,6 +23,8 @@ import {
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { CreateEventModal } from "@/components/CreateEventModal"
+import { CreateOrganizationModal } from "@/components/CreateOrganizationModal"
+import { ManageOrganizationSheet } from "@/components/ManageOrganizationSheet"
 import {
   Collapsible,
   CollapsibleContent,
@@ -32,6 +34,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
@@ -63,10 +66,12 @@ import { useQueryClient } from "@tanstack/react-query"
 import { useAdminPing } from "@/hooks/useAdminPing"
 import { useEventSettings } from "@/hooks/useEventSettings"
 import { useEventsMe } from "@/hooks/useEvents"
+import { useOrganizations } from "@/hooks/useOrganizations"
 import { isEventEnded } from "@/lib/adminEventFilters"
 import { queryKeys } from "@/lib/queryKeys"
 import { getDisplayName, getInitials } from "@/lib/user"
 import { useEventStore } from "@/store/eventStore"
+import { useOrganizationStore } from "@/store/organizationStore"
 import { useUserStore } from "@/store/userStore"
 
 type NavSubItem = { title: string; url: string }
@@ -162,19 +167,80 @@ const navMain: NavItem[] = [
 ]
 
 const CREATE_NEW_EVENT_VALUE = "__create_new__"
+const CREATE_NEW_ORG_VALUE = "__create_new_org__"
+const MANAGE_ORG_VALUE = "__manage_org__"
 
 function AppLayoutInner(): React.ReactElement {
   const location = useLocation()
   const user = useUserStore((s) => s.user)
   const activeEventId = useEventStore((s) => s.activeEventId)
   const setActiveEventId = useEventStore((s) => s.setActiveEventId)
+  const activeOrganizationId = useOrganizationStore((s) => s.activeOrganizationId)
+  const setActiveOrganizationId = useOrganizationStore((s) => s.setActiveOrganizationId)
   const queryClient = useQueryClient()
-  const { data: events = [], isLoading, isError } = useEventsMe()
+  const {
+    data: organizations = [],
+    isLoading: isOrganizationsLoading,
+    isError: isOrganizationsError,
+  } = useOrganizations()
+  const { data: events = [], isLoading: isEventsLoading, isError: isEventsError } = useEventsMe()
   const { data: adminPing, isSuccess: isAdminPingSuccess } = useAdminPing()
   const { data: eventSettings } = useEventSettings(activeEventId)
   const sponsorsEnabled = eventSettings?.features?.sponsors?.enabled ?? false
   const { state, isMobile } = useSidebar()
   const [createEventOpen, setCreateEventOpen] = useState(false)
+  const [createOrganizationOpen, setCreateOrganizationOpen] = useState(false)
+  const [manageOrganizationOpen, setManageOrganizationOpen] = useState(false)
+
+  const activeOrganization = React.useMemo(
+    () => organizations.find((org) => org.id === activeOrganizationId) ?? null,
+    [activeOrganizationId, organizations]
+  )
+
+  const filteredEvents = React.useMemo(() => {
+    if (organizations.length === 0 || !activeOrganizationId) {
+      return events
+    }
+    return events.filter((event) => event.organization_id === activeOrganizationId)
+  }, [activeOrganizationId, events, organizations.length])
+
+  React.useEffect(() => {
+    if (isOrganizationsLoading || isOrganizationsError) return
+
+    if (organizations.length === 0) {
+      if (activeOrganizationId) {
+        setActiveOrganizationId(null)
+      }
+      return
+    }
+
+    const persistedOrgValid = organizations.some((org) => org.id === activeOrganizationId)
+    if (!persistedOrgValid) {
+      setActiveOrganizationId(organizations[0]?.id ?? null)
+    }
+  }, [
+    activeOrganizationId,
+    isOrganizationsError,
+    isOrganizationsLoading,
+    organizations,
+    setActiveOrganizationId,
+  ])
+
+  React.useEffect(() => {
+    if (isEventsLoading) return
+
+    if (filteredEvents.length === 0) {
+      if (activeEventId) {
+        setActiveEventId(null)
+      }
+      return
+    }
+
+    const activeEventValid = filteredEvents.some((event) => event.id === activeEventId)
+    if (!activeEventValid) {
+      setActiveEventId(filteredEvents[0]?.id ?? null)
+    }
+  }, [activeEventId, filteredEvents, isEventsLoading, setActiveEventId])
 
   const navItems = React.useMemo((): NavItem[] => {
     const activeEvent = activeEventId ? events.find((e) => e.id === activeEventId) : undefined
@@ -193,6 +259,18 @@ function AppLayoutInner(): React.ReactElement {
     }
     return baseNav
   }, [activeEventId, adminPing?.ok, events, isAdminPingSuccess, sponsorsEnabled])
+
+  const handleOrganizationSelect = (value: string) => {
+    if (value === CREATE_NEW_ORG_VALUE) {
+      setCreateOrganizationOpen(true)
+      return
+    }
+    if (value === MANAGE_ORG_VALUE) {
+      setManageOrganizationOpen(true)
+      return
+    }
+    setActiveOrganizationId(value || null)
+  }
 
   const handleEventSelect = (value: string) => {
     if (value === CREATE_NEW_EVENT_VALUE) {
@@ -350,19 +428,56 @@ function AppLayoutInner(): React.ReactElement {
               className="h-8 w-auto shrink-0 object-contain"
             />
             <Select
-              value={activeEventId ?? ""}
-              onValueChange={handleEventSelect}
-              disabled={isLoading || isError}
+              value={activeOrganizationId ?? ""}
+              onValueChange={handleOrganizationSelect}
+              disabled={isOrganizationsLoading || isOrganizationsError}
             >
               <SelectTrigger className="w-[200px]" size="sm">
                 <SelectValue
                   placeholder={
-                    isLoading ? "Loading…" : isError ? "Error loading events" : "Select event"
+                    isOrganizationsLoading
+                      ? "Loading…"
+                      : isOrganizationsError
+                        ? "Error loading orgs"
+                        : organizations.length === 0
+                          ? "No organization"
+                          : "Select organization"
                   }
                 />
               </SelectTrigger>
               <SelectContent>
-                {events.map((event) => (
+                {organizations.map((org) => (
+                  <SelectItem key={org.id} value={org.id}>
+                    {org.name}
+                  </SelectItem>
+                ))}
+                <SelectSeparator />
+                <SelectItem value={CREATE_NEW_ORG_VALUE}>Create organization</SelectItem>
+                <SelectItem value={MANAGE_ORG_VALUE} disabled={!activeOrganizationId}>
+                  Manage organization…
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={activeEventId ?? ""}
+              onValueChange={handleEventSelect}
+              disabled={isEventsLoading || isEventsError}
+            >
+              <SelectTrigger className="w-[200px]" size="sm">
+                <SelectValue
+                  placeholder={
+                    isEventsLoading
+                      ? "Loading…"
+                      : isEventsError
+                        ? "Error loading events"
+                        : filteredEvents.length === 0
+                          ? "No events"
+                          : "Select event"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredEvents.map((event) => (
                   <SelectItem key={event.id} value={event.id}>
                     {event.name}
                   </SelectItem>
@@ -380,6 +495,15 @@ function AppLayoutInner(): React.ReactElement {
         </main>
       </SidebarInset>
       <CreateEventModal open={createEventOpen} onOpenChange={setCreateEventOpen} />
+      <CreateOrganizationModal
+        open={createOrganizationOpen}
+        onOpenChange={setCreateOrganizationOpen}
+      />
+      <ManageOrganizationSheet
+        open={manageOrganizationOpen}
+        onOpenChange={setManageOrganizationOpen}
+        organization={activeOrganization}
+      />
     </>
   )
 }

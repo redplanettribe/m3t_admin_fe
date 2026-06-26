@@ -37,6 +37,7 @@ import {
 } from "@/lib/schemas/account"
 import { cn } from "@/lib/utils"
 import { useEventStore } from "@/store/eventStore"
+import { useOrganizationStore } from "@/store/organizationStore"
 import { useUserStore } from "@/store/userStore"
 import type { User } from "@/types/auth"
 
@@ -64,6 +65,7 @@ export function AccountPage(): React.ReactElement {
   const user = useUserStore((s) => s.user)
   const clearAuth = useUserStore((s) => s.clearAuth)
   const clearEventState = useEventStore((s) => s.clearAll)
+  const clearOrganizationState = useOrganizationStore((s) => s.clearAll)
   const updateUser = useUpdateUser()
   const updateAvatar = useUpdateUserAvatar()
   const deleteUser = useDeleteUser()
@@ -117,6 +119,7 @@ export function AccountPage(): React.ReactElement {
   const handleLogout = () => {
     clearAuth()
     clearEventState()
+    clearOrganizationState()
     queryClient.clear()
     navigate("/login", { replace: true })
   }

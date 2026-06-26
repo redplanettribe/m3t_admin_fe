@@ -35,6 +35,11 @@ export const queryKeys = {
   sessions: {
     detail: (sessionId: string) => ["sessions", sessionId] as const,
   },
+  organizations: {
+    list: ["organizations"] as const,
+    detail: (id: string) => ["organizations", id] as const,
+    members: (id: string) => ["organizations", id, "members"] as const,
+  },
   events: {
     list: ["events", "me"] as const,
     detail: (id: string) => ["events", id] as const,
