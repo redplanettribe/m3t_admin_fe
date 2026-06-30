@@ -1,5 +1,14 @@
 import type { PaginationMeta } from "@/types/event"
 
+export type EventChatReplyPreview = {
+  message_id: string
+  sender_user_id: string
+  sender_name: string
+  sender_last_name: string
+  body: string
+  deleted: boolean
+}
+
 export type EventChatMessage = {
   message_id: string
   event_id: string
@@ -11,6 +20,7 @@ export type EventChatMessage = {
   sender_profile_picture_url?: string
   recipient_user_id: string | null
   body: string
+  reply_to?: EventChatReplyPreview
   created_at: string
 }
 
@@ -63,6 +73,7 @@ export type AgendaWsTicket = {
 export type SendChatMessageRequest = {
   body: string
   client_msg_id?: string
+  reply_to_message_id?: string
 }
 
 export type DMConversationPreview = {

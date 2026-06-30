@@ -351,6 +351,38 @@
               "recipient_user_id": {
                 "type": "string"
               },
+              "reply_to": {
+                "additionalProperties": false,
+                "properties": {
+                  "body": {
+                    "type": "string"
+                  },
+                  "deleted": {
+                    "type": "boolean"
+                  },
+                  "message_id": {
+                    "type": "string"
+                  },
+                  "sender_last_name": {
+                    "type": "string"
+                  },
+                  "sender_name": {
+                    "type": "string"
+                  },
+                  "sender_user_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "message_id",
+                  "sender_user_id",
+                  "sender_name",
+                  "sender_last_name",
+                  "body",
+                  "deleted"
+                ],
+                "type": "object"
+              },
               "sender_last_name": {
                 "type": "string"
               },
@@ -613,6 +645,45 @@
         "title": "realtime.ErrorEnvelope",
         "type": "object"
       },
+      "wsdocs.PushGeneralChatReplyData": {
+        "additionalProperties": false,
+        "properties": {
+          "event_id": {
+            "description": "Event UUID",
+            "type": "string"
+          },
+          "message_id": {
+            "description": "Reply message UUID (dedupe key)",
+            "type": "string"
+          },
+          "reply_to_message_id": {
+            "description": "Parent message UUID the recipient authored",
+            "type": "string"
+          },
+          "sender_name": {
+            "description": "Replier display name (same as notification title)",
+            "type": "string"
+          },
+          "sender_user_id": {
+            "description": "Replier user UUID",
+            "type": "string"
+          },
+          "type": {
+            "description": "Always general_chat_reply",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "event_id",
+          "message_id",
+          "reply_to_message_id",
+          "sender_name",
+          "sender_user_id"
+        ],
+        "title": "wsdocs.PushGeneralChatReplyData",
+        "type": "object"
+      },
       "wsdocs.PushEventAnnouncementData": {
         "additionalProperties": false,
         "properties": {
@@ -722,6 +793,13 @@
           "$ref": "#/components/schemas/realtime.ErrorEnvelope"
         }
       },
+      "push_general_chat_reply": {
+        "name": "push.general_chat_reply",
+        "description": "FCM push to the parent message author (attendee app tokens only). Triggered by POST /attendee/events/{eventID}/chat/general/messages with reply_to_message_id. Not delivered on WebSocket.",
+        "payload": {
+          "$ref": "#/components/schemas/wsdocs.PushGeneralChatReplyData"
+        }
+      },
       "push_event_announcement": {
         "name": "push.event_announcement",
         "description": "FCM push to checked-in attendees (attendee app tokens only). Triggered by POST /events/{eventID}/announcements. History: GET /events/{eventID}/announcements. Not delivered on WebSocket.",
@@ -733,6 +811,9 @@
     "x-pushNotifications": {
       "description": "Mobile push (FCM) data payloads. Delivered when the app is backgrounded or killed; not sent on the WebSocket channel. Register tokens via PUT /users/me/device-tokens.",
       "messages": [
+        {
+          "$ref": "#/components/messages/push_general_chat_reply"
+        },
         {
           "$ref": "#/components/messages/push_event_announcement"
         }

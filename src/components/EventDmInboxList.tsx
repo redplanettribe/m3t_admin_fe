@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { profileDisplayName } from "@/lib/chatUtils"
+import { profileDisplayName, replyPreviewText } from "@/lib/chatUtils"
 import { getInitials } from "@/lib/user"
 import { cn } from "@/lib/utils"
 import type { DMConversationPreview } from "@/types/chat"
@@ -98,7 +98,9 @@ export function EventDmInboxList({
           const name = otherParticipantName(conv, currentUserId, profileByUserId)
           const avatarUrl = otherParticipantAvatar(conv, profileByUserId)
           const isSelected = selectedRecipientId === conv.other_user_id
-          const preview = conv.last_message.body
+          const preview = conv.last_message.reply_to
+            ? `↩ ${replyPreviewText(conv.last_message.reply_to)}`
+            : conv.last_message.body
           const time = formatPreviewTime(conv.last_message.created_at)
 
           return (

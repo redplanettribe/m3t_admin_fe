@@ -7,6 +7,7 @@ Chat is **not** available outside an event. There is no global or cross-event me
 **Related docs**
 
 - REST details: Swagger (`/swagger/`) — tag `attendee` for attendee chat; tag `events` for organizer moderation (`DELETE /events/{eventID}/chat/messages/{messageID}`)
+- Mobile push (FCM token registration, DM notification payloads): [push-notifications-client-guide.md](./push-notifications-client-guide.md)
 - WebSocket multiplexing (shared with agenda realtime): [agenda-realtime-websocket-architecture.md](./agenda-realtime-websocket-architecture.md)
 - WebSocket message schemas: `GET /ws/asyncapi.json`
 
@@ -74,7 +75,8 @@ Used by both general and DM send endpoints:
 ```json
 {
   "body": "Hello everyone!",
-  "client_msg_id": "optional-client-uuid"
+  "client_msg_id": "optional-client-uuid",
+  "reply_to_message_id": "550e8400-e29b-41d4-a716-446655440099"
 }
 ```
 
@@ -82,6 +84,7 @@ Used by both general and DM send endpoints:
 |-------|----------|-------|
 | `body` | yes | Trimmed non-empty string, max **2000** characters |
 | `client_msg_id` | no | Max **64** characters; enables idempotent retries |
+| `reply_to_message_id` | no | UUID of a prior message in the **same channel** (general or same DM thread) to quote |
 
 ### Message object (`data` on send / items in lists)
 
@@ -97,9 +100,19 @@ Used by both general and DM send endpoints:
   "sender_profile_picture_url": "https://cdn.example/avatar.png",
   "recipient_user_id": null,
   "body": "Hello everyone!",
+  "reply_to": {
+    "message_id": "660e8400-e29b-41d4-a716-446655440098",
+    "sender_user_id": "550e8400-e29b-41d4-a716-446655440002",
+    "sender_name": "Grace",
+    "sender_last_name": "Hopper",
+    "body": "Earlier message snippet",
+    "deleted": false
+  },
   "created_at": "2026-06-08T12:00:00Z"
 }
 ```
+
+`reply_to` is omitted when the message is not a reply. When the quoted parent was deleted, `reply_to.deleted` is `true` and `reply_to.body` is empty.
 
 For DM messages:
 
@@ -468,6 +481,37 @@ Common codes: `forbidden`, `invalid_topic`, `invalid_message`.
 4. On `403` → caller is not owner/team member, or target is a DM message.
 5. On `404` → message already gone or invalid id.
 
+### Organizer chat bans
+
+Ban a registered attendee from **sending** chat (general + DM). Banned users can still read history, list conversations, and receive WebSocket pushes. They are **hidden from the public profiles list** for the event.
+
+| Method | Path | Notes |
+|--------|------|-------|
+| `POST` | `/events/{eventID}/chat/bans/{userID}` | `201` new ban, `200` already banned |
+| `DELETE` | `/events/{eventID}/chat/bans/{userID}` | `204` on success |
+| `GET` | `/events/{eventID}/chat/bans` | Paginated (`page`, `page_size`) |
+
+**Ban object (`data` on POST):**
+
+```json
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440001",
+  "user_name": "Ada",
+  "user_last_name": "Lovelace",
+  "banned_by_user_id": "550e8400-e29b-41d4-a716-446655440099",
+  "banned_by_name": "Org",
+  "banned_by_last_name": "One",
+  "banned_at": "2026-06-09T12:00:00Z"
+}
+```
+
+**Rules:**
+
+- Target must be registered for the event; otherwise `404`.
+- Cannot ban event owner, team members, or yourself (`403`).
+- Banned attendee `POST` send endpoints return `403` with `error.code: chat_banned_from_event`.
+- Unban restores send access and public profile visibility (when `profile_is_public` is true).
+
 ### DM thread screen
 
 1. Compute `conversation_id` from `event_id`, self `user_id`, and `recipient_user_id` (for filtering only).
@@ -507,6 +551,7 @@ Common codes: `forbidden`, `invalid_topic`, `invalid_message`.
 |------|------------------------|---------------|
 | `401` | `unauthorized` | Re-authenticate |
 | `403` | `not_registered_for_event` | Prompt registration or hide chat (attendee routes) |
+| `403` | `chat_banned_from_event` | User banned from sending chat; show moderation notice |
 | `403` | `forbidden` | Not event organizer, or organizer delete on DM (organizer route) |
 | `404` | `not_found` | Event missing or DM recipient not in event |
 | `400` | `invalid_request_body` | Fix validation (body length, cursor, etc.) |
@@ -523,8 +568,9 @@ Common codes: `forbidden`, `invalid_topic`, `invalid_message`.
 | Message edit | Not supported |
 | Message delete (attendee) | Sender only (general + DM); `DELETE /attendee/...` + `chat.message.deleted` WS |
 | Message delete (organizer) | Owner/team member; **general only**; `DELETE /events/...`; no registration required |
-| DM moderation by organizers | Not supported |
-| Push notifications (APNs/FCM) | Not supported — in-app WS + REST only |
+| DM moderation by organizers | Not supported (message delete); chat **ban** blocks send for general + DM |
+| Chat ban (organizer) | Send-only block + hide from public profiles; list/unban via `/events/.../chat/bans` |
+| Push notifications (APNs/FCM) | DM recipient + general-chat reply to parent author — see [push-notifications-client-guide.md](./push-notifications-client-guide.md); in-app WS + REST still primary when online; dedupe by `message_id` |
 | Organizers using attendee chat | Must be registered like any attendee (send/list/subscribe) |
 | Per-conversation WebSocket topic | Not supported — use DM inbox + `conversation_id` filter |
 

@@ -4,6 +4,7 @@ import type {
   ChatConnectionState,
   ChatMessagesListResponse,
   EventChatMessage,
+  EventChatReplyPreview,
 } from "@/types/chat"
 
 export const MAX_MESSAGE_LENGTH = 2000
@@ -52,6 +53,31 @@ export function profileDisplayName(profile: {
 }): string {
   const parts = [profile.name, profile.last_name].filter(Boolean)
   return parts.join(" ").trim() || "Unknown"
+}
+
+export function replyPreviewDisplayName(reply: EventChatReplyPreview): string {
+  return profileDisplayName({
+    name: reply.sender_name,
+    last_name: reply.sender_last_name,
+  })
+}
+
+export function replyPreviewText(reply: EventChatReplyPreview): string {
+  if (reply.deleted) return "Message deleted"
+  return reply.body.trim() || "…"
+}
+
+export function replyPreviewFromMessage(
+  message: EventChatMessage
+): EventChatReplyPreview {
+  return {
+    message_id: message.message_id,
+    sender_user_id: message.sender_user_id,
+    sender_name: message.sender_name,
+    sender_last_name: message.sender_last_name,
+    body: message.body,
+    deleted: false,
+  }
 }
 
 export function filterOutMessage(

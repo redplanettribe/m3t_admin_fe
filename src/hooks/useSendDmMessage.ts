@@ -8,6 +8,7 @@ type SendDmMessageVariables = {
   recipientUserId: string
   body: string
   clientMsgId: string
+  replyToMessageId?: string
 }
 
 export function useSendDmMessage(eventId: string | null) {
@@ -16,6 +17,7 @@ export function useSendDmMessage(eventId: string | null) {
       recipientUserId,
       body,
       clientMsgId,
+      replyToMessageId,
     }: SendDmMessageVariables) => {
       if (!eventId) throw new Error("No event selected")
 
@@ -27,7 +29,11 @@ export function useSendDmMessage(eventId: string | null) {
 
       return apiClient.post<EventChatMessage>(
         `/attendee/events/${eventId}/chat/dm/${recipientUserId}/messages`,
-        { body: trimmed, client_msg_id: clientMsgId }
+        {
+          body: trimmed,
+          client_msg_id: clientMsgId,
+          ...(replyToMessageId ? { reply_to_message_id: replyToMessageId } : {}),
+        }
       )
     },
   })

@@ -7,11 +7,16 @@ const MAX_BODY_LENGTH = 2000
 type SendGeneralChatMessageVariables = {
   body: string
   clientMsgId: string
+  replyToMessageId?: string
 }
 
 export function useSendGeneralChatMessage(eventId: string | null) {
   return useMutation({
-    mutationFn: async ({ body, clientMsgId }: SendGeneralChatMessageVariables) => {
+    mutationFn: async ({
+      body,
+      clientMsgId,
+      replyToMessageId,
+    }: SendGeneralChatMessageVariables) => {
       if (!eventId) throw new Error("No event selected")
 
       const trimmed = body.trim()
@@ -22,7 +27,11 @@ export function useSendGeneralChatMessage(eventId: string | null) {
 
       return apiClient.post<EventChatMessage>(
         `/attendee/events/${eventId}/chat/general/messages`,
-        { body: trimmed, client_msg_id: clientMsgId }
+        {
+          body: trimmed,
+          client_msg_id: clientMsgId,
+          ...(replyToMessageId ? { reply_to_message_id: replyToMessageId } : {}),
+        }
       )
     },
   })

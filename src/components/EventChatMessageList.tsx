@@ -1,5 +1,6 @@
 import * as React from "react"
-import { Trash2 } from "lucide-react"
+import { Reply, Trash2 } from "lucide-react"
+import { EventChatReplyQuote } from "@/components/EventChatReplyQuote"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { getInitials } from "@/lib/user"
@@ -23,6 +24,7 @@ function isGroupContinuation(
   current: EventChatMessage,
   previous: EventChatMessage | undefined
 ) {
+  if (current.reply_to) return false
   if (!previous) return false
   if (previous.sender_user_id !== current.sender_user_id) return false
   const prevTime = new Date(previous.created_at).getTime()
@@ -45,6 +47,7 @@ type EventChatMessageListProps = {
   deletingMessageId?: string | null
   canModerateMessages?: boolean
   onSenderClick?: (userId: string, message: EventChatMessage) => void
+  onReplyMessage?: (message: EventChatMessage) => void
 }
 
 export function EventChatMessageList({
@@ -61,6 +64,7 @@ export function EventChatMessageList({
   deletingMessageId,
   canModerateMessages,
   onSenderClick,
+  onReplyMessage,
 }: EventChatMessageListProps): React.ReactElement {
   return (
     <div
@@ -106,19 +110,33 @@ export function EventChatMessageList({
                   isContinuation ? "mt-0.5" : "mt-3"
                 )}
               >
-                {onDeleteMessage && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    className="text-muted-foreground hover:text-destructive shrink-0 self-end opacity-0 transition-opacity group-hover:opacity-100"
-                    aria-label="Delete message"
-                    disabled={isDeleting}
-                    onClick={() => onDeleteMessage(message.message_id)}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                )}
+                <div className="flex shrink-0 flex-col justify-end gap-0.5 self-end opacity-0 transition-opacity group-hover:opacity-100">
+                  {onReplyMessage && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label="Reply to message"
+                      onClick={() => onReplyMessage(message)}
+                    >
+                      <Reply className="size-3.5" />
+                    </Button>
+                  )}
+                  {onDeleteMessage && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-muted-foreground hover:text-destructive"
+                      aria-label="Delete message"
+                      disabled={isDeleting}
+                      onClick={() => onDeleteMessage(message.message_id)}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  )}
+                </div>
                 <div className="flex max-w-[85%] flex-col items-end gap-1">
                   {!isContinuation && (
                     <span className="text-muted-foreground text-[11px]">
@@ -126,6 +144,13 @@ export function EventChatMessageList({
                     </span>
                   )}
                   <div className="bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-3 py-2 text-sm whitespace-pre-wrap break-words">
+                    {message.reply_to ? (
+                      <EventChatReplyQuote
+                        reply={message.reply_to}
+                        variant="embedded"
+                        className="border-primary-foreground/40 bg-primary-foreground/10"
+                      />
+                    ) : null}
                     {message.body}
                   </div>
                 </div>
@@ -202,23 +227,40 @@ export function EventChatMessageList({
                   </div>
                 )}
                 <div className="bg-muted rounded-2xl rounded-tl-sm px-3 py-2 text-sm whitespace-pre-wrap break-words">
+                  {message.reply_to ? (
+                    <EventChatReplyQuote reply={message.reply_to} variant="embedded" />
+                  ) : null}
                   {message.body}
                 </div>
               </div>
 
-              {showModerateDelete && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className="text-muted-foreground hover:text-destructive shrink-0 self-end opacity-0 transition-opacity group-hover:opacity-100"
-                  aria-label="Delete message"
-                  disabled={isDeleting}
-                  onClick={() => onDeleteMessage(message.message_id)}
-                >
-                  <Trash2 className="size-3.5" />
-                </Button>
-              )}
+              <div className="flex shrink-0 flex-col justify-end gap-0.5 self-end opacity-0 transition-opacity group-hover:opacity-100">
+                {onReplyMessage && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="text-muted-foreground hover:text-foreground"
+                    aria-label="Reply to message"
+                    onClick={() => onReplyMessage(message)}
+                  >
+                    <Reply className="size-3.5" />
+                  </Button>
+                )}
+                {showModerateDelete && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="text-muted-foreground hover:text-destructive"
+                    aria-label="Delete message"
+                    disabled={isDeleting}
+                    onClick={() => onDeleteMessage(message.message_id)}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                )}
+              </div>
             </div>
           )
         })}

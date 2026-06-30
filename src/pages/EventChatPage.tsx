@@ -47,6 +47,7 @@ import {
   mergeMessages,
   profileDisplayName,
   removeMessageFromChatInfiniteCache,
+  replyPreviewFromMessage,
 } from "@/lib/chatUtils"
 import { dmConversationId } from "@/lib/dmConversationId"
 import type { AttendeeProfileFallback } from "@/lib/returnNavigation"
@@ -180,6 +181,10 @@ export function EventChatPage(): React.ReactElement {
   const [dmLiveMessages, setDmLiveMessages] = React.useState<EventChatMessage[]>([])
   const [generalDraft, setGeneralDraft] = React.useState("")
   const [dmDraft, setDmDraft] = React.useState("")
+  const [generalReplyTo, setGeneralReplyTo] = React.useState<EventChatMessage | null>(
+    null
+  )
+  const [dmReplyTo, setDmReplyTo] = React.useState<EventChatMessage | null>(null)
   const [generalSendError, setGeneralSendError] = React.useState<string | null>(null)
   const [dmSendError, setDmSendError] = React.useState<string | null>(null)
   const [deleteError, setDeleteError] = React.useState<string | null>(null)
@@ -450,6 +455,8 @@ export function EventChatPage(): React.ReactElement {
     setDmLiveMessages([])
     setGeneralDraft("")
     setDmDraft("")
+    setGeneralReplyTo(null)
+    setDmReplyTo(null)
     setGeneralSendError(null)
     setDmSendError(null)
     setDeleteError(null)
@@ -466,6 +473,7 @@ export function EventChatPage(): React.ReactElement {
   React.useEffect(() => {
     setDmLiveMessages([])
     setDmDraft("")
+    setDmReplyTo(null)
     setDmSendError(null)
     dmStickToBottomRef.current = true
   }, [selectedRecipientId])
@@ -544,9 +552,11 @@ export function EventChatPage(): React.ReactElement {
       const message = await sendGeneralMessage.mutateAsync({
         body: generalDraft,
         clientMsgId,
+        replyToMessageId: generalReplyTo?.message_id,
       })
       handleGeneralLiveMessage(message)
       setGeneralDraft("")
+      setGeneralReplyTo(null)
       generalStickToBottomRef.current = true
     } catch (e) {
       if (isNotRegisteredError(e)) {
@@ -569,9 +579,11 @@ export function EventChatPage(): React.ReactElement {
         recipientUserId: selectedRecipientId,
         body: dmDraft,
         clientMsgId,
+        replyToMessageId: dmReplyTo?.message_id,
       })
       handleDmLiveMessage(message)
       setDmDraft("")
+      setDmReplyTo(null)
       dmStickToBottomRef.current = true
       if (effectiveEventId) {
         void queryClient.invalidateQueries({
@@ -622,6 +634,8 @@ export function EventChatPage(): React.ReactElement {
   const handleTabChange = (value: string) => {
     const tab = value as ChatTab
     setActiveTab(tab)
+    setGeneralReplyTo(null)
+    setDmReplyTo(null)
     if (tab === "general") {
       setSearchParams({}, { replace: true })
     } else if (selectedRecipientId) {
@@ -817,6 +831,7 @@ export function EventChatPage(): React.ReactElement {
               deletingMessageId={deletingMessageId}
               canModerateMessages={canModerateGeneralChat}
               onSenderClick={handleSenderClick}
+              onReplyMessage={setGeneralReplyTo}
             />
             <EventChatComposer
               draft={generalDraft}
@@ -830,6 +845,10 @@ export function EventChatPage(): React.ReactElement {
               isSending={sendGeneralMessage.isPending}
               canSend={canSendGeneral}
               sendError={generalSendError}
+              replyTo={
+                generalReplyTo ? replyPreviewFromMessage(generalReplyTo) : null
+              }
+              onCancelReply={() => setGeneralReplyTo(null)}
             />
           </TabsContent>
 
@@ -898,6 +917,7 @@ export function EventChatPage(): React.ReactElement {
                   onDeleteMessage={handleDeleteDm}
                   deletingMessageId={deletingMessageId}
                   onSenderClick={handleSenderClick}
+                  onReplyMessage={setDmReplyTo}
                 />
                 <EventChatComposer
                   draft={dmDraft}
@@ -912,6 +932,8 @@ export function EventChatPage(): React.ReactElement {
                   canSend={canSendDm}
                   sendError={dmSendError}
                   placeholder="Message…"
+                  replyTo={dmReplyTo ? replyPreviewFromMessage(dmReplyTo) : null}
+                  onCancelReply={() => setDmReplyTo(null)}
                 />
               </>
             ) : (

@@ -771,7 +771,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Posts a 1:1 DM within the event. Both users must be registered for the event.",
+                "description": "Posts a 1:1 DM within the event. Optional reply_to_message_id quotes a prior message in the same DM thread. Both users must be registered for the event.",
                 "consumes": [
                     "application/json"
                 ],
@@ -928,7 +928,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Posts a message to the event general chat room. Caller must be registered for the event.",
+                "description": "Posts a message to the event general chat room. Optional reply_to_message_id quotes a prior general message in the same event. Caller must be registered for the event.",
                 "consumes": [
                     "application/json"
                 ],
@@ -13352,6 +13352,9 @@
                 },
                 "client_msg_id": {
                     "type": "string"
+                },
+                "reply_to_message_id": {
+                    "type": "string"
                 }
             }
         },
@@ -14380,6 +14383,9 @@
                 "recipient_user_id": {
                     "type": "string"
                 },
+                "reply_to": {
+                    "$ref": "#/definitions/domain.EventChatReplyPreview"
+                },
                 "sender_last_name": {
                     "type": "string"
                 },
@@ -14387,6 +14393,29 @@
                     "type": "string"
                 },
                 "sender_profile_picture_url": {
+                    "type": "string"
+                },
+                "sender_user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.EventChatReplyPreview": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "deleted": {
+                    "type": "boolean"
+                },
+                "message_id": {
+                    "type": "string"
+                },
+                "sender_last_name": {
+                    "type": "string"
+                },
+                "sender_name": {
                     "type": "string"
                 },
                 "sender_user_id": {

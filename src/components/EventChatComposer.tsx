@@ -1,6 +1,8 @@
 import * as React from "react"
 import { Button } from "@/components/ui/button"
+import { EventChatReplyQuote } from "@/components/EventChatReplyQuote"
 import { cn } from "@/lib/utils"
+import type { EventChatReplyPreview } from "@/types/chat"
 
 const MAX_MESSAGE_LENGTH = 2000
 const SHOW_COUNT_THRESHOLD = 1800
@@ -15,6 +17,8 @@ type EventChatComposerProps = {
   canSend: boolean
   sendError: string | null
   placeholder?: string
+  replyTo?: EventChatReplyPreview | null
+  onCancelReply?: () => void
 }
 
 export function EventChatComposer({
@@ -27,12 +31,27 @@ export function EventChatComposer({
   canSend,
   sendError,
   placeholder = "Message general chat…",
+  replyTo,
+  onCancelReply,
 }: EventChatComposerProps): React.ReactElement {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null)
   const showCount = draft.length > SHOW_COUNT_THRESHOLD
 
+  React.useEffect(() => {
+    if (replyTo) {
+      textareaRef.current?.focus()
+    }
+  }, [replyTo?.message_id])
+
   return (
     <div className="border-border/60 shrink-0 border-t p-3">
+      {replyTo ? (
+        <EventChatReplyQuote
+          reply={replyTo}
+          variant="composer"
+          onCancel={onCancelReply}
+        />
+      ) : null}
       <div className="flex items-end gap-2">
         <label className="sr-only" htmlFor="chat-message">
           Message
