@@ -49,18 +49,22 @@ const LABEL_HALO_STYLE: React.CSSProperties = {
 }
 
 /** Tracks the container width so the static Sankey layout can fill it. */
-function useMeasuredWidth(): [React.RefObject<HTMLDivElement | null>, number] {
-  const ref = React.useRef<HTMLDivElement | null>(null)
+function useMeasuredWidth(): [React.RefCallback<HTMLDivElement | null>, number] {
   const [width, setWidth] = React.useState(0)
+  const observerRef = React.useRef<ResizeObserver | null>(null)
 
-  React.useLayoutEffect(() => {
-    const element = ref.current
-    if (!element) return
+  const ref = React.useCallback((element: HTMLDivElement | null) => {
+    observerRef.current?.disconnect()
+    observerRef.current = null
+    if (!element) {
+      setWidth(0)
+      return
+    }
     const update = () => setWidth(element.clientWidth)
     update()
     const observer = new ResizeObserver(update)
     observer.observe(element)
-    return () => observer.disconnect()
+    observerRef.current = observer
   }, [])
 
   return [ref, width]
