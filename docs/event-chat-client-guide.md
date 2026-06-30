@@ -19,7 +19,8 @@ Chat is **not** available outside an event. There is no global or cross-event me
 |--------|-----------|-------|
 | Send message | REST `POST` | Source of truth; always persists before push |
 | Load history | REST `GET` | Cursor-based pagination |
-| Live delivery | WebSocket `GET /ws` | `chat.message` and `chat.message.deleted` on subscribed topics |
+| Live delivery | WebSocket `GET /ws` | `chat.message`, `chat.message.deleted`, `chat.reaction.added`, `chat.reaction.removed` on subscribed topics |
+| Set/remove reaction | REST `PUT` / `DELETE` | One emoji per user per message; broadcasts reaction WS events |
 | Delete message (attendee) | REST `DELETE` | Sender soft-deletes own general or DM message; broadcasts `chat.message.deleted` |
 | Delete message (organizer) | REST `DELETE` | Event owner/team member soft-deletes **general** messages only; same WS event |
 | Offline / reconnect | REST history | WS is best-effort notification |
@@ -108,9 +109,15 @@ Used by both general and DM send endpoints:
     "body": "Earlier message snippet",
     "deleted": false
   },
+  "reactions": [
+    { "emoji": "👍", "count": 3, "reacted_by_me": true },
+    { "emoji": "❤️", "count": 1, "reacted_by_me": false }
+  ],
   "created_at": "2026-06-08T12:00:00Z"
 }
 ```
+
+`reactions` is omitted when empty. Each row is an aggregate: `emoji`, `count`, and whether the **current user** reacted (`reacted_by_me`). There is no per-user reactor list in history — only counts.
 
 `reply_to` is omitted when the message is not a reply. When the quoted parent was deleted, `reply_to.deleted` is `true` and `reply_to.body` is empty.
 
@@ -266,6 +273,63 @@ Authorization: Bearer <token>
 | `401` | Missing or invalid token |
 
 No response body on success. All clients subscribed to `attendee.chat.{event_id}.general` receive `chat.message.deleted` immediately — **no client WS changes** beyond handling that event on the general topic (same as attendee self-delete).
+
+### Emoji reactions
+
+Registered attendees may react to **general** and **DM** messages with **one emoji per user per message**. Setting a new emoji replaces the previous one. Chat-banned users cannot react.
+
+#### Set or replace reaction
+
+```
+PUT /attendee/events/{eventID}/chat/messages/{messageID}/reactions
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+```json
+{ "emoji": "👍" }
+```
+
+| Field | Required | Rules |
+|-------|----------|-------|
+| `emoji` | yes | Single Unicode emoji grapheme (NFC), max **32** bytes |
+
+| Status | Meaning |
+|--------|---------|
+| `200` | Reaction set; `data` contains aggregated reactions for the message |
+| `400` | Invalid emoji or body |
+| `403` | Not registered, chat-banned, or (DM) not a thread participant |
+| `404` | Message not found or deleted |
+| `401` | Missing or invalid token |
+
+**Response `data`:**
+
+```json
+{
+  "message_id": "550e8400-e29b-41d4-a716-446655440099",
+  "reactions": [
+    { "emoji": "👍", "count": 2, "reacted_by_me": true }
+  ]
+}
+```
+
+Idempotent: repeating the same emoji returns `200` with current aggregates and does **not** re-broadcast WebSocket events.
+
+#### Remove reaction
+
+```
+DELETE /attendee/events/{eventID}/chat/messages/{messageID}/reactions
+Authorization: Bearer <token>
+```
+
+| Status | Meaning |
+|--------|---------|
+| `200` | `data` contains updated aggregates (empty `reactions` when none remain) |
+| `403` | Not registered, chat-banned, or (DM) not a thread participant |
+| `404` | Message not found or deleted |
+| `401` | Missing or invalid token |
+
+Removing when no reaction exists is idempotent (`200`, unchanged aggregates, no WS broadcast).
 
 ---
 
@@ -437,7 +501,77 @@ When a sender or organizer deletes a message, subscribers on the matching topic 
 }
 ```
 
-Remove the message from UI by `message_id`. For DM, filter by `data.conversation_id` like `chat.message`. Repeat delete does **not** re-broadcast.
+Remove the message from UI by `message_id`. For DM, filter by `data.conversation_id` like `chat.message`. Repeat delete does **not** re-broadcast. Clear local reaction state for that `message_id` when a delete arrives.
+
+### Server push: `chat.reaction.added`
+
+When a user adds or changes a reaction, subscribers on the matching topic receive:
+
+**General chat example:**
+
+```json
+{
+  "type": "chat.reaction.added",
+  "topic": "attendee.chat.550e8400-e29b-41d4-a716-446655440000.general",
+  "data": {
+    "message_id": "...",
+    "event_id": "...",
+    "channel_type": "general",
+    "conversation_id": null,
+    "emoji": "👍",
+    "user_id": "...",
+    "user_name": "Ada",
+    "user_last_name": "Lovelace"
+  },
+  "ts": "2026-06-08T12:05:00Z"
+}
+```
+
+**DM inbox example:**
+
+```json
+{
+  "type": "chat.reaction.added",
+  "topic": "attendee.chat.550e8400-e29b-41d4-a716-446655440000.dm.inbox",
+  "data": {
+    "message_id": "...",
+    "event_id": "...",
+    "channel_type": "dm",
+    "conversation_id": "dm:550e8400-...:user-a:user-b",
+    "emoji": "👍",
+    "user_id": "...",
+    "user_name": "Ada",
+    "user_last_name": "Lovelace"
+  },
+  "ts": "2026-06-08T12:05:00Z"
+}
+```
+
+When a user **replaces** an emoji, the server sends `chat.reaction.removed` for the old emoji first, then `chat.reaction.added` for the new one.
+
+### Server push: `chat.reaction.removed`
+
+When a user removes a reaction (or replaces it), subscribers receive:
+
+```json
+{
+  "type": "chat.reaction.removed",
+  "topic": "attendee.chat.550e8400-e29b-41d4-a716-446655440000.general",
+  "data": {
+    "message_id": "...",
+    "event_id": "...",
+    "channel_type": "general",
+    "conversation_id": null,
+    "emoji": "👍",
+    "user_id": "...",
+    "user_name": "Ada",
+    "user_last_name": "Lovelace"
+  },
+  "ts": "2026-06-08T12:06:00Z"
+}
+```
+
+Update local counts from delta events. Dedupe by `(message_id, user_id, emoji, type)`. For DM, filter by `data.conversation_id` like other chat events.
 
 ### Subscribe errors
 
@@ -466,12 +600,15 @@ Common codes: `forbidden`, `invalid_topic`, `invalid_message`.
 1. `subscribe` → `attendee.chat.{event_id}.general`
 2. `GET .../chat/general/messages` (no cursor) → render latest page.
 3. On `chat.message` for general topic → append if `message_id` not already in list.
-4. On `chat.message.deleted` for general topic → remove by `message_id`.
+4. On `chat.message.deleted` for general topic → remove by `message_id` and clear reactions for that message.
 5. On send → `POST .../chat/general/messages` with optional `client_msg_id`.
    - On `201`/`200`, you may append from response **or** wait for WS push — **dedupe by `message_id`**.
-6. On delete → `DELETE .../chat/messages/{messageID}`; remove locally on `204` or when `chat.message.deleted` arrives.
-7. On scroll up → `GET` with `next_cursor` to load older messages.
-8. On leave screen → `unsubscribe` general topic (keep DM inbox subscription).
+6. On reaction tap → `PUT .../chat/messages/{messageID}/reactions` with `{ "emoji": "..." }`; optional optimistic UI; reconcile from `200` response or WS deltas.
+7. On reaction remove → `DELETE .../chat/messages/{messageID}/reactions`.
+8. On `chat.reaction.added` / `chat.reaction.removed` on general topic → update reaction counts for `data.message_id` (decrement old emoji on remove, increment on add; one reaction per `user_id`).
+9. On delete → `DELETE .../chat/messages/{messageID}`; remove locally on `204` or when `chat.message.deleted` arrives.
+10. On scroll up → `GET` with `next_cursor` to load older messages.
+11. On leave screen → `unsubscribe` general topic (keep DM inbox subscription).
 
 ### Organizer general chat moderation
 
@@ -566,6 +703,7 @@ Ban a registered attendee from **sending** chat (general + DM). Banned users can
 | Typing indicators | Not supported |
 | Read receipts | Not supported |
 | Message edit | Not supported |
+| Emoji reactions | One per user per message; `PUT`/`DELETE .../reactions` + `chat.reaction.added` / `chat.reaction.removed` WS; aggregates in history; no push |
 | Message delete (attendee) | Sender only (general + DM); `DELETE /attendee/...` + `chat.message.deleted` WS |
 | Message delete (organizer) | Owner/team member; **general only**; `DELETE /events/...`; no registration required |
 | DM moderation by organizers | Not supported (message delete); chat **ban** blocks send for general + DM |
@@ -603,8 +741,13 @@ onMessage(frame):
       removeFromInbox(frame.data)
       if openThreadId == frame.data.conversation_id:
         removeFromThreadUI(frame.data.message_id)
+        clearReactions(frame.data.message_id)
     else if frame.topic.endsWith(".general"):
       removeFromGeneralUI(frame.data.message_id)
+      clearReactions(frame.data.message_id)
+    return
+  if frame.type == "chat.reaction.added" || frame.type == "chat.reaction.removed":
+    applyReactionDelta(frame)
     return
   if frame.type != "chat.message" || seen.has(frame.data.message_id):
     return
@@ -621,10 +764,10 @@ onMessage(frame):
 
 ## Topic reference
 
-| Channel | WebSocket subscribe topic | Server push `topic` | Delete WS `type` |
-|---------|---------------------------|---------------------|------------------|
-| General | `attendee.chat.{event_id}.general` | same | `chat.message.deleted` |
-| DM inbox | `attendee.chat.{event_id}.dm.inbox` | `attendee.chat.{event_id}.dm.inbox` | `chat.message.deleted` |
+| Channel | WebSocket subscribe topic | Server push `topic` | Delete WS `type` | Reaction WS `type` |
+|---------|---------------------------|---------------------|------------------|-------------------|
+| General | `attendee.chat.{event_id}.general` | same | `chat.message.deleted` | `chat.reaction.added`, `chat.reaction.removed` |
+| DM inbox | `attendee.chat.{event_id}.dm.inbox` | `attendee.chat.{event_id}.dm.inbox` | `chat.message.deleted` | `chat.reaction.added`, `chat.reaction.removed` |
 
 `{event_id}`: lowercase UUID of the event.
 

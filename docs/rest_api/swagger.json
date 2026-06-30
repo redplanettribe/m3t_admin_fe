@@ -1065,6 +1065,158 @@
                 }
             }
         },
+        "/attendee/events/{eventID}/chat/messages/{messageID}/reactions": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Adds or replaces the caller's single emoji reaction on a general or DM message. Idempotent when the same emoji is set again (no WebSocket re-broadcast).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "attendee"
+                ],
+                "summary": "Set or replace emoji reaction on a chat message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Message ID (UUID)",
+                        "name": "messageID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reaction emoji",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.SetMessageReactionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data contains message_id and aggregated reactions",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.MessageReactionsSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: invalid_request_body",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: not_registered_for_event",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes the caller's reaction if present. Idempotent when no reaction exists.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "attendee"
+                ],
+                "summary": "Remove caller's emoji reaction from a chat message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event ID (UUID)",
+                        "name": "eventID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Message ID (UUID)",
+                        "name": "messageID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "data contains message_id and aggregated reactions",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.MessageReactionsSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error.code: invalid_path_param",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "error.code: unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "error.code: not_registered_for_event",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "error.code: not_found",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "error.code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/attendee/events/{eventID}/check-in": {
             "post": {
                 "security": [
@@ -12987,6 +13139,17 @@
                 }
             }
         },
+        "controllers.MessageReactionsSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/domain.EventChatMessageReactionsView"
+                },
+                "error": {
+                    "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
         "controllers.MobileRemoteConfigResponse": {
             "type": "object",
             "properties": {
@@ -13427,6 +13590,14 @@
                 },
                 "error": {
                     "$ref": "#/definitions/helpers.APIError"
+                }
+            }
+        },
+        "controllers.SetMessageReactionRequest": {
+            "type": "object",
+            "properties": {
+                "emoji": {
+                    "type": "string"
                 }
             }
         },
@@ -14359,6 +14530,20 @@
                 }
             }
         },
+        "domain.EventChatMessageReactionsView": {
+            "type": "object",
+            "properties": {
+                "message_id": {
+                    "type": "string"
+                },
+                "reactions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.EventChatReactionSummary"
+                    }
+                }
+            }
+        },
         "domain.EventChatMessageView": {
             "type": "object",
             "properties": {
@@ -14380,6 +14565,12 @@
                 "message_id": {
                     "type": "string"
                 },
+                "reactions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.EventChatReactionSummary"
+                    }
+                },
                 "recipient_user_id": {
                     "type": "string"
                 },
@@ -14397,6 +14588,20 @@
                 },
                 "sender_user_id": {
                     "type": "string"
+                }
+            }
+        },
+        "domain.EventChatReactionSummary": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "emoji": {
+                    "type": "string"
+                },
+                "reacted_by_me": {
+                    "type": "boolean"
                 }
             }
         },

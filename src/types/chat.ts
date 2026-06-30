@@ -9,6 +9,17 @@ export type EventChatReplyPreview = {
   deleted: boolean
 }
 
+export type EventChatReactionSummary = {
+  emoji: string
+  count: number
+  reacted_by_me: boolean
+}
+
+export type EventChatMessageReactionsView = {
+  message_id: string
+  reactions: EventChatReactionSummary[]
+}
+
 export type EventChatMessage = {
   message_id: string
   event_id: string
@@ -21,6 +32,7 @@ export type EventChatMessage = {
   recipient_user_id: string | null
   body: string
   reply_to?: EventChatReplyPreview
+  reactions?: EventChatReactionSummary[]
   created_at: string
 }
 
@@ -48,6 +60,24 @@ export type ChatMessageDeletedEnvelope = {
   type: string
   topic: string
   data: ChatMessageDeleted
+  ts?: string
+}
+
+export type ChatReactionEvent = {
+  message_id: string
+  event_id: string
+  channel_type: string
+  conversation_id: string | null
+  emoji: string
+  user_id: string
+  user_name: string
+  user_last_name: string
+}
+
+export type ChatReactionEnvelope = {
+  type: "chat.reaction.added" | "chat.reaction.removed"
+  topic: string
+  data: ChatReactionEvent
   ts?: string
 }
 

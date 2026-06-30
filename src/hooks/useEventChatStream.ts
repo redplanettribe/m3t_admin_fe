@@ -8,6 +8,7 @@ import type {
   ChatMessageDeleted,
   ChatMessageDeletedEnvelope,
   ChatMessageEnvelope,
+  ChatReactionEnvelope,
   ChatStreamError,
   ChatWsErrorEnvelope,
   EventChatMessage,
@@ -20,6 +21,8 @@ type UseEventChatStreamOptions = {
   onDmMessage?: (message: EventChatMessage) => void
   onGeneralMessageDeleted?: (data: ChatMessageDeleted) => void
   onDmMessageDeleted?: (data: ChatMessageDeleted) => void
+  onGeneralReaction?: (frame: ChatReactionEnvelope) => void
+  onDmReaction?: (frame: ChatReactionEnvelope) => void
 }
 
 type UseEventChatStreamResult = {
@@ -59,6 +62,8 @@ export function useEventChatStream({
   onDmMessage,
   onGeneralMessageDeleted,
   onDmMessageDeleted,
+  onGeneralReaction,
+  onDmReaction,
 }: UseEventChatStreamOptions): UseEventChatStreamResult {
   const token = useUserStore((s) => s.token)
   const onGeneralMessageRef = React.useRef(onGeneralMessage)
@@ -69,6 +74,10 @@ export function useEventChatStream({
   onGeneralMessageDeletedRef.current = onGeneralMessageDeleted
   const onDmMessageDeletedRef = React.useRef(onDmMessageDeleted)
   onDmMessageDeletedRef.current = onDmMessageDeleted
+  const onGeneralReactionRef = React.useRef(onGeneralReaction)
+  onGeneralReactionRef.current = onGeneralReaction
+  const onDmReactionRef = React.useRef(onDmReaction)
+  onDmReactionRef.current = onDmReaction
   const generalEnabledRef = React.useRef(generalEnabled)
   generalEnabledRef.current = generalEnabled
   const wsRef = React.useRef<WebSocket | null>(null)
@@ -173,6 +182,7 @@ export function useEventChatStream({
                 const frame = JSON.parse(ev.data as string) as
                   | ChatMessageEnvelope
                   | ChatMessageDeletedEnvelope
+                  | ChatReactionEnvelope
                   | ChatWsErrorEnvelope
 
                 if (frame.type === "error") {
@@ -203,6 +213,19 @@ export function useEventChatStream({
                     onGeneralMessageDeletedRef.current?.(deletedFrame.data)
                   } else if (deletedFrame.topic === dmTopic) {
                     onDmMessageDeletedRef.current?.(deletedFrame.data)
+                  }
+                  setError(null)
+                  setConnectionState("live")
+                  attempt = 0
+                } else if (
+                  frame.type === "chat.reaction.added" ||
+                  frame.type === "chat.reaction.removed"
+                ) {
+                  const reactionFrame = frame as ChatReactionEnvelope
+                  if (reactionFrame.topic === generalTopic) {
+                    onGeneralReactionRef.current?.(reactionFrame)
+                  } else if (reactionFrame.topic === dmTopic) {
+                    onDmReactionRef.current?.(reactionFrame)
                   }
                   setError(null)
                   setConnectionState("live")

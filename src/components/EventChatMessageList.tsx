@@ -1,5 +1,7 @@
 import * as React from "react"
-import { Reply, Trash2 } from "lucide-react"
+import { EventChatMessageActionMenu } from "@/components/EventChatMessageActionMenu"
+import { EventChatMessageReactions } from "@/components/EventChatMessageReactions"
+import { EventChatReactionPicker } from "@/components/EventChatReactionPicker"
 import { EventChatReplyQuote } from "@/components/EventChatReplyQuote"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -48,6 +50,9 @@ type EventChatMessageListProps = {
   canModerateMessages?: boolean
   onSenderClick?: (userId: string, message: EventChatMessage) => void
   onReplyMessage?: (message: EventChatMessage) => void
+  onReactMessage?: (messageId: string, emoji: string) => void
+  onRemoveReaction?: (messageId: string) => void
+  reactingMessageId?: string | null
 }
 
 export function EventChatMessageList({
@@ -65,6 +70,9 @@ export function EventChatMessageList({
   canModerateMessages,
   onSenderClick,
   onReplyMessage,
+  onReactMessage,
+  onRemoveReaction,
+  reactingMessageId,
 }: EventChatMessageListProps): React.ReactElement {
   return (
     <div
@@ -99,9 +107,12 @@ export function EventChatMessageList({
           const isOwn = !!currentUserId && message.sender_user_id === currentUserId
           const isContinuation = isGroupContinuation(message, previous)
           const name = senderDisplayName(message)
+          const isDeleting = deletingMessageId === message.message_id
+          const isReacting = reactingMessageId === message.message_id
+          const canReact = !!(onReactMessage && onRemoveReaction)
+          const showModerateDelete = canModerateMessages && onDeleteMessage
 
           if (isOwn) {
-            const isDeleting = deletingMessageId === message.message_id
             return (
               <div
                 key={message.message_id}
@@ -110,56 +121,62 @@ export function EventChatMessageList({
                   isContinuation ? "mt-0.5" : "mt-3"
                 )}
               >
-                <div className="flex shrink-0 flex-col justify-end gap-0.5 self-end opacity-0 transition-opacity group-hover:opacity-100">
-                  {onReplyMessage && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      className="text-muted-foreground hover:text-foreground"
-                      aria-label="Reply to message"
-                      onClick={() => onReplyMessage(message)}
-                    >
-                      <Reply className="size-3.5" />
-                    </Button>
-                  )}
-                  {onDeleteMessage && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      className="text-muted-foreground hover:text-destructive"
-                      aria-label="Delete message"
-                      disabled={isDeleting}
-                      onClick={() => onDeleteMessage(message.message_id)}
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
-                  )}
-                </div>
                 <div className="flex max-w-[85%] flex-col items-end gap-1">
                   {!isContinuation && (
                     <span className="text-muted-foreground text-[11px]">
                       You · {formatMessageTime(message.created_at)}
                     </span>
                   )}
-                  <div className="bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-3 py-2 text-sm whitespace-pre-wrap break-words">
-                    {message.reply_to ? (
-                      <EventChatReplyQuote
-                        reply={message.reply_to}
-                        variant="embedded"
-                        className="border-primary-foreground/40 bg-primary-foreground/10"
+                  <div className="flex items-center gap-1">
+                    {canReact && (
+                      <div className="flex shrink-0 items-center opacity-0 transition-opacity group-hover:opacity-100">
+                        <EventChatReactionPicker
+                          disabled={isReacting}
+                          onSelect={(emoji) => onReactMessage(message.message_id, emoji)}
+                        />
+                      </div>
+                    )}
+                    <div className="relative">
+                      <EventChatMessageActionMenu
+                        showReply={!!onReplyMessage}
+                        showDelete={!!onDeleteMessage}
+                        onReply={
+                          onReplyMessage ? () => onReplyMessage(message) : undefined
+                        }
+                        onDelete={
+                          onDeleteMessage
+                            ? () => onDeleteMessage(message.message_id)
+                            : undefined
+                        }
+                        isDeleting={isDeleting}
+                        align="end"
                       />
-                    ) : null}
-                    {message.body}
+                      <div className="bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-3 py-2 text-sm whitespace-pre-wrap break-words">
+                        {message.reply_to ? (
+                          <EventChatReplyQuote
+                            reply={message.reply_to}
+                            variant="embedded"
+                            className="border-primary-foreground/40 bg-primary-foreground/10"
+                          />
+                        ) : null}
+                        {message.body}
+                      </div>
+                    </div>
                   </div>
+                  {canReact && message.reactions && message.reactions.length > 0 && (
+                    <EventChatMessageReactions
+                      reactions={message.reactions}
+                      isOwn
+                      disabled={isReacting}
+                      onReact={(emoji) => onReactMessage(message.message_id, emoji)}
+                      onRemove={() => onRemoveReaction(message.message_id)}
+                    />
+                  )}
                 </div>
               </div>
             )
           }
 
-          const isDeleting = deletingMessageId === message.message_id
-          const showModerateDelete = canModerateMessages && onDeleteMessage
           const handleSenderClick = onSenderClick
             ? () => onSenderClick(message.sender_user_id, message)
             : undefined
@@ -226,39 +243,46 @@ export function EventChatMessageList({
                     </span>
                   </div>
                 )}
-                <div className="bg-muted rounded-2xl rounded-tl-sm px-3 py-2 text-sm whitespace-pre-wrap break-words">
-                  {message.reply_to ? (
-                    <EventChatReplyQuote reply={message.reply_to} variant="embedded" />
-                  ) : null}
-                  {message.body}
+                <div className="flex items-center gap-1">
+                  <div className="relative inline-block max-w-full">
+                    <EventChatMessageActionMenu
+                      showReply={!!onReplyMessage}
+                      showDelete={!!showModerateDelete}
+                      onReply={
+                        onReplyMessage ? () => onReplyMessage(message) : undefined
+                      }
+                      onDelete={
+                        showModerateDelete
+                          ? () => onDeleteMessage(message.message_id)
+                          : undefined
+                      }
+                      isDeleting={isDeleting}
+                      align="end"
+                    />
+                    <div className="bg-muted rounded-2xl rounded-tl-sm px-3 py-2 text-sm whitespace-pre-wrap break-words">
+                      {message.reply_to ? (
+                        <EventChatReplyQuote reply={message.reply_to} variant="embedded" />
+                      ) : null}
+                      {message.body}
+                    </div>
+                  </div>
+                  {canReact && (
+                    <div className="flex shrink-0 items-center opacity-0 transition-opacity group-hover:opacity-100">
+                      <EventChatReactionPicker
+                        disabled={isReacting}
+                        onSelect={(emoji) => onReactMessage(message.message_id, emoji)}
+                      />
+                    </div>
+                  )}
                 </div>
-              </div>
-
-              <div className="flex shrink-0 flex-col justify-end gap-0.5 self-end opacity-0 transition-opacity group-hover:opacity-100">
-                {onReplyMessage && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    className="text-muted-foreground hover:text-foreground"
-                    aria-label="Reply to message"
-                    onClick={() => onReplyMessage(message)}
-                  >
-                    <Reply className="size-3.5" />
-                  </Button>
-                )}
-                {showModerateDelete && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    className="text-muted-foreground hover:text-destructive"
-                    aria-label="Delete message"
-                    disabled={isDeleting}
-                    onClick={() => onDeleteMessage(message.message_id)}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
+                {canReact && message.reactions && message.reactions.length > 0 && (
+                  <EventChatMessageReactions
+                    reactions={message.reactions}
+                    isOwn={false}
+                    disabled={isReacting}
+                    onReact={(emoji) => onReactMessage(message.message_id, emoji)}
+                    onRemove={() => onRemoveReaction(message.message_id)}
+                  />
                 )}
               </div>
             </div>
