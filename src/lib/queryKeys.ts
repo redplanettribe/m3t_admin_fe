@@ -121,6 +121,7 @@ export const queryKeys = {
     attendeeFlow: (eventId: string) =>
       ["events", eventId, "analytics", "flow"] as const,
     chatGeneral: (eventId: string) => ["events", eventId, "chat", "general"] as const,
+    chatOrganizers: (eventId: string) => ["events", eventId, "chat", "organizers"] as const,
     chatDmConversations: (eventId: string) =>
       ["events", eventId, "chat", "dm", "conversations"] as const,
     chatDmThread: (eventId: string, recipientUserId: string) =>

@@ -1,5 +1,7 @@
 import type { PaginationMeta } from "@/types/event"
 
+export type ChatChannel = "general" | "dm" | "organizers"
+
 export type EventChatReplyPreview = {
   message_id: string
   sender_user_id: string

@@ -22,7 +22,7 @@
   "channels": {
     "WebSocketMultiplex": {
       "address": "/ws",
-      "description": "Multiplexed WebSocket endpoint. Clients subscribe/unsubscribe to topics; server pushes agenda.invalidate (attendee), session.checked_in (attendee.agenda.{event_id}), session.status_changed (organizer.agenda.{event_id}), chat.message, chat.message.deleted, chat.reaction.added, and chat.reaction.removed (attendee.chat.{event_id}.general or attendee.chat.{event_id}.dm.inbox). Organizer event announcements to checked-in attendees are mobile push (FCM data.type event_announcement), not WebSocket — see components.messages.push_event_announcement.",
+      "description": "Multiplexed WebSocket endpoint. Clients subscribe/unsubscribe to topics; server pushes agenda.invalidate (attendee), session.checked_in (attendee.agenda.{event_id}), session.status_changed (organizer.agenda.{event_id}), chat.message, chat.message.deleted, chat.reaction.added, and chat.reaction.removed (attendee.chat.{event_id}.general, attendee.chat.{event_id}.dm.inbox, or organizer.chat.{event_id}). Organizer event announcements to checked-in attendees are mobile push (FCM data.type event_announcement), not WebSocket — see components.messages.push_event_announcement.",
       "bindings": {
         "ws": {
           "method": "GET"
@@ -820,28 +820,28 @@
       },
       "chat_message": {
         "name": "chat.message",
-        "description": "Chat message delivered on attendee.chat.{event_id}.general or attendee.chat.{event_id}.dm.inbox (DM inbox; server routes to authenticated user).",
+        "description": "Chat message delivered on attendee.chat.{event_id}.general, attendee.chat.{event_id}.dm.inbox (DM inbox; server routes to authenticated user), or organizer.chat.{event_id} (event managers only).",
         "payload": {
           "$ref": "#/components/schemas/realtime.ChatMessageEnvelope"
         }
       },
       "chat_message_deleted": {
         "name": "chat.message.deleted",
-        "description": "Chat message deleted by sender or organizer (general only) on attendee.chat.{event_id}.general or by sender on attendee.chat.{event_id}.dm.inbox.",
+        "description": "Chat message deleted by sender or organizer (general only) on attendee.chat.{event_id}.general, by sender on attendee.chat.{event_id}.dm.inbox, or by sender on organizer.chat.{event_id}.",
         "payload": {
           "$ref": "#/components/schemas/realtime.ChatMessageDeletedEnvelope"
         }
       },
       "chat_reaction_added": {
         "name": "chat.reaction.added",
-        "description": "Emoji reaction added or changed on attendee.chat.{event_id}.general or attendee.chat.{event_id}.dm.inbox.",
+        "description": "Emoji reaction added or changed on attendee.chat.{event_id}.general, attendee.chat.{event_id}.dm.inbox, or organizer.chat.{event_id}.",
         "payload": {
           "$ref": "#/components/schemas/realtime.ChatReactionEnvelope"
         }
       },
       "chat_reaction_removed": {
         "name": "chat.reaction.removed",
-        "description": "Emoji reaction removed on attendee.chat.{event_id}.general or attendee.chat.{event_id}.dm.inbox.",
+        "description": "Emoji reaction removed on attendee.chat.{event_id}.general, attendee.chat.{event_id}.dm.inbox, or organizer.chat.{event_id}.",
         "payload": {
           "$ref": "#/components/schemas/realtime.ChatReactionEnvelope"
         }

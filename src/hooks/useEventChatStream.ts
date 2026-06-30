@@ -17,12 +17,16 @@ import type {
 type UseEventChatStreamOptions = {
   eventId: string | null
   generalEnabled: boolean
+  organizersEnabled?: boolean
   onGeneralMessage?: (message: EventChatMessage) => void
   onDmMessage?: (message: EventChatMessage) => void
+  onOrganizersMessage?: (message: EventChatMessage) => void
   onGeneralMessageDeleted?: (data: ChatMessageDeleted) => void
   onDmMessageDeleted?: (data: ChatMessageDeleted) => void
+  onOrganizersMessageDeleted?: (data: ChatMessageDeleted) => void
   onGeneralReaction?: (frame: ChatReactionEnvelope) => void
   onDmReaction?: (frame: ChatReactionEnvelope) => void
+  onOrganizersReaction?: (frame: ChatReactionEnvelope) => void
 }
 
 type UseEventChatStreamResult = {
@@ -51,6 +55,10 @@ function dmInboxTopic(eventId: string) {
   return `attendee.chat.${eventId.toLowerCase()}.dm.inbox`
 }
 
+function organizerChatTopic(eventId: string) {
+  return `organizer.chat.${eventId.toLowerCase()}`
+}
+
 async function fetchTicket(eventId: string): Promise<AgendaWsTicket> {
   return apiClient.postNoBody<AgendaWsTicket>(`/events/${eventId}/agenda/ws/ticket`)
 }
@@ -58,30 +66,43 @@ async function fetchTicket(eventId: string): Promise<AgendaWsTicket> {
 export function useEventChatStream({
   eventId,
   generalEnabled,
+  organizersEnabled = false,
   onGeneralMessage,
   onDmMessage,
+  onOrganizersMessage,
   onGeneralMessageDeleted,
   onDmMessageDeleted,
+  onOrganizersMessageDeleted,
   onGeneralReaction,
   onDmReaction,
+  onOrganizersReaction,
 }: UseEventChatStreamOptions): UseEventChatStreamResult {
   const token = useUserStore((s) => s.token)
   const onGeneralMessageRef = React.useRef(onGeneralMessage)
   onGeneralMessageRef.current = onGeneralMessage
   const onDmMessageRef = React.useRef(onDmMessage)
   onDmMessageRef.current = onDmMessage
+  const onOrganizersMessageRef = React.useRef(onOrganizersMessage)
+  onOrganizersMessageRef.current = onOrganizersMessage
   const onGeneralMessageDeletedRef = React.useRef(onGeneralMessageDeleted)
   onGeneralMessageDeletedRef.current = onGeneralMessageDeleted
   const onDmMessageDeletedRef = React.useRef(onDmMessageDeleted)
   onDmMessageDeletedRef.current = onDmMessageDeleted
+  const onOrganizersMessageDeletedRef = React.useRef(onOrganizersMessageDeleted)
+  onOrganizersMessageDeletedRef.current = onOrganizersMessageDeleted
   const onGeneralReactionRef = React.useRef(onGeneralReaction)
   onGeneralReactionRef.current = onGeneralReaction
   const onDmReactionRef = React.useRef(onDmReaction)
   onDmReactionRef.current = onDmReaction
+  const onOrganizersReactionRef = React.useRef(onOrganizersReaction)
+  onOrganizersReactionRef.current = onOrganizersReaction
   const generalEnabledRef = React.useRef(generalEnabled)
   generalEnabledRef.current = generalEnabled
+  const organizersEnabledRef = React.useRef(organizersEnabled)
+  organizersEnabledRef.current = organizersEnabled
   const wsRef = React.useRef<WebSocket | null>(null)
   const generalSubscribedRef = React.useRef(false)
+  const organizersSubscribedRef = React.useRef(false)
 
   const [connectionState, setConnectionState] =
     React.useState<ChatConnectionState>("connecting")
@@ -113,6 +134,27 @@ export function useEventChatStream({
     setGeneralSubscription(generalEnabled)
   }, [generalEnabled, setGeneralSubscription])
 
+  const setOrganizersSubscription = React.useCallback(
+    (enabled: boolean) => {
+      const socket = wsRef.current
+      if (!socket || socket.readyState !== WebSocket.OPEN || !eventId) return
+
+      const organizersTopic = organizerChatTopic(eventId)
+      if (enabled && !organizersSubscribedRef.current) {
+        socket.send(JSON.stringify({ type: "subscribe", topic: organizersTopic }))
+        organizersSubscribedRef.current = true
+      } else if (!enabled && organizersSubscribedRef.current) {
+        socket.send(JSON.stringify({ type: "unsubscribe", topic: organizersTopic }))
+        organizersSubscribedRef.current = false
+      }
+    },
+    [eventId]
+  )
+
+  React.useEffect(() => {
+    setOrganizersSubscription(organizersEnabled)
+  }, [organizersEnabled, setOrganizersSubscription])
+
   React.useEffect(() => {
     let closed = false
     let attempt = 0
@@ -136,6 +178,14 @@ export function useEventChatStream({
                 })
               )
             }
+            if (organizersSubscribedRef.current) {
+              socket.send(
+                JSON.stringify({
+                  type: "unsubscribe",
+                  topic: organizerChatTopic(eventId),
+                })
+              )
+            }
           } catch {
             // ignore send errors during teardown
           }
@@ -143,6 +193,7 @@ export function useEventChatStream({
         socket.close()
         wsRef.current = null
         generalSubscribedRef.current = false
+        organizersSubscribedRef.current = false
       }
     }
 
@@ -154,6 +205,7 @@ export function useEventChatStream({
 
     const generalTopic = generalChatTopic(eventId)
     const dmTopic = dmInboxTopic(eventId)
+    const organizersTopic = organizerChatTopic(eventId)
 
     const run = async () => {
       while (!closed) {
@@ -161,6 +213,7 @@ export function useEventChatStream({
           setConnectionState(attempt > 0 ? "reconnecting" : "connecting")
           setError(null)
           generalSubscribedRef.current = false
+          organizersSubscribedRef.current = false
 
           const ticketResp = await fetchTicket(eventId)
           if (closed) return
@@ -174,6 +227,12 @@ export function useEventChatStream({
               if (generalEnabledRef.current) {
                 socket.send(JSON.stringify({ type: "subscribe", topic: generalTopic }))
                 generalSubscribedRef.current = true
+              }
+              if (organizersEnabledRef.current) {
+                socket.send(
+                  JSON.stringify({ type: "subscribe", topic: organizersTopic })
+                )
+                organizersSubscribedRef.current = true
               }
             }
 
@@ -203,6 +262,8 @@ export function useEventChatStream({
                     onGeneralMessageRef.current?.(msgFrame.data)
                   } else if (msgFrame.topic === dmTopic) {
                     onDmMessageRef.current?.(msgFrame.data)
+                  } else if (msgFrame.topic === organizersTopic) {
+                    onOrganizersMessageRef.current?.(msgFrame.data)
                   }
                   setError(null)
                   setConnectionState("live")
@@ -213,6 +274,8 @@ export function useEventChatStream({
                     onGeneralMessageDeletedRef.current?.(deletedFrame.data)
                   } else if (deletedFrame.topic === dmTopic) {
                     onDmMessageDeletedRef.current?.(deletedFrame.data)
+                  } else if (deletedFrame.topic === organizersTopic) {
+                    onOrganizersMessageDeletedRef.current?.(deletedFrame.data)
                   }
                   setError(null)
                   setConnectionState("live")
@@ -226,6 +289,8 @@ export function useEventChatStream({
                     onGeneralReactionRef.current?.(reactionFrame)
                   } else if (reactionFrame.topic === dmTopic) {
                     onDmReactionRef.current?.(reactionFrame)
+                  } else if (reactionFrame.topic === organizersTopic) {
+                    onOrganizersReactionRef.current?.(reactionFrame)
                   }
                   setError(null)
                   setConnectionState("live")
@@ -243,6 +308,7 @@ export function useEventChatStream({
             socket.onclose = () => {
               wsRef.current = null
               generalSubscribedRef.current = false
+              organizersSubscribedRef.current = false
               if (closed) {
                 resolve()
               } else {

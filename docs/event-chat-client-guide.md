@@ -1,12 +1,12 @@
 # Event Chat — Client Implementation Guide
 
-This guide explains how mobile and web clients should integrate **event-scoped chat**: a **general room** for all registered attendees and **1:1 direct messages (DM)** between attendees in the same event.
+This guide explains how mobile and web clients should integrate **event-scoped chat**: a **general room** for all registered attendees, **1:1 direct messages (DM)** between attendees in the same event, and an **organizers-only backstage room** for event owner and team members.
 
 Chat is **not** available outside an event. There is no global or cross-event messaging.
 
 **Related docs**
 
-- REST details: Swagger (`/swagger/`) — tag `attendee` for attendee chat; tag `events` for organizer moderation (`DELETE /events/{eventID}/chat/messages/{messageID}`)
+- REST details: Swagger (`/swagger/`) — tag `attendee` for attendee chat; tag `events` for organizer backstage chat and moderation (`/events/{eventID}/chat/organizers/...`, `DELETE /events/{eventID}/chat/messages/{messageID}`)
 - Mobile push (FCM token registration, DM notification payloads): [push-notifications-client-guide.md](./push-notifications-client-guide.md)
 - WebSocket multiplexing (shared with agenda realtime): [agenda-realtime-websocket-architecture.md](./agenda-realtime-websocket-architecture.md)
 - WebSocket message schemas: `GET /ws/asyncapi.json`
@@ -23,6 +23,7 @@ Chat is **not** available outside an event. There is no global or cross-event me
 | Set/remove reaction | REST `PUT` / `DELETE` | One emoji per user per message; broadcasts reaction WS events |
 | Delete message (attendee) | REST `DELETE` | Sender soft-deletes own general or DM message; broadcasts `chat.message.deleted` |
 | Delete message (organizer) | REST `DELETE` | Event owner/team member soft-deletes **general** messages only; same WS event |
+| Organizers backstage chat | REST + WS | Owner/team only; `organizer.chat.{event_id}`; no registration required |
 | Offline / reconnect | REST history | WS is best-effort notification |
 
 Use **one shared WebSocket connection** per app session and multiplex chat with agenda and other topics (see agenda doc).
@@ -610,6 +611,31 @@ Common codes: `forbidden`, `invalid_topic`, `invalid_message`.
 10. On scroll up → `GET` with `next_cursor` to load older messages.
 11. On leave screen → `unsubscribe` general topic (keep DM inbox subscription).
 
+### Organizer backstage chat
+
+Private staff room for **event owner** and **team members**. Separate from attendee general/DM chat. Always available to managers (not gated by attendee chat feature flag). No push notifications.
+
+| Method | Path | Notes |
+|--------|------|-------|
+| `POST` | `/events/{eventID}/chat/organizers/messages` | Send message (`body`, optional `client_msg_id`, `reply_to_message_id`) |
+| `GET` | `/events/{eventID}/chat/organizers/messages` | Cursor history (`cursor`, `limit`) |
+| `DELETE` | `/events/{eventID}/chat/organizers/messages/{messageID}` | Sender soft-deletes own message only |
+| `PUT` | `/events/{eventID}/chat/organizers/messages/{messageID}/reactions` | Set/replace emoji reaction |
+| `DELETE` | `/events/{eventID}/chat/organizers/messages/{messageID}/reactions` | Remove own reaction |
+
+**WebSocket:** `subscribe` → `organizer.chat.{event_id}` (same shared `/ws` connection). Receive `chat.message`, `chat.message.deleted`, `chat.reaction.added`, `chat.reaction.removed` with `data.channel_type: "organizers"`.
+
+**Screen flow:**
+
+1. `subscribe` → `organizer.chat.{event_id}`
+2. `GET /events/{event_id}/chat/organizers/messages` → render history
+3. Send via `POST /events/{event_id}/chat/organizers/messages`
+4. On WS `chat.message` where `topic` is `organizer.chat.{event_id}` → append (dedupe by `message_id`)
+5. On delete → `DELETE /events/{event_id}/chat/organizers/messages/{messageID}` (sender only)
+6. On leave screen → `unsubscribe` organizer chat topic
+
+**Auth:** `403 forbidden` when caller is not owner/team member. Registration **not** required.
+
 ### Organizer general chat moderation
 
 1. Organizer app obtains `message_id` from its own general-chat view (e.g. moderation UI backed by attendee history or live WS).
@@ -710,6 +736,7 @@ Ban a registered attendee from **sending** chat (general + DM). Banned users can
 | Chat ban (organizer) | Send-only block + hide from public profiles; list/unban via `/events/.../chat/bans` |
 | Push notifications (APNs/FCM) | DM recipient + general-chat reply to parent author — see [push-notifications-client-guide.md](./push-notifications-client-guide.md); in-app WS + REST still primary when online; dedupe by `message_id` |
 | Organizers using attendee chat | Must be registered like any attendee (send/list/subscribe) |
+| Organizers backstage chat | Owner/team only; `/events/.../chat/organizers/...`; WS `organizer.chat.{event_id}`; sender-only delete; no push |
 | Per-conversation WebSocket topic | Not supported — use DM inbox + `conversation_id` filter |
 
 ---

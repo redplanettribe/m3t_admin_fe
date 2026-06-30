@@ -26,14 +26,18 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useDeleteChatMessage } from "@/hooks/useDeleteChatMessage"
 import { useDeleteChatMessageAsOrganizer } from "@/hooks/useDeleteChatMessageAsOrganizer"
+import { useDeleteOrganizersChatMessage } from "@/hooks/useDeleteOrganizersChatMessage"
 import { useEventChatStream } from "@/hooks/useEventChatStream"
 import { useMessageReactions } from "@/hooks/useMessageReactions"
+import { useOrganizersMessageReactions } from "@/hooks/useOrganizersMessageReactions"
 import { useEventDmConversations } from "@/hooks/useEventDmConversations"
 import { useEventDmMessages } from "@/hooks/useEventDmMessages"
 import { useEventGeneralChatMessages } from "@/hooks/useEventGeneralChatMessages"
+import { useEventOrganizersChatMessages } from "@/hooks/useEventOrganizersChatMessages"
 import { useEventPublicProfile } from "@/hooks/useEventPublicProfiles"
 import { useSendDmMessage } from "@/hooks/useSendDmMessage"
 import { useSendGeneralChatMessage } from "@/hooks/useSendGeneralChatMessage"
+import { useSendOrganizersChatMessage } from "@/hooks/useSendOrganizersChatMessage"
 import { useEventSchedule } from "@/hooks/useEvents"
 import { useEventSettings } from "@/hooks/useEventSettings"
 import { useTeamMembers } from "@/hooks/useTeamMembers"
@@ -61,10 +65,10 @@ import { getInitials } from "@/lib/user"
 import { cn } from "@/lib/utils"
 import { useEventStore } from "@/store/eventStore"
 import { useUserStore } from "@/store/userStore"
-import type { ChatMessageDeleted, ChatReactionEnvelope, EventChatMessage, EventChatReactionSummary } from "@/types/chat"
+import type { ChatChannel, ChatMessageDeleted, ChatReactionEnvelope, EventChatMessage, EventChatReactionSummary } from "@/types/chat"
 import type { PublicAttendeeProfile } from "@/types/profile"
 
-type ChatTab = "general" | "messages"
+type ChatTab = "general" | "messages" | "organizers"
 
 function messageSenderDisplayName(message: EventChatMessage): string {
   const parts = [message.sender_name, message.sender_last_name].filter(Boolean)
@@ -111,7 +115,12 @@ export function EventChatPage(): React.ReactElement {
 
   const dmParam = searchParams.get("dm")
   const tabParam = searchParams.get("tab")
-  const initialTab: ChatTab = tabParam === "messages" || dmParam ? "messages" : "general"
+  const initialTab: ChatTab =
+    tabParam === "organizers"
+      ? "organizers"
+      : tabParam === "messages" || dmParam
+        ? "messages"
+        : "general"
 
   const [activeTab, setActiveTab] = React.useState<ChatTab>(initialTab)
   const [selectedRecipientId, setSelectedRecipientId] = React.useState<string | null>(
@@ -137,13 +146,21 @@ export function EventChatPage(): React.ReactElement {
     if (dmParam) {
       setSelectedRecipientId(dmParam)
       setActiveTab("messages")
+    } else if (tabParam === "organizers") {
+      setActiveTab("organizers")
     }
-  }, [dmParam])
+  }, [dmParam, tabParam])
 
   const effectiveEventId = eventId ?? activeEventId ?? null
   const { data: schedule } = useEventSchedule(effectiveEventId)
   const chatSettings = useEventSettings(effectiveEventId)
   const { data: teamMembers = [] } = useTeamMembers(effectiveEventId)
+
+  const canAccessOrganizersChat = React.useMemo(() => {
+    if (!currentUserId) return false
+    if (schedule?.event?.owner_id === currentUserId) return true
+    return teamMembers.some((member) => member.user_id === currentUserId)
+  }, [currentUserId, schedule?.event?.owner_id, teamMembers])
 
   const {
     messages: restGeneralMessages,
@@ -154,6 +171,16 @@ export function EventChatPage(): React.ReactElement {
     hasNextPage: hasNextGeneralPage,
     isFetchingNextPage: isFetchingNextGeneralPage,
   } = useEventGeneralChatMessages(effectiveEventId)
+
+  const {
+    messages: restOrganizersMessages,
+    isLoading: isOrganizersLoading,
+    isError: isOrganizersError,
+    error: organizersRestError,
+    fetchNextPage: fetchNextOrganizersPage,
+    hasNextPage: hasNextOrganizersPage,
+    isFetchingNextPage: isFetchingNextOrganizersPage,
+  } = useEventOrganizersChatMessages(effectiveEventId, canAccessOrganizersChat)
 
   const {
     conversations,
@@ -184,18 +211,32 @@ export function EventChatPage(): React.ReactElement {
     EventChatMessage[]
   >([])
   const [dmLiveMessages, setDmLiveMessages] = React.useState<EventChatMessage[]>([])
+  const [organizersLiveMessages, setOrganizersLiveMessages] = React.useState<
+    EventChatMessage[]
+  >([])
   const [generalDraft, setGeneralDraft] = React.useState("")
   const [dmDraft, setDmDraft] = React.useState("")
+  const [organizersDraft, setOrganizersDraft] = React.useState("")
   const [generalReplyTo, setGeneralReplyTo] = React.useState<EventChatMessage | null>(
     null
   )
   const [dmReplyTo, setDmReplyTo] = React.useState<EventChatMessage | null>(null)
+  const [organizersReplyTo, setOrganizersReplyTo] =
+    React.useState<EventChatMessage | null>(null)
   const [generalSendError, setGeneralSendError] = React.useState<string | null>(null)
   const [dmSendError, setDmSendError] = React.useState<string | null>(null)
+  const [organizersSendError, setOrganizersSendError] = React.useState<string | null>(
+    null
+  )
   const [deleteError, setDeleteError] = React.useState<string | null>(null)
   const [reactionError, setReactionError] = React.useState<string | null>(null)
+  const [organizersReactionError, setOrganizersReactionError] = React.useState<
+    string | null
+  >(null)
   const [deleteConfirmTarget, setDeleteConfirmTarget] =
     React.useState<EventChatMessage | null>(null)
+  const [deleteConfirmChannel, setDeleteConfirmChannel] =
+    React.useState<ChatChannel | null>(null)
   const [deletingMessageId, setDeletingMessageId] = React.useState<string | null>(
     null
   )
@@ -206,8 +247,10 @@ export function EventChatPage(): React.ReactElement {
   const processedReactionKeysRef = React.useRef(new Set<string>())
   const generalListRef = React.useRef<HTMLDivElement>(null)
   const dmListRef = React.useRef<HTMLDivElement>(null)
+  const organizersListRef = React.useRef<HTMLDivElement>(null)
   const generalStickToBottomRef = React.useRef(true)
   const dmStickToBottomRef = React.useRef(true)
+  const organizersStickToBottomRef = React.useRef(true)
 
   const cacheProfile = React.useCallback((profile: PublicAttendeeProfile) => {
     setProfileCache((prev) => {
@@ -237,6 +280,13 @@ export function EventChatPage(): React.ReactElement {
 
   const handleGeneralLiveMessage = React.useCallback((message: EventChatMessage) => {
     setGeneralLiveMessages((prev) => {
+      if (prev.some((m) => m.message_id === message.message_id)) return prev
+      return [...prev, message]
+    })
+  }, [])
+
+  const handleOrganizersLiveMessage = React.useCallback((message: EventChatMessage) => {
+    setOrganizersLiveMessages((prev) => {
       if (prev.some((m) => m.message_id === message.message_id)) return prev
       return [...prev, message]
     })
@@ -296,24 +346,38 @@ export function EventChatPage(): React.ReactElement {
 
   const sendGeneralMessage = useSendGeneralChatMessage(effectiveEventId)
   const sendDmMessage = useSendDmMessage(effectiveEventId)
+  const sendOrganizersMessage = useSendOrganizersChatMessage(effectiveEventId)
   const deleteChatMessage = useDeleteChatMessage(effectiveEventId)
   const deleteChatMessageAsOrganizer = useDeleteChatMessageAsOrganizer(effectiveEventId)
+  const deleteOrganizersChatMessage = useDeleteOrganizersChatMessage(effectiveEventId)
   const { setReaction, removeReaction } = useMessageReactions(effectiveEventId)
+  const {
+    setReaction: setOrganizersReaction,
+    removeReaction: removeOrganizersReaction,
+  } = useOrganizersMessageReactions(effectiveEventId)
 
-  const canModerateGeneralChat = React.useMemo(() => {
-    if (!currentUserId) return false
-    if (schedule?.event?.owner_id === currentUserId) return true
-    return teamMembers.some((member) => member.user_id === currentUserId)
-  }, [currentUserId, schedule?.event?.owner_id, teamMembers])
+  const canModerateGeneralChat = canAccessOrganizersChat
 
   const removeMessage = React.useCallback(
-    (messageId: string, channel: "general" | "dm") => {
+    (messageId: string, channel: ChatChannel) => {
       if (channel === "general") {
         setGeneralLiveMessages((prev) => filterOutMessage(prev, messageId))
         if (effectiveEventId) {
           removeMessageFromChatInfiniteCache(
             queryClient,
             queryKeys.events.chatGeneral(effectiveEventId),
+            messageId
+          )
+        }
+        return
+      }
+
+      if (channel === "organizers") {
+        setOrganizersLiveMessages((prev) => filterOutMessage(prev, messageId))
+        if (effectiveEventId) {
+          removeMessageFromChatInfiniteCache(
+            queryClient,
+            queryKeys.events.chatOrganizers(effectiveEventId),
             messageId
           )
         }
@@ -362,30 +426,41 @@ export function EventChatPage(): React.ReactElement {
     [currentUserId, effectiveEventId, queryClient, removeMessage, selectedRecipientId]
   )
 
+  const handleOrganizersMessageDeleted = React.useCallback(
+    (data: ChatMessageDeleted) => {
+      removeMessage(data.message_id, "organizers")
+    },
+    [removeMessage]
+  )
+
   const handleDeleteMessage = React.useCallback(
     async (
       messageId: string,
-      channel: "general" | "dm",
+      channel: ChatChannel,
       options?: { asOrganizer?: boolean }
     ) => {
       setDeleteError(null)
       setDeletingMessageId(messageId)
 
       try {
-        if (options?.asOrganizer) {
+        if (channel === "organizers") {
+          await deleteOrganizersChatMessage.mutateAsync({ messageId })
+        } else if (options?.asOrganizer) {
           await deleteChatMessageAsOrganizer.mutateAsync({ messageId })
         } else {
           await deleteChatMessage.mutateAsync({ messageId })
         }
         removeMessage(messageId, channel)
-        if (channel === "general") {
+        if (channel === "general" || channel === "organizers") {
           setDeleteConfirmTarget(null)
+          setDeleteConfirmChannel(null)
         }
       } catch (e) {
         if (e instanceof ApiError && e.status === 404) {
           removeMessage(messageId, channel)
-          if (channel === "general") {
+          if (channel === "general" || channel === "organizers") {
             setDeleteConfirmTarget(null)
+            setDeleteConfirmChannel(null)
           }
           return
         }
@@ -394,23 +469,25 @@ export function EventChatPage(): React.ReactElement {
         setDeletingMessageId(null)
       }
     },
-    [deleteChatMessage, deleteChatMessageAsOrganizer, removeMessage]
+    [deleteChatMessage, deleteChatMessageAsOrganizer, deleteOrganizersChatMessage, removeMessage]
   )
 
   const patchMessageReactions = React.useCallback(
     (
       messageId: string,
       reactions: EventChatReactionSummary[],
-      channel: "general" | "dm"
+      channel: ChatChannel
     ) => {
       if (!effectiveEventId) return
 
       const queryKey =
         channel === "general"
           ? queryKeys.events.chatGeneral(effectiveEventId)
-          : selectedRecipientId
-            ? queryKeys.events.chatDmThread(effectiveEventId, selectedRecipientId)
-            : null
+          : channel === "organizers"
+            ? queryKeys.events.chatOrganizers(effectiveEventId)
+            : selectedRecipientId
+              ? queryKeys.events.chatDmThread(effectiveEventId, selectedRecipientId)
+              : null
 
       if (queryKey) {
         updateMessageReactionsInChatInfiniteCache(
@@ -423,6 +500,10 @@ export function EventChatPage(): React.ReactElement {
 
       if (channel === "general") {
         setGeneralLiveMessages((prev) =>
+          setMessageReactionsOnMessages(prev, messageId, reactions)
+        )
+      } else if (channel === "organizers") {
+        setOrganizersLiveMessages((prev) =>
           setMessageReactionsOnMessages(prev, messageId, reactions)
         )
       } else {
@@ -449,10 +530,15 @@ export function EventChatPage(): React.ReactElement {
     [restDmMessages, dmLiveMessages]
   )
 
+  const organizersMessages = React.useMemo(
+    () => mergeMessages(restOrganizersMessages, organizersLiveMessages),
+    [restOrganizersMessages, organizersLiveMessages]
+  )
+
   const applyReactionFrame = React.useCallback(
     (
       frame: ChatReactionEnvelope,
-      channel: "general" | "dm",
+      channel: ChatChannel,
       messages: EventChatMessage[]
     ) => {
       if (currentUserId && frame.data.user_id === currentUserId) return
@@ -477,32 +563,47 @@ export function EventChatPage(): React.ReactElement {
   )
 
   const handleRemoveReaction = React.useCallback(
-    async (messageId: string, channel: "general" | "dm") => {
-      setReactionError(null)
+    async (messageId: string, channel: ChatChannel) => {
+      const isOrganizers = channel === "organizers"
+      if (isOrganizers) {
+        setOrganizersReactionError(null)
+      } else {
+        setReactionError(null)
+      }
       setReactingMessageId(messageId)
 
       try {
-        const result = await removeReaction.mutateAsync({ messageId })
+        const result = isOrganizers
+          ? await removeOrganizersReaction.mutateAsync({ messageId })
+          : await removeReaction.mutateAsync({ messageId })
         patchMessageReactions(result.message_id, result.reactions, channel)
       } catch (e) {
         if (e instanceof ApiError && e.status === 404) return
-        if (isNotRegisteredError(e)) {
+        if (!isOrganizers && isNotRegisteredError(e)) {
           setRegistrationRequired(true)
           return
         }
-        setReactionError(
-          e instanceof Error ? e.message : "Failed to remove reaction"
-        )
+        const message = e instanceof Error ? e.message : "Failed to remove reaction"
+        if (isOrganizers) {
+          setOrganizersReactionError(message)
+        } else {
+          setReactionError(message)
+        }
       } finally {
         setReactingMessageId(null)
       }
     },
-    [patchMessageReactions, removeReaction]
+    [patchMessageReactions, removeOrganizersReaction, removeReaction]
   )
 
   const handleReact = React.useCallback(
-    async (messageId: string, emoji: string, channel: "general" | "dm") => {
-      const messages = channel === "general" ? generalMessages : dmMessages
+    async (messageId: string, emoji: string, channel: ChatChannel) => {
+      const messages =
+        channel === "general"
+          ? generalMessages
+          : channel === "organizers"
+            ? organizersMessages
+            : dmMessages
       const message = messages.find((m) => m.message_id === messageId)
       if (!message) return
 
@@ -512,24 +613,44 @@ export function EventChatPage(): React.ReactElement {
         return
       }
 
-      setReactionError(null)
+      const isOrganizers = channel === "organizers"
+      if (isOrganizers) {
+        setOrganizersReactionError(null)
+      } else {
+        setReactionError(null)
+      }
       setReactingMessageId(messageId)
 
       try {
-        const result = await setReaction.mutateAsync({ messageId, emoji })
+        const result = isOrganizers
+          ? await setOrganizersReaction.mutateAsync({ messageId, emoji })
+          : await setReaction.mutateAsync({ messageId, emoji })
         patchMessageReactions(result.message_id, result.reactions, channel)
       } catch (e) {
         if (e instanceof ApiError && e.status === 404) return
-        if (isNotRegisteredError(e)) {
+        if (!isOrganizers && isNotRegisteredError(e)) {
           setRegistrationRequired(true)
           return
         }
-        setReactionError(e instanceof Error ? e.message : "Failed to add reaction")
+        const message = e instanceof Error ? e.message : "Failed to add reaction"
+        if (isOrganizers) {
+          setOrganizersReactionError(message)
+        } else {
+          setReactionError(message)
+        }
       } finally {
         setReactingMessageId(null)
       }
     },
-    [dmMessages, generalMessages, handleRemoveReaction, patchMessageReactions, setReaction]
+    [
+      dmMessages,
+      generalMessages,
+      handleRemoveReaction,
+      organizersMessages,
+      patchMessageReactions,
+      setOrganizersReaction,
+      setReaction,
+    ]
   )
 
   const handleGeneralReaction = React.useCallback(
@@ -563,15 +684,26 @@ export function EventChatPage(): React.ReactElement {
     ]
   )
 
+  const handleOrganizersReaction = React.useCallback(
+    (frame: ChatReactionEnvelope) => {
+      applyReactionFrame(frame, "organizers", organizersMessages)
+    },
+    [applyReactionFrame, organizersMessages]
+  )
+
   const { connectionState, error: streamError, reconnectNow } = useEventChatStream({
     eventId: effectiveEventId,
     generalEnabled: activeTab === "general",
+    organizersEnabled: activeTab === "organizers" && canAccessOrganizersChat,
     onGeneralMessage: handleGeneralLiveMessage,
     onDmMessage: handleInboxDmMessage,
+    onOrganizersMessage: handleOrganizersLiveMessage,
     onGeneralMessageDeleted: handleGeneralMessageDeleted,
     onDmMessageDeleted: handleDmMessageDeleted,
+    onOrganizersMessageDeleted: handleOrganizersMessageDeleted,
     onGeneralReaction: handleGeneralReaction,
     onDmReaction: handleDmReaction,
+    onOrganizersReaction: handleOrganizersReaction,
   })
 
   const handleDeleteGeneral = React.useCallback(
@@ -580,12 +712,29 @@ export function EventChatPage(): React.ReactElement {
       if (!message) return
       setDeleteError(null)
       setDeleteConfirmTarget(message)
+      setDeleteConfirmChannel("general")
     },
     [generalMessages]
   )
 
+  const handleDeleteOrganizers = React.useCallback(
+    (messageId: string) => {
+      const message = organizersMessages.find((m) => m.message_id === messageId)
+      if (!message) return
+      if (!currentUserId || message.sender_user_id !== currentUserId) return
+      setDeleteError(null)
+      setDeleteConfirmTarget(message)
+      setDeleteConfirmChannel("organizers")
+    },
+    [currentUserId, organizersMessages]
+  )
+
   const handleDeleteConfirm = React.useCallback(() => {
-    if (!deleteConfirmTarget) return
+    if (!deleteConfirmTarget || !deleteConfirmChannel) return
+    if (deleteConfirmChannel === "organizers") {
+      void handleDeleteMessage(deleteConfirmTarget.message_id, "organizers")
+      return
+    }
     const isOwn =
       !!currentUserId && deleteConfirmTarget.sender_user_id === currentUserId
     const asOrganizer = !isOwn && canModerateGeneralChat
@@ -595,17 +744,25 @@ export function EventChatPage(): React.ReactElement {
   }, [
     canModerateGeneralChat,
     currentUserId,
+    deleteConfirmChannel,
     deleteConfirmTarget,
     handleDeleteMessage,
   ])
 
   const isDeletePending =
-    deleteChatMessage.isPending || deleteChatMessageAsOrganizer.isPending
+    deleteChatMessage.isPending ||
+    deleteChatMessageAsOrganizer.isPending ||
+    deleteOrganizersChatMessage.isPending
 
   const deleteConfirmIsOwn =
     !!deleteConfirmTarget &&
     !!currentUserId &&
     deleteConfirmTarget.sender_user_id === currentUserId
+
+  const deleteConfirmIsModeration =
+    deleteConfirmChannel === "general" &&
+    !!deleteConfirmTarget &&
+    !deleteConfirmIsOwn
 
   const prevEventIdRef = React.useRef<string | null>(null)
 
@@ -617,15 +774,21 @@ export function EventChatPage(): React.ReactElement {
 
     setGeneralLiveMessages([])
     setDmLiveMessages([])
+    setOrganizersLiveMessages([])
     setGeneralDraft("")
     setDmDraft("")
+    setOrganizersDraft("")
     setGeneralReplyTo(null)
     setDmReplyTo(null)
+    setOrganizersReplyTo(null)
     setGeneralSendError(null)
     setDmSendError(null)
+    setOrganizersSendError(null)
     setDeleteError(null)
     setReactionError(null)
+    setOrganizersReactionError(null)
     setDeleteConfirmTarget(null)
+    setDeleteConfirmChannel(null)
     setDeletingMessageId(null)
     setReactingMessageId(null)
     processedReactionKeysRef.current.clear()
@@ -634,6 +797,7 @@ export function EventChatPage(): React.ReactElement {
     setProfileCache(new Map())
     generalStickToBottomRef.current = true
     dmStickToBottomRef.current = true
+    organizersStickToBottomRef.current = true
     setSearchParams({}, { replace: true })
   }, [effectiveEventId, setSearchParams])
 
@@ -655,6 +819,11 @@ export function EventChatPage(): React.ReactElement {
     dmListRef.current.scrollTop = dmListRef.current.scrollHeight
   }, [dmMessages.length])
 
+  React.useEffect(() => {
+    if (!organizersStickToBottomRef.current || !organizersListRef.current) return
+    organizersListRef.current.scrollTop = organizersListRef.current.scrollHeight
+  }, [organizersMessages.length])
+
   const handleGeneralListScroll = () => {
     const el = generalListRef.current
     if (!el) return
@@ -669,45 +838,95 @@ export function EventChatPage(): React.ReactElement {
     dmStickToBottomRef.current = distanceFromBottom < 80
   }
 
+  const handleOrganizersListScroll = () => {
+    const el = organizersListRef.current
+    if (!el) return
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+    organizersStickToBottomRef.current = distanceFromBottom < 80
+  }
+
 
   const isRestError =
-    activeTab === "general"
-      ? isGeneralError
-      : selectedRecipientId
-        ? isDmError
-        : isInboxError
+    activeTab === "organizers"
+      ? isOrganizersError
+      : activeTab === "general"
+        ? isGeneralError
+        : selectedRecipientId
+          ? isDmError
+          : isInboxError
   const displayRestError =
-    activeTab === "general"
-      ? generalRestError
-      : selectedRecipientId
-        ? dmRestError
-        : inboxRestError
+    activeTab === "organizers"
+      ? organizersRestError
+      : activeTab === "general"
+        ? generalRestError
+        : selectedRecipientId
+          ? dmRestError
+          : inboxRestError
 
   const eventName = schedule?.event?.name
   const chatEnabled = chatSettings.data?.features?.chat?.enabled ?? false
   const chatDisabled =
     !chatSettings.isLoading && !chatSettings.isError && !chatEnabled
-  const notRegistered =
+  const attendeeNotRegistered =
     registrationRequired ||
     isNotRegisteredError(generalRestError) ||
     isNotRegisteredError(inboxRestError) ||
-    isNotRegisteredError(dmRestError) ||
+    isNotRegisteredError(dmRestError)
+
+  const attendeeStreamForbidden =
+    (activeTab === "general" || activeTab === "messages") &&
     isForbiddenStreamError(streamError?.code)
 
+  const showAttendeeRegistrationBlock = attendeeNotRegistered || attendeeStreamForbidden
+  const showAttendeeChat = !showAttendeeRegistrationBlock && !chatDisabled
+  const showChatPanel = showAttendeeChat || canAccessOrganizersChat
+
+  const organizersForbidden =
+    activeTab === "organizers" &&
+    organizersRestError instanceof ApiError &&
+    organizersRestError.status === 403
+
+  const trimmedOrganizersDraft = organizersDraft.trim()
+  const canSendOrganizers =
+    !!trimmedOrganizersDraft &&
+    trimmedOrganizersDraft.length <= MAX_MESSAGE_LENGTH &&
+    !sendOrganizersMessage.isPending &&
+    !organizersForbidden
   const trimmedGeneralDraft = generalDraft.trim()
   const canSendGeneral =
-    !notRegistered &&
+    showAttendeeChat &&
     !!trimmedGeneralDraft &&
     trimmedGeneralDraft.length <= MAX_MESSAGE_LENGTH &&
     !sendGeneralMessage.isPending
 
   const trimmedDmDraft = dmDraft.trim()
   const canSendDm =
-    !notRegistered &&
+    showAttendeeChat &&
     !!selectedRecipientId &&
     !!trimmedDmDraft &&
     trimmedDmDraft.length <= MAX_MESSAGE_LENGTH &&
     !sendDmMessage.isPending
+
+  const handleSendOrganizers = async () => {
+    if (!canSendOrganizers) return
+
+    setOrganizersSendError(null)
+    const clientMsgId = crypto.randomUUID()
+
+    try {
+      const message = await sendOrganizersMessage.mutateAsync({
+        body: organizersDraft,
+        clientMsgId,
+        replyToMessageId: organizersReplyTo?.message_id,
+      })
+      handleOrganizersLiveMessage(message)
+      setOrganizersDraft("")
+      setOrganizersReplyTo(null)
+      organizersStickToBottomRef.current = true
+    } catch (e) {
+      setOrganizersSendError(e instanceof Error ? e.message : "Failed to send message")
+    }
+  }
 
   const handleSendGeneral = async () => {
     if (!canSendGeneral) return
@@ -780,6 +999,15 @@ export function EventChatPage(): React.ReactElement {
     }
   }
 
+  const handleOrganizersComposerKeyDown = (
+    e: React.KeyboardEvent<HTMLTextAreaElement>
+  ) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      void handleSendOrganizers()
+    }
+  }
+
   const handleDmComposerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
@@ -803,8 +1031,11 @@ export function EventChatPage(): React.ReactElement {
     setActiveTab(tab)
     setGeneralReplyTo(null)
     setDmReplyTo(null)
+    setOrganizersReplyTo(null)
     if (tab === "general") {
       setSearchParams({}, { replace: true })
+    } else if (tab === "organizers") {
+      setSearchParams({ tab: "organizers" }, { replace: true })
     } else if (selectedRecipientId) {
       setSearchParams(
         { tab: "messages", dm: selectedRecipientId },
@@ -855,7 +1086,8 @@ export function EventChatPage(): React.ReactElement {
     ? profileDisplayName(selectedProfile)
     : "Direct message"
 
-  const showChatPanel = !notRegistered && !chatDisabled
+  const showAttendeeTabContent =
+    activeTab === "general" || activeTab === "messages"
 
   return (
     <div className="mx-auto flex h-[min(100dvh-7rem,900px)] max-w-3xl flex-col gap-3">
@@ -888,7 +1120,7 @@ export function EventChatPage(): React.ReactElement {
         </div>
       </div>
 
-      {chatDisabled && (
+      {showAttendeeTabContent && chatDisabled && (
         <Card className="shrink-0">
           <CardHeader>
             <CardTitle className="text-base">Chat is disabled</CardTitle>
@@ -905,7 +1137,7 @@ export function EventChatPage(): React.ReactElement {
         </Card>
       )}
 
-      {notRegistered && (
+      {showAttendeeTabContent && showAttendeeRegistrationBlock && (
         <Card className="border-destructive/40 shrink-0">
           <CardHeader>
             <CardTitle className="text-base text-destructive">
@@ -924,7 +1156,24 @@ export function EventChatPage(): React.ReactElement {
         </Card>
       )}
 
-      {!notRegistered && !chatDisabled && isRestError && displayRestError && (
+      {activeTab === "organizers" && organizersForbidden && (
+        <Card className="border-destructive/40 shrink-0">
+          <CardHeader>
+            <CardTitle className="text-base text-destructive">
+              Access denied
+            </CardTitle>
+            <CardDescription>
+              You don&apos;t have access to the organizers chat. Only event owners and
+              team members can use this room.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
+      {((showAttendeeTabContent && showAttendeeChat) || activeTab === "organizers") &&
+        isRestError &&
+        displayRestError &&
+        !organizersForbidden && (
         <Card className="border-destructive/40 shrink-0">
           <CardHeader>
             <CardTitle className="text-base text-destructive">
@@ -942,7 +1191,10 @@ export function EventChatPage(): React.ReactElement {
         </Card>
       )}
 
-      {!notRegistered && !chatDisabled && streamError && !isForbiddenStreamError(streamError.code) && (
+      {showAttendeeTabContent &&
+        showAttendeeChat &&
+        streamError &&
+        !isForbiddenStreamError(streamError.code) && (
         <Card className="border-destructive/40 shrink-0">
           <CardHeader>
             <CardTitle className="text-base text-destructive">
@@ -955,7 +1207,22 @@ export function EventChatPage(): React.ReactElement {
         </Card>
       )}
 
-      {!notRegistered && !chatDisabled && deleteError && !deleteConfirmTarget && (
+      {activeTab === "organizers" &&
+        streamError &&
+        isForbiddenStreamError(streamError.code) && (
+        <Card className="border-destructive/40 shrink-0">
+          <CardHeader>
+            <CardTitle className="text-base text-destructive">
+              Stream error{streamError.code ? ` (${streamError.code})` : ""}
+            </CardTitle>
+            <CardDescription className="text-destructive">
+              {streamError.message}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
+      {deleteError && !deleteConfirmTarget && (
         <Card className="border-destructive/40 shrink-0">
           <CardHeader>
             <CardTitle className="text-base text-destructive">
@@ -966,13 +1233,26 @@ export function EventChatPage(): React.ReactElement {
         </Card>
       )}
 
-      {!notRegistered && !chatDisabled && reactionError && (
+      {showAttendeeTabContent && showAttendeeChat && reactionError && (
         <Card className="border-destructive/40 shrink-0">
           <CardHeader>
             <CardTitle className="text-base text-destructive">
               Failed to update reaction
             </CardTitle>
             <CardDescription className="text-destructive">{reactionError}</CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
+      {activeTab === "organizers" && organizersReactionError && (
+        <Card className="border-destructive/40 shrink-0">
+          <CardHeader>
+            <CardTitle className="text-base text-destructive">
+              Failed to update reaction
+            </CardTitle>
+            <CardDescription className="text-destructive">
+              {organizersReactionError}
+            </CardDescription>
           </CardHeader>
         </Card>
       )}
@@ -986,12 +1266,23 @@ export function EventChatPage(): React.ReactElement {
           <TabsList className="shrink-0 self-start">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="messages">Messages</TabsTrigger>
+            {canAccessOrganizersChat ? (
+              <TabsTrigger value="organizers">Organizers</TabsTrigger>
+            ) : null}
           </TabsList>
 
           <TabsContent
             value="general"
             className="border-border/60 mt-0 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-background shadow-sm data-[state=inactive]:hidden"
           >
+            {!showAttendeeChat ? (
+              <div className="text-muted-foreground flex flex-1 items-center justify-center p-6 text-sm">
+                {chatDisabled
+                  ? "Attendee chat is disabled for this event."
+                  : "Register as an attendee to use general chat."}
+              </div>
+            ) : (
+              <>
             <div className="border-border/60 shrink-0 border-b px-4 py-2">
               <p className="text-muted-foreground text-sm">General room for all attendees</p>
             </div>
@@ -1031,13 +1322,21 @@ export function EventChatPage(): React.ReactElement {
               }
               onCancelReply={() => setGeneralReplyTo(null)}
             />
+              </>
+            )}
           </TabsContent>
 
           <TabsContent
             value="messages"
             className="border-border/60 mt-0 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-background shadow-sm data-[state=inactive]:hidden"
           >
-            {selectedRecipientId ? (
+            {!showAttendeeChat ? (
+              <div className="text-muted-foreground flex flex-1 items-center justify-center p-6 text-sm">
+                {chatDisabled
+                  ? "Attendee chat is disabled for this event."
+                  : "Register as an attendee to use direct messages."}
+              </div>
+            ) : selectedRecipientId ? (
               <>
                 <div className="border-border/60 flex shrink-0 items-center gap-2 border-b px-3 py-2">
                   <Button
@@ -1145,6 +1444,68 @@ export function EventChatPage(): React.ReactElement {
               </>
             )}
           </TabsContent>
+
+          {canAccessOrganizersChat ? (
+            <TabsContent
+              value="organizers"
+              className="border-border/60 mt-0 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-background shadow-sm data-[state=inactive]:hidden"
+            >
+              {organizersForbidden ? (
+                <div className="text-muted-foreground flex flex-1 items-center justify-center p-6 text-sm">
+                  You don&apos;t have access to the organizers chat.
+                </div>
+              ) : (
+                <>
+                  <div className="border-border/60 shrink-0 border-b px-4 py-2">
+                    <p className="text-muted-foreground text-sm">
+                      Backstage room for event organizers
+                    </p>
+                  </div>
+                  <EventChatMessageList
+                    messages={organizersMessages}
+                    currentUserId={currentUserId}
+                    listRef={organizersListRef}
+                    onScroll={handleOrganizersListScroll}
+                    hasNextPage={!!hasNextOrganizersPage}
+                    isFetchingNextPage={isFetchingNextOrganizersPage}
+                    onLoadOlder={() => fetchNextOrganizersPage()}
+                    isLoading={isOrganizersLoading}
+                    isEmpty={organizersMessages.length === 0}
+                    onDeleteMessage={handleDeleteOrganizers}
+                    deletingMessageId={deletingMessageId}
+                    onSenderClick={handleSenderClick}
+                    onReplyMessage={setOrganizersReplyTo}
+                    onReactMessage={(id, emoji) =>
+                      void handleReact(id, emoji, "organizers")
+                    }
+                    onRemoveReaction={(id) =>
+                      void handleRemoveReaction(id, "organizers")
+                    }
+                    reactingMessageId={reactingMessageId}
+                  />
+                  <EventChatComposer
+                    draft={organizersDraft}
+                    onDraftChange={(value) => {
+                      setOrganizersDraft(value)
+                      if (organizersSendError) setOrganizersSendError(null)
+                    }}
+                    onSend={() => void handleSendOrganizers()}
+                    onKeyDown={handleOrganizersComposerKeyDown}
+                    disabled={false}
+                    isSending={sendOrganizersMessage.isPending}
+                    canSend={canSendOrganizers}
+                    sendError={organizersSendError}
+                    replyTo={
+                      organizersReplyTo
+                        ? replyPreviewFromMessage(organizersReplyTo)
+                        : null
+                    }
+                    onCancelReply={() => setOrganizersReplyTo(null)}
+                  />
+                </>
+              )}
+            </TabsContent>
+          ) : null}
         </Tabs>
       )}
 
@@ -1153,9 +1514,11 @@ export function EventChatPage(): React.ReactElement {
         onOpenChange={(open) => {
           if (!open) {
             setDeleteConfirmTarget(null)
+            setDeleteConfirmChannel(null)
             setDeleteError(null)
             deleteChatMessage.reset()
             deleteChatMessageAsOrganizer.reset()
+            deleteOrganizersChatMessage.reset()
           }
         }}
       >
@@ -1165,7 +1528,7 @@ export function EventChatPage(): React.ReactElement {
             <DialogDescription>
               {deleteConfirmIsOwn
                 ? "Delete your message? This cannot be undone."
-                : deleteConfirmTarget
+                : deleteConfirmIsModeration && deleteConfirmTarget
                   ? `Delete message from ${messageSenderDisplayName(deleteConfirmTarget)}? This removes it for all attendees.`
                   : null}
             </DialogDescription>
